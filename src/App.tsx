@@ -1,65 +1,121 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { api, ApiError, type User } from './api';
+import { ChatOnboarding, type ChatMessage } from './components/ChatOnboarding';
 import { CompareTable } from './components/CompareTable';
-import { HouseholdForm, newMember } from './components/HouseholdForm';
 import { PlanBrowser } from './components/PlanBrowser';
+import { ProfileForm } from './components/ProfileForm';
+import { SignIn } from './components/SignIn';
 import { SubsidySummary } from './components/SubsidySummary';
+import { LEGACY_DRUG_NAMES } from './data/careNeeds';
 import { KING_COUNTY_PLANS } from './data/kingCounty2027';
 import { estimateSubsidy, evaluatePlan, isSoldIn } from './domain/calc';
 import { REQUIRED_HOSPITALS } from './data/hospitalNetworks';
 import { EMPTY_FILTERS, type Filters } from './domain/filter';
+import { EMPTY_PROFILE, householdFromProfile, profileFromLegacy, type LegacyHousehold, type Profile } from './domain/profile';
 import { ENROLLMENT, PLAN_YEAR } from './domain/rules2027';
-import type { Household } from './domain/types';
 
-const STORAGE_KEY = 'mih.household.v1';
+/** Where earlier versions kept the household. It's moved into the account on first sign-in. */
+const LEGACY_STORAGE_KEY = 'mih.household.v1';
 const MAX_COMPARE = 4;
-
-const DEFAULT_HOUSEHOLD: Household = {
-  county: 'King',
-  members: [newMember('m1', 'Person 1', 40)],
-  taxHouseholdSize: 1,
-  annualIncome: null,
-  overSubsidyLimit: false,
-  filingStatus: 'single',
-  immigration: 'citizen',
-  affordableEmployerOffer: false,
-};
-
-function loadHousehold(): Household {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    // Only King County plans are loaded, so an older saved county is replaced.
-    if (saved) {
-      const parsed = JSON.parse(saved) as Partial<Household>;
-      return {
-        ...DEFAULT_HOUSEHOLD,
-        ...parsed,
-        county: 'King',
-        // Households saved by older versions are missing newer care fields.
-        members: (parsed.members ?? DEFAULT_HOUSEHOLD.members).map((m) => ({ ...newMember(m.id, m.label, m.age), ...m })),
-      };
-    }
-  } catch {
-    // Storage can be unavailable; the app still works without it.
-  }
-  return DEFAULT_HOUSEHOLD;
-}
+const SAVE_DELAY_MS = 700;
 
 type Tab = 'household' | 'plans' | 'compare';
+type SaveState = 'saved' | 'saving' | 'error';
+
+function takeLegacyHousehold(): Profile | null {
+  try {
+    const saved = localStorage.getItem(LEGACY_STORAGE_KEY);
+    return saved ? profileFromLegacy(JSON.parse(saved) as LegacyHousehold, LEGACY_DRUG_NAMES) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function loadProfile(): Promise<Profile> {
+  const saved = await api.getProfile();
+  if (saved) return saved;
+  const legacy = takeLegacyHousehold();
+  if (!legacy) return EMPTY_PROFILE;
+  await api.saveProfile(legacy);
+  try {
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable; the copy in the account is what counts now.
+  }
+  return legacy;
+}
 
 export function App() {
-  const [household, setHousehold] = useState<Household>(loadHousehold);
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>('saved');
   const [filters, setFilters] = useState<Filters>({ ...EMPTY_FILTERS, hospitals: REQUIRED_HOSPITALS });
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [tab, setTab] = useState<Tab>('household');
+  const [chatOpen, setChatOpen] = useState(false);
+  // Kept in memory only, so the conversation survives switching tabs but not a reload.
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const lastSaved = useRef<Profile | null>(null);
+
+  const startSession = useCallback((signedIn: User) => {
+    setUser(signedIn);
+    setLoadError(null);
+    loadProfile().then(
+      (loaded) => {
+        lastSaved.current = loaded;
+        setProfile(loaded);
+        if (loaded.members.length === 0) {
+          setTab('household');
+          setChatOpen(true);
+        }
+      },
+      (e: Error) => setLoadError(e.message),
+    );
+  }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(household));
-    } catch {
-      // Ignore: saving is a convenience.
-    }
-  }, [household]);
+    api.me().then(startSession, () => setUser(null));
+  }, [startSession]);
 
+  // Save edits to the account shortly after typing stops.
+  useEffect(() => {
+    if (!profile || profile === lastSaved.current) return;
+    setSaveState('saving');
+    const timer = setTimeout(() => {
+      api.saveProfile(profile).then(
+        () => {
+          lastSaved.current = profile;
+          setSaveState('saved');
+        },
+        (e) => {
+          setSaveState('error');
+          if (e instanceof ApiError && e.status === 401) setUser(null);
+        },
+      );
+    }, SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [profile]);
+
+  const signOut = () => {
+    api.signOut().finally(() => {
+      setUser(null);
+      setProfile(null);
+      lastSaved.current = null;
+      setCompareIds([]);
+      setChatMessages([]);
+      setChatOpen(false);
+    });
+  };
+
+  // Must-have hospitals from the profile join the network filter.
+  const providerHospitals = (profile?.providers ?? []).flatMap((p) => (p.hospitalId ? [p.hospitalId] : [])).join(',');
+  useEffect(() => {
+    if (!providerHospitals) return;
+    setFilters((f) => ({ ...f, hospitals: [...new Set([...f.hospitals, ...providerHospitals.split(',')])] }));
+  }, [providerHospitals]);
+
+  const household = useMemo(() => householdFromProfile(profile ?? EMPTY_PROFILE), [profile]);
   const subsidy = useMemo(() => estimateSubsidy(KING_COUNTY_PLANS, household), [household]);
   const evaluated = useMemo(
     () =>
@@ -87,22 +143,66 @@ export function App() {
     { id: 'compare', label: `3. Compare (${compared.length})` },
   ];
 
+  const header = (
+    <header className="masthead">
+      <div>
+        <h1>Medical Insurance Hunter</h1>
+        <p className="muted">
+          King County, Washington {PLAN_YEAR} plans. Enroll by {ENROLLMENT.januaryDeadline} for January 1 coverage; open enrollment
+          ends {ENROLLMENT.closes}.
+        </p>
+      </div>
+      {user && (
+        <div className="account">
+          <span className="muted">{user.email}</span>
+          {profile && (
+            <span className={saveState === 'error' ? 'warn save-state' : 'muted save-state'} role="status">
+              {saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Not saved. Check your connection.' : 'Saved'}
+            </span>
+          )}
+          <button type="button" className="link-button" onClick={signOut}>
+            Sign out
+          </button>
+        </div>
+      )}
+    </header>
+  );
+
+  if (user === undefined || (user && !profile && !loadError)) {
+    return (
+      <div className="app">
+        {header}
+        <p className="muted">Loading…</p>
+      </div>
+    );
+  }
+  if (user === null) {
+    return (
+      <div className="app">
+        {header}
+        <SignIn onSignedIn={startSession} />
+      </div>
+    );
+  }
+  if (!profile) {
+    return (
+      <div className="app">
+        {header}
+        <p className="warn">Your profile could not be loaded: {loadError}</p>
+      </div>
+    );
+  }
+
+  const hasPeople = profile.members.length > 0;
+  const uncheckedProviders = (profile.providers ?? []).filter((p) => !p.hospitalId && p.name.trim()).map((p) => p.name.trim());
   return (
     <div className="app">
-      <header className="masthead">
-        <div>
-          <h1>Medical Insurance Hunter</h1>
-          <p className="muted">
-            King County, Washington {PLAN_YEAR} plans. Enroll by {ENROLLMENT.januaryDeadline} for January 1 coverage; open enrollment
-            ends {ENROLLMENT.closes}.
-          </p>
-        </div>
-      </header>
+      {header}
 
       <div className="sample-banner" role="note">
         <strong>Use these costs as estimates.</strong> Premiums and benefits come from {PLAN_YEAR} state and insurer
         documents, but care prices are rough assumptions and hospital networks need confirming. Check with the insurer
-        and hospital before enrolling. Your information stays in this browser.
+        and hospital before enrolling. Your profile is saved to your account.
       </div>
 
       <nav className="tabs" aria-label="Steps">
@@ -112,6 +212,7 @@ export function App() {
             type="button"
             className={tab === t.id ? 'tab active' : 'tab'}
             aria-current={tab === t.id ? 'page' : undefined}
+            disabled={!hasPeople && t.id !== 'household'}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -122,8 +223,25 @@ export function App() {
       <SubsidySummary subsidy={subsidy} hasChildren={household.members.some((m) => m.age < 19)} />
 
       <main>
-        {tab === 'household' && (
-          <HouseholdForm household={household} onChange={setHousehold} onDone={() => setTab('plans')} />
+        {tab === 'household' &&
+          (chatOpen ? (
+            <ChatOnboarding
+              profile={profile}
+              onChange={setProfile}
+              messages={chatMessages}
+              onMessages={setChatMessages}
+              onShowPlans={() => setTab('plans')}
+              onUseForm={() => setChatOpen(false)}
+            />
+          ) : (
+            <ProfileForm profile={profile} onChange={setProfile} onDone={() => setTab('plans')} onOpenChat={() => setChatOpen(true)} />
+          ))}
+        {tab === 'plans' && uncheckedProviders.length > 0 && (
+          <p className="sample-banner" role="note">
+            <strong>Check these yourself:</strong> {uncheckedProviders.join(', ')}. The app can't check{' '}
+            {uncheckedProviders.length === 1 ? 'its network' : 'their networks'} yet, so look them up in each insurer's provider
+            directory before you enroll.
+          </p>
         )}
         {tab === 'plans' && (
           <PlanBrowser

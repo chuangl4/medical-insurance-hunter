@@ -37,7 +37,10 @@ const ROWS: Row[] = [
   { label: 'Emergency room', text: (p) => costShareText(p.plan.benefits?.er) },
   { label: 'Hospital stay', text: (p) => costShareText(p.plan.benefits?.hospital) },
   { label: 'Metal level', text: (p) => p.plan.metal.charAt(0).toUpperCase() + p.plan.metal.slice(1) },
-  { label: 'Network', text: (p) => p.plan.network ?? 'See plan details' },
+  {
+    label: 'Network',
+    text: (p) => (p.plan.network ? `${p.plan.network}${p.plan.networkNote ? ' (from 2026 documents; confirm)' : ''}` : 'See plan details'),
+  },
   { label: 'HSA plan', text: (p) => (p.plan.hsaEligible ? 'Yes' : 'No') },
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];

@@ -29,7 +29,10 @@ export interface Hospital {
   status: (plan: Plan) => NetworkStatus;
 }
 
-/** Optional presets from src/data/personal/config.ts, which git ignores. See the README. */
+/**
+ * Optional presets from src/data/personal/config.ts, which git ignores. See the README. Care needs and
+ * self-pay drugs are hints for the care parser; hospitals drive the network filter.
+ */
 export interface PersonalConfig {
   careNeeds?: Record<string, CareNeed>;
   selfPayDrugs?: Record<string, SelfPayDrug>;

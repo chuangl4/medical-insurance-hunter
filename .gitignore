@@ -5,3 +5,7 @@ dist/
 
 # Personal health details stay on this computer
 src/data/personal/
+
+# Server secrets and the database (encrypted profiles, sessions)
+.env
+/data/

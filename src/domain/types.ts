@@ -9,6 +9,8 @@ export interface Plan {
   name: string;
   metal: Metal;
   network: NetworkType | null;
+  /** Where the network type comes from when it isn't the plan's own current documents. */
+  networkNote?: string;
   channel: Channel;
   hsaEligible: boolean;
   cascadeCare: boolean;
@@ -65,7 +67,6 @@ export interface Member {
   scans: number;
   erVisits: number;
   hospitalStays: number;
-  careNeeds: string[];
   /** Monthly cost of each medication paid for without insurance. */
   selfPayDrugs: Record<string, number>;
 }

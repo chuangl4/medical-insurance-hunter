@@ -1,5 +1,9 @@
 import { hospitalStatus, type HospitalId } from '../data/hospitalNetworks';
-import type { Channel, EvaluatedPlan, Metal, NetworkType } from './types';
+import type { Channel, EvaluatedPlan, Metal, NetworkType, Plan } from './types';
+
+/** A plan's network type, or 'unconfirmed' when its documents didn't say. */
+export type NetworkChoice = NetworkType | 'unconfirmed';
+export const networkOf = (plan: Plan): NetworkChoice => plan.network ?? 'unconfirmed';
 
 export type SortKey =
   | 'expectedYear'
@@ -25,7 +29,7 @@ export type BuyingRoute = 'any' | 'exchange' | 'direct';
 export interface Filters {
   search: string;
   metals: Metal[];
-  networks: NetworkType[];
+  networks: NetworkChoice[];
   carriers: string[];
   route: BuyingRoute;
   hsaOnly: boolean;
@@ -62,7 +66,7 @@ export function applyFilters(plans: EvaluatedPlan[], f: Filters): EvaluatedPlan[
   return plans.filter(({ plan, netMonthly, deductible, oopMax }) => {
     if (search && !`${plan.name} ${plan.carrier}`.toLowerCase().includes(search)) return false;
     if (f.metals.length && !f.metals.includes(plan.metal)) return false;
-    if (f.networks.length && (plan.network === null || !f.networks.includes(plan.network))) return false;
+    if (f.networks.length && !f.networks.includes(networkOf(plan))) return false;
     if (f.carriers.length && !f.carriers.includes(plan.carrier)) return false;
     if (!routeAllows(f.route, plan.channel)) return false;
     if (f.hsaOnly && !plan.hsaEligible) return false;
@@ -73,6 +77,21 @@ export function applyFilters(plans: EvaluatedPlan[], f: Filters): EvaluatedPlan[
     if (f.maxOopMax !== null && (oopMax === null || oopMax > f.maxOopMax)) return false;
     return true;
   });
+}
+
+/**
+ * How many plans each option of a check-box filter would show, given every other filter.
+ * Lets the filter show counts and grey out options that would leave nothing.
+ */
+export function optionCounts<K extends 'metals' | 'networks' | 'carriers'>(
+  plans: EvaluatedPlan[],
+  f: Filters,
+  field: K,
+  keyOf: (plan: Plan) => string,
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const { plan } of applyFilters(plans, { ...f, [field]: [] })) counts[keyOf(plan)] = (counts[keyOf(plan)] ?? 0) + 1;
+  return counts;
 }
 
 function sortValue(p: EvaluatedPlan, key: SortKey): number | null {

@@ -4,12 +4,15 @@ import {
   EMPTY_FILTERS,
   SORT_LABELS,
   applyFilters,
+  networkOf,
+  optionCounts,
+  type NetworkChoice,
   sortPlans,
   type BuyingRoute,
   type Filters,
   type SortKey,
 } from '../domain/filter';
-import type { EvaluatedPlan, Metal, NetworkType } from '../domain/types';
+import type { EvaluatedPlan, Metal } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, parseOptionalNumber, primaryCareText } from '../format';
 
 interface Props {
@@ -23,7 +26,8 @@ interface Props {
 }
 
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
-const NETWORKS: NetworkType[] = ['HMO', 'PPO', 'EPO'];
+const NETWORKS: NetworkChoice[] = ['EPO', 'HMO', 'PPO', 'unconfirmed'];
+const NETWORK_LABELS: Record<string, string> = { unconfirmed: 'Not confirmed' };
 const CHANNEL_LABEL = { on: 'Exchange only', off: 'Direct only', both: 'Exchange or direct' };
 
 function toggled<T>(list: T[], value: T): T[] {
@@ -36,20 +40,27 @@ function CheckGroup<T extends string>(props: {
   selected: T[];
   onChange: (next: T[]) => void;
   capitalize?: boolean;
+  /** Plans each option would show given the other filters. Options with none are disabled unless already ticked. */
+  counts?: Record<string, number>;
+  labels?: Record<string, string>;
+  note?: string;
 }) {
   return (
     <fieldset className="filter-group">
       <legend>{props.legend}</legend>
-      {props.options.map((option) => (
-        <label className="check" key={option}>
-          <input
-            type="checkbox"
-            checked={props.selected.includes(option)}
-            onChange={() => props.onChange(toggled(props.selected, option))}
-          />
-          <span className={props.capitalize ? 'capitalize' : undefined}>{option}</span>
-        </label>
-      ))}
+      {props.options.map((option) => {
+        const count = props.counts?.[option] ?? 0;
+        const checked = props.selected.includes(option);
+        const empty = props.counts !== undefined && count === 0 && !checked;
+        return (
+          <label className={empty ? 'check is-empty' : 'check'} key={option}>
+            <input type="checkbox" checked={checked} disabled={empty} onChange={() => props.onChange(toggled(props.selected, option))} />
+            <span className={props.capitalize ? 'capitalize' : undefined}>{props.labels?.[option] ?? option}</span>
+            {props.counts && <span className="count">{count}</span>}
+          </label>
+        );
+      })}
+      {props.note && <small className="hint">{props.note}</small>}
     </fieldset>
   );
 }
@@ -76,6 +87,14 @@ export function PlanBrowser(props: Props) {
   const set = (patch: Partial<Filters>) => onFiltersChange({ ...filters, ...patch });
 
   const carriers = useMemo(() => [...new Set(plans.map((p) => p.plan.carrier))].sort(), [plans]);
+  const counts = useMemo(
+    () => ({
+      metals: optionCounts(plans, filters, 'metals', (p) => p.metal),
+      networks: optionCounts(plans, filters, 'networks', networkOf),
+      carriers: optionCounts(plans, filters, 'carriers', (p) => p.carrier),
+    }),
+    [plans, filters],
+  );
   const visible = useMemo(
     () => sortPlans(applyFilters(plans, filters), sortKey, descending),
     [plans, filters, sortKey, descending],
@@ -130,9 +149,30 @@ export function PlanBrowser(props: Props) {
           ))}
         </fieldset>
         )}
-        <CheckGroup legend="Metal level" capitalize options={METALS} selected={filters.metals} onChange={(metals) => set({ metals })} />
-        <CheckGroup legend="Network type" options={NETWORKS} selected={filters.networks} onChange={(networks) => set({ networks })} />
-        <CheckGroup legend="Carrier" options={carriers} selected={filters.carriers} onChange={(next) => set({ carriers: next })} />
+        <CheckGroup
+          legend="Metal level"
+          capitalize
+          options={METALS}
+          selected={filters.metals}
+          counts={counts.metals}
+          onChange={(metals) => set({ metals })}
+        />
+        <CheckGroup
+          legend="Network type"
+          options={NETWORKS}
+          selected={filters.networks}
+          counts={counts.networks}
+          labels={NETWORK_LABELS}
+          note="No PPO plans are listed for King County. An EPO lets you see specialists without a referral, like a PPO, but doesn't pay for out-of-network care except emergencies. 'Not confirmed' means the plan's documents didn't say."
+          onChange={(networks) => set({ networks })}
+        />
+        <CheckGroup
+          legend="Carrier"
+          options={carriers}
+          selected={filters.carriers}
+          counts={counts.carriers}
+          onChange={(next) => set({ carriers: next })}
+        />
         <fieldset className="filter-group">
           <legend>Features</legend>
           <label className="check">
@@ -211,7 +251,12 @@ export function PlanBrowser(props: Props) {
                 </div>
                 <div className="badges">
                   <span className={`badge metal-${plan.metal}`}>{plan.metal}</span>
-                  {plan.network && <span className="badge">{plan.network}</span>}
+                  {plan.network && (
+                    <span className="badge" title={plan.networkNote}>
+                      {plan.network}
+                      {plan.networkNote && ' (2026)'}
+                    </span>
+                  )}
                   <span className="badge">{CHANNEL_LABEL[plan.channel]}</span>
                   {plan.hsaEligible && <span className="badge">HSA</span>}
                   {plan.cascadeCare && <span className="badge">Cascade Care</span>}

@@ -8,18 +8,14 @@ import {
   outOfPocket,
   povertyLine,
 } from './calc';
-import { EMPTY_FILTERS, applyFilters, sortPlans } from './filter';
+import { EMPTY_FILTERS, applyFilters, networkOf, optionCounts, sortPlans } from './filter';
 import type { Benefits, Household, Member, Plan } from './types';
 import { KING_COUNTY_PLANS } from '../data/kingCounty2027';
-import { toggleCareNeed } from '../data/careNeeds';
 import { hospitalStatus } from '../data/hospitalNetworks';
 
 // Tests use fictional presets, so they don't depend on anyone's personal config.
 vi.mock('../data/personalConfig', () => ({
   PERSONAL: {
-    careNeeds: {
-      testNeed: { label: 'Test need', adds: 'test care', care: { specialistVisits: 1, labTests: 1, diagnosticTests: 1 } },
-    },
     hospitals: {
       testHospital: {
         name: 'Test Hospital',
@@ -43,7 +39,6 @@ const member = (age: number, extra: Partial<Member> = {}): Member => ({
   scans: 0,
   erVisits: 0,
   hospitalStays: 0,
-  careNeeds: [],
   selfPayDrugs: {},
   ...extra,
 });
@@ -197,17 +192,6 @@ describe('out of pocket', () => {
 });
 
 describe('ongoing care', () => {
-  it('adds and removes a need without touching other care', () => {
-    const start = member(40, { primaryVisits: 2, specialistVisits: 1 });
-    const on = toggleCareNeed(start, 'testNeed');
-    expect(on).toMatchObject({ specialistVisits: 2, labTests: 1, diagnosticTests: 1, primaryVisits: 2, careNeeds: ['testNeed'] });
-    const off = toggleCareNeed(on, 'testNeed');
-    expect(off).toMatchObject({ specialistVisits: 1, labTests: 0, diagnosticTests: 0, careNeeds: [] });
-  });
-  it('never goes below zero if counts were edited down', () => {
-    const on = toggleCareNeed(member(40), 'testNeed');
-    expect(toggleCareNeed({ ...on, diagnosticTests: 1 }, 'testNeed').diagnosticTests).toBe(0);
-  });
   it('adds self-paid medication to every yearly total, outside the out-of-pocket limit', () => {
     const without = evaluatePlan(plan(), household({ members: [member(21)] }), 0);
     const withDrug = evaluatePlan(plan(), household({ members: [member(21, { selfPayDrugs: { testDrug: 300 } })] }), 0);
@@ -317,6 +301,25 @@ describe('filters and sorting', () => {
     expect(names(sortPlans(list, 'deductible')).at(-1)).toBe('Unknown');
     expect(names(sortPlans(list, 'deductible', true)).at(-1)).toBe('Unknown');
     expect(names(applyFilters(list, { ...EMPTY_FILTERS, maxDeductible: 999999 }))).not.toContain('Unknown');
+  });
+
+  it('treats a missing network type as its own "not confirmed" choice', () => {
+    const list = [
+      evaluatePlan(plan({ id: 'e', name: 'Epo', network: 'EPO', metal: 'gold' }), h, 0),
+      evaluatePlan(plan({ id: 'u', name: 'Unsure', network: null, metal: 'silver' }), h, 0),
+    ];
+    expect(names(applyFilters(list, { ...EMPTY_FILTERS, networks: ['unconfirmed'] }))).toEqual(['Unsure']);
+    expect(names(applyFilters(list, { ...EMPTY_FILTERS, networks: ['PPO'] }))).toEqual([]);
+  });
+
+  it('counts the plans each option would show, given the other filters', () => {
+    const list = [
+      evaluatePlan(plan({ id: 'e', name: 'Epo', network: 'EPO', metal: 'gold' }), h, 0),
+      evaluatePlan(plan({ id: 'u', name: 'Unsure', network: null, metal: 'silver' }), h, 0),
+    ];
+    // Ticking a network type doesn't change its own counts, but other filters do.
+    expect(optionCounts(list, { ...EMPTY_FILTERS, networks: ['EPO'] }, 'networks', networkOf)).toEqual({ EPO: 1, unconfirmed: 1 });
+    expect(optionCounts(list, { ...EMPTY_FILTERS, metals: ['gold'] }, 'networks', networkOf)).toEqual({ EPO: 1 });
   });
 
   it('sorts in both directions', () => {

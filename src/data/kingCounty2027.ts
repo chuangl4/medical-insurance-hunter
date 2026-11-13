@@ -9,7 +9,8 @@ import type { Plan } from '../domain/types';
  *   a metal level share cost sharing, and Premera's Cascade Silver and Bronze summaries match.
  * - Other benefits: each insurer's 2027 Summary of Benefits and Coverage, linked per plan.
  * - benefits is null where no 2027 summary could be found.
- * - network is null where the source for that plan didn't confirm it.
+ * - network is null where the source for that plan didn't confirm it. networkNote marks a type taken
+ *   from an earlier year's documents.
  *
  * Collected 2026-11-06. Generated from the source documents, so check them before relying on a value.
  */
@@ -2153,7 +2154,8 @@ export const KING_COUNTY_PLANS: Plan[] = [
     "carrier": "Molina",
     "name": "Molina Cascade Bronze",
     "metal": "bronze",
-    "network": null,
+    "network": "HMO",
+    "networkNote": "From Molina's 2025 and 2026 Washington summaries (Plan Type: HMO); its 2027 summaries weren't published when this data was collected. Confirm before enrolling.",
     "channel": "on",
     "hsaEligible": false,
     "cascadeCare": true,
@@ -2224,7 +2226,8 @@ export const KING_COUNTY_PLANS: Plan[] = [
     "carrier": "Molina",
     "name": "Molina Cascade Complete Gold",
     "metal": "gold",
-    "network": null,
+    "network": "HMO",
+    "networkNote": "From Molina's 2025 and 2026 Washington summaries (Plan Type: HMO); its 2027 summaries weren't published when this data was collected. Confirm before enrolling.",
     "channel": "on",
     "hsaEligible": false,
     "cascadeCare": true,
@@ -2297,7 +2300,8 @@ export const KING_COUNTY_PLANS: Plan[] = [
     "carrier": "Molina",
     "name": "Molina Cascade Vital Gold",
     "metal": "gold",
-    "network": null,
+    "network": "HMO",
+    "networkNote": "From Molina's 2025 and 2026 Washington summaries (Plan Type: HMO); its 2027 summaries weren't published when this data was collected. Confirm before enrolling.",
     "channel": "on",
     "hsaEligible": false,
     "cascadeCare": true,
@@ -2370,7 +2374,8 @@ export const KING_COUNTY_PLANS: Plan[] = [
     "carrier": "Molina",
     "name": "Molina Cascade Silver",
     "metal": "silver",
-    "network": null,
+    "network": "HMO",
+    "networkNote": "From Molina's 2025 and 2026 Washington summaries (Plan Type: HMO); its 2027 summaries weren't published when this data was collected. Confirm before enrolling.",
     "channel": "on",
     "hsaEligible": false,
     "cascadeCare": true,
