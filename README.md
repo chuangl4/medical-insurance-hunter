@@ -10,6 +10,8 @@ You sign in with Google. Your profile (the people who need coverage, their ages,
 
 New users are greeted by Scout, a setup chat that asks for what plan selection needs: who needs coverage and their ages, whether you live in King County, each person's expected care, must-have doctors and hospitals, and, only while a premium tax credit is possible, tax household, income, job-based coverage offers, and immigration status. You can answer in your own words and add more than was asked. The server sends the conversation to the Claude API, which turns answers into profile details such as specialist visits, lab tests, drug fills, or medication paid without insurance. Each reply lists what it saved, with Undo, and everything stays editable in the form. The list of what is still needed is worked out by the app (`src/domain/onboarding.ts`), not by the model.
 
+For a must-have doctor, the app looks them up automatically in the national provider registry (NPPES), picks the match when it is clear, then checks their clinic's and health system's websites for accepted insurance, using Claude with web search (`server/doctors.ts`). It also checks whether Premera's public provider directory lists the doctor; that directory doesn't say which network, so it's only a hint. Website findings show as "likely" or "likely out" on each plan, and a ? next to each status lists what the app tried and what is left to confirm. Plans are hidden only after you mark a doctor out of network for that insurer yourself, since clinic sites list insurers rather than plans and can be out of date.
+
 A household saved in the browser by earlier versions moves into your account the first time you sign in.
 
 ## Set up
@@ -66,4 +68,4 @@ export default config;
 
 ## Not modeled yet
 
-Cost-sharing reductions, Cascade Care Savings amounts, whether specific doctors and drugs are covered, specialty drugs, catastrophic plans, and counties other than King.
+Cost-sharing reductions, Cascade Care Savings amounts, networks of individual doctors (beyond the website hints above), whether specific drugs are covered, specialty drugs, catastrophic plans, and counties other than King.

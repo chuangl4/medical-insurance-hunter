@@ -1,15 +1,24 @@
 import type { FilingStatus, ImmigrationStatus } from '../domain/types';
+import { useMemo } from 'react';
 import { HOSPITALS } from '../data/hospitalNetworks';
+import { KING_COUNTY_PLANS } from '../data/kingCounty2027';
+import { carriersToCheck, requiredHospitalsOf } from '../useDoctorLookups';
 import { findGaps } from '../domain/onboarding';
-import { newId, type AnswerKey, type CareItem, type Profile, type ProfileMember } from '../domain/profile';
+import { newId, type AnswerKey, type CareItem, type Profile, type ProfileMember, type Provider } from '../domain/profile';
 import { parseOptionalNumber } from '../format';
 import { CareItemRow } from './CareItemRow';
+import { DoctorPanel } from './DoctorPanel';
 
 interface Props {
   profile: Profile;
   onChange: (next: Profile) => void;
   onDone: () => void;
   onOpenChat: () => void;
+  /** Updates one provider in the latest profile. Used for slow lookups that finish after other edits. */
+  onPatchProvider: (id: string, patch: Partial<Provider>) => void;
+  /** Doctors being looked up right now. */
+  checking: string[];
+  onRecheck: (provider: Provider) => void;
 }
 
 const wholeNumber = (text: string, max: number): number => Math.min(max, Math.max(0, Math.floor(Number(text) || 0)));
@@ -23,13 +32,15 @@ const blankItem = (): CareItem => ({
   notes: '',
 });
 
-export function ProfileForm({ profile, onChange, onDone, onOpenChat }: Props) {
+export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProvider, checking, onRecheck }: Props) {
   const update = (patch: Partial<Profile>) => onChange({ ...profile, ...patch });
   /** Records that a question was answered here, so the chat doesn't ask it again. */
   const answer = (key: AnswerKey, patch: Partial<Profile>) =>
     update({ ...patch, answered: [...new Set([...(profile.answered ?? []), key])] });
   const providers = profile.providers ?? [];
   const setProviders = (next: typeof providers) => answer('providers', { providers: next });
+  const hospitalKey = requiredHospitalsOf(profile).join(',');
+  const carriers = useMemo(() => carriersToCheck(hospitalKey ? hospitalKey.split(',') : []), [hospitalKey]);
   const gaps = findGaps(profile);
   const updateMember = (id: string, patch: Partial<ProfileMember>) =>
     update({ members: profile.members.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
@@ -165,7 +176,8 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat }: Props) {
         <legend>Must-have doctors and hospitals</legend>
         {providers.length === 0 && <p className="hint">None listed.</p>}
         {providers.map((p) => (
-          <div className="member-head" key={p.id}>
+          <div className="provider-row" key={p.id}>
+          <div className="member-head">
             <label className="field">
               <span>Name</span>
               <input
@@ -175,12 +187,12 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat }: Props) {
               />
             </label>
             <label className="field">
-              <span>Network check</span>
+              <span>Type</span>
               <select
                 value={p.hospitalId ?? ''}
                 onChange={(e) => setProviders(providers.map((x) => (x.id === p.id ? { ...x, hospitalId: e.target.value || null } : x)))}
               >
-                <option value="">Check insurer directories myself</option>
+                <option value="">Doctor or clinic</option>
                 {Object.entries(HOSPITALS).map(([id, h]) => (
                   <option key={id} value={id}>
                     {h.name}
@@ -192,8 +204,23 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat }: Props) {
               Remove
             </button>
           </div>
+          {!p.hospitalId && p.name.trim() && (
+            <DoctorPanel
+              provider={p}
+              carriers={carriers}
+              onPatch={(patch) => onPatchProvider(p.id, patch)}
+              checking={checking.includes(p.id)}
+              onRecheck={() => onRecheck(p)}
+            />
+          )}
+          </div>
         ))}
-        <p className="hint">Hospitals the app can check filter the plan list. Check any others in each insurer's provider directory.</p>
+        <p className="hint">
+          Hospitals the app tracks filter the plan list. For a doctor or clinic, the app finds them in the national registry
+          and checks their clinic's website on its own; mark each insurer once you've confirmed it.
+          {carriers.length < new Set(KING_COUNTY_PLANS.map((p) => p.carrier)).size &&
+            ` Only insurers with plans covering your must-have hospitals are shown: ${carriers.join(', ')}.`}
+        </p>
         <button type="button" className="secondary" onClick={() => setProviders([...providers, { id: newId('provider'), name: '', hospitalId: null }])}>
           Add a doctor or hospital
         </button>

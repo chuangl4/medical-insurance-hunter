@@ -127,9 +127,14 @@ button.secondary { background: var(--surface); color: var(--text); border: 1px s
 .hospital-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.88rem; }
 .hospital-name { color: var(--muted); }
 .status-in { font-weight: 600; color: var(--accent); }
-.status-limited, .status-not-listed { color: var(--warn-text); }
+.status-limited, .status-not-listed, .status-out { color: var(--warn-text); }
 .status-unknown { color: var(--muted); }
-.status-in .hospital-name, .status-limited .hospital-name, .status-not-listed .hospital-name { font-weight: 400; }
+.doctor-in { font-weight: 600; color: var(--accent); }
+.doctor-out, .doctor-unlikely { color: var(--warn-text); }
+.doctor-likely { color: var(--accent); }
+.doctor-unknown { color: var(--muted); }
+.doctor-in .hospital-name, .doctor-out .hospital-name { font-weight: 400; }
+.status-in .hospital-name, .status-limited .hospital-name, .status-not-listed .hospital-name, .status-out .hospital-name { font-weight: 400; }
 .plan-links { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.86rem; }
 a { color: var(--accent); }
 .empty { background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; padding: 28px; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
@@ -230,3 +235,56 @@ a { color: var(--accent); }
 .check .count { margin-left: auto; color: var(--muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
 .check.is-empty { color: var(--muted); cursor: not-allowed; opacity: 0.6; }
 .filter-group .hint { display: block; margin-top: 4px; }
+
+/* Medications paid without insurance */
+.cash-summary { padding: 0; }
+.cash-summary > summary { list-style: none; cursor: pointer; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; justify-content: space-between; }
+.cash-summary > summary::-webkit-details-marker { display: none; }
+.cash-toggle { color: var(--accent); font-size: 0.9rem; font-weight: 600; white-space: nowrap; }
+.cash-toggle::after { content: ' ▾'; }
+.cash-summary[open] .cash-toggle::after { content: ' ▴'; }
+.cash-summary > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 10px; }
+.cash-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border); }
+.cash-body h3 { margin: 4px 0 0; font-size: 0.98rem; }
+.table-scroll { overflow-x: auto; }
+.cash-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; }
+.cash-table th, .cash-table td { text-align: left; vertical-align: top; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--border); }
+.cash-table thead th { color: var(--muted); font-weight: 600; font-size: 0.82rem; }
+.cash-table .num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cash-note { display: block; margin-top: 2px; }
+.cash-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 0.92rem; }
+.cash-body .link-button { align-self: flex-start; }
+.cash-detail { grid-column: 1 / -1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 0.86rem; display: flex; flex-direction: column; gap: 6px; }
+.cash-detail p { margin: 0; color: var(--muted); }
+.cash-detail strong { color: var(--text); }
+.cash-detail-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.cash-detail .inline-field { display: flex; gap: 6px; align-items: center; font-weight: 600; }
+.cash-detail .inline-field select { width: auto; padding: 4px 6px; }
+.cash-steps-toggle summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.cash-steps-toggle ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.metric-lead small { display: block; color: var(--muted); font-size: 0.78rem; }
+.cash-group h4 { margin: 4px 0 4px; font-size: 0.9rem; }
+
+/* Must-have doctors */
+.provider-row { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
+.provider-row:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+.doctor-panel { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 4px; }
+.doctor-panel p { margin: 0; }
+.doctor-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.doctor-results li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.doctor-location { display: block; }
+.doctor-check { background: var(--surface-2); border-left: 3px solid var(--accent); padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
+.doctor-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.doctor-table th, .doctor-table td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.doctor-table small { display: block; }
+.doctor-table td:last-child { width: 1%; white-space: nowrap; }
+.doctor-table select { min-width: 9.5rem; }
+
+.help-button { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; padding: 0; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 0.75rem; font-weight: 700; line-height: 1; cursor: pointer; vertical-align: middle; }
+.help-button[aria-expanded='true'] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.help-steps { list-style: none; margin: 6px 0 4px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: var(--surface-2); border-radius: 8px; color: var(--text); font-weight: 400; font-size: 0.85rem; text-align: left; }
+.step { display: flex; gap: 8px; }
+.step-mark { flex: none; width: 1rem; text-align: center; font-weight: 700; }
+.step-done .step-mark { color: var(--accent); }
+.step-failed .step-mark, .step-missing .step-mark { color: var(--warn-text); }
+.step-running .step-mark { color: var(--muted); }

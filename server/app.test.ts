@@ -32,6 +32,8 @@ let server: Server;
 let base: string;
 let store: Store;
 const chat = vi.fn();
+const searchDoctors = vi.fn();
+const checkDoctor = vi.fn();
 
 function start(overrides: Partial<ServerConfig> = {}) {
   const config: ServerConfig = {
@@ -47,6 +49,8 @@ function start(overrides: Partial<ServerConfig> = {}) {
       return identities[token];
     },
     chat,
+    searchDoctors,
+    checkDoctor,
   });
   return new Promise<void>((resolve) => {
     server = app.listen(0, () => {
@@ -70,6 +74,8 @@ afterEach(() => {
   server.close();
   store.close();
   chat.mockReset();
+  searchDoctors.mockReset();
+  checkDoctor.mockReset();
 });
 
 describe('server configuration', () => {
@@ -169,6 +175,31 @@ describe('setup chat', () => {
   });
 });
 
+describe('doctor lookups', () => {
+  const doctor = { npi: '1234567890', name: 'Test Doctor', credential: 'MD', specialty: 'Testing', locations: ['1 Main St · Testville, WA'] };
+  it('searches the registry for signed-in users with a last name', async () => {
+    expect((await post('/api/doctors/search', { last: 'Doctor' })).status).toBe(401);
+    const cookie = await signIn();
+    expect((await post('/api/doctors/search', { last: 'D' }, cookie)).status).toBe(400);
+    searchDoctors.mockResolvedValue([doctor]);
+    const response = await post('/api/doctors/search', { first: 'Test', last: 'Doctor' }, cookie);
+    expect(await response.json()).toEqual({ doctors: [doctor] });
+    expect(searchDoctors).toHaveBeenCalledWith({ first: 'Test', last: 'Doctor', city: '' });
+  });
+  it('checks websites for a valid doctor and hides failure details', async () => {
+    const cookie = await signIn();
+    expect((await post('/api/doctors/check', { doctor: { ...doctor, npi: 'x' }, carriers: ['A'] }, cookie)).status).toBe(400);
+    const check = { checkedAt: 'now', summary: 'ok', clinicName: '', clinicUrl: null, hospitalId: null, carriers: [], premeraListed: null };
+    checkDoctor.mockResolvedValue(check);
+    expect(await (await post('/api/doctors/check', { doctor, carriers: ['A'] }, cookie)).json()).toEqual({ check });
+    checkDoctor.mockRejectedValue(new Error('upstream secret'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const failed = await post('/api/doctors/check', { doctor, carriers: ['A'] }, cookie);
+    expect(failed.status).toBe(502);
+    expect(JSON.stringify(await failed.json())).not.toContain('upstream secret');
+  });
+});
+
 describe('chat prompt', () => {
   it('starts with the user, merges repeated roles, and puts the profile and what is missing in the last message', () => {
     const turns = buildMessages({
@@ -207,9 +238,9 @@ describe('cleaning assistant output', () => {
             { memberRef: 'ghost', label: 'X', age: 1 },
           ],
           addItems: [
-            { memberRef: 'm1', name: 'Inhaler', category: 'brandFills', perYear: 900, monthlyCost: 50, notes: '' },
-            { memberRef: 'new-1', name: 'Cream', category: 'selfPay', perYear: 1, monthlyCost: -5, notes: 'Estimated' },
-            { memberRef: 'nobody', name: 'Lost', category: 'labTests', perYear: 1, monthlyCost: null, notes: '' },
+            { memberRef: 'm1', name: 'Inhaler', category: 'brandFills', perYear: 900, monthlyCost: 50, notes: '', cashReason: 'preferCash' },
+            { memberRef: 'new-1', name: 'Cream', category: 'selfPay', perYear: 1, monthlyCost: -5, notes: 'Estimated', cashReason: 'usuallyNotCovered' },
+            { memberRef: 'nobody', name: 'Lost', category: 'labTests', perYear: 1, monthlyCost: null, notes: '', cashReason: null },
           ],
           removeItemIds: ['c1', 'not-an-item'],
           careComplete: ['m1', 'ghost'],
@@ -230,8 +261,8 @@ describe('cleaning assistant output', () => {
     expect(u.newMembers).toEqual([{ ref: 'new-1', label: 'Kid', age: 13 }]);
     expect(u.memberChanges).toEqual([{ memberRef: 'm1', label: null, age: 51 }]);
     expect(u.addItems).toEqual([
-      { memberRef: 'm1', name: 'Inhaler', category: 'brandFills', perYear: 366, monthlyCost: null, notes: '' },
-      { memberRef: 'new-1', name: 'Cream', category: 'selfPay', perYear: 12, monthlyCost: 0, notes: 'Estimated' },
+      { memberRef: 'm1', name: 'Inhaler', category: 'brandFills', perYear: 366, monthlyCost: null, notes: '', cashReason: null },
+      { memberRef: 'new-1', name: 'Cream', category: 'selfPay', perYear: 12, monthlyCost: 0, notes: 'Estimated', cashReason: 'usuallyNotCovered' },
     ]);
     expect(u.removeItemIds).toEqual(['c1']);
     expect(u.careComplete).toEqual(['m1']);

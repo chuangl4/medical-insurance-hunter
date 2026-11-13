@@ -1,3 +1,5 @@
+import type { DoctorFields } from './doctors';
+import type { CashReason } from './cashMeds';
 import type { FilingStatus, Household, ImmigrationStatus, Member } from './types';
 
 /** What a care item counts as when costing plans. `selfPay` is paid in cash on every plan. */
@@ -38,6 +40,8 @@ export interface CareItem {
   /** Monthly cash cost, used only for self-pay items. */
   monthlyCost: number | null;
   notes: string;
+  /** For self-pay items: why the plan won't pay, which decides the suggested next steps. */
+  cashReason?: CashReason;
 }
 
 export interface ProfileMember {
@@ -51,8 +55,11 @@ export interface ProfileMember {
   careReviewed?: boolean;
 }
 
-/** A hospital, clinic, or doctor that must be in network. `hospitalId` is set when the app can check networks for it. */
-export interface Provider {
+/**
+ * A hospital, clinic, or doctor that must be in network. `hospitalId` is set when the provider is a hospital the app
+ * can check networks for; doctors carry their registry record, website check, and the user's confirmations instead.
+ */
+export interface Provider extends DoctorFields {
   id: string;
   name: string;
   hospitalId: string | null;

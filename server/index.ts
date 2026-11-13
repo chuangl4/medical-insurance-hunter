@@ -5,6 +5,7 @@ import { createApp } from './app';
 import { loadConfig } from './config';
 import { Store } from './db';
 import { AssistantNotConfiguredError, chat, ReplyRefusedError } from './chat';
+import { checkDoctor, CheckRefusedError, searchDoctors } from './doctors';
 
 try {
   process.loadEnvFile();
@@ -17,6 +18,19 @@ const store = new Store(path.join(config.dataDir, 'app.db'), config.profileKey);
 const google = new OAuth2Client();
 const anthropic = new Anthropic();
 
+/** Reports a missing Claude key as such, rather than as a generic failure. */
+async function withClaude<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    // With no key or `ant auth login` profile, the SDK fails before sending; network and HTTP failures are APIErrors.
+    const noKey = !process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN;
+    const ours = error instanceof ReplyRefusedError || error instanceof CheckRefusedError;
+    if (noKey && !(error instanceof Anthropic.APIError) && !ours) throw new AssistantNotConfiguredError();
+    throw error;
+  }
+}
+
 const app = createApp({
   config,
   store,
@@ -26,18 +40,9 @@ const app = createApp({
     if (!payload?.sub || !payload.email) throw new Error('Token has no account details.');
     return { sub: payload.sub, email: payload.email, emailVerified: payload.email_verified === true, name: payload.name ?? '' };
   },
-  chat: async (request) => {
-    try {
-      return await chat(anthropic, request);
-    } catch (error) {
-      // With no key or `ant auth login` profile, the SDK fails before sending; network and HTTP failures are APIErrors.
-      const noKey = !process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN;
-      if (noKey && !(error instanceof Anthropic.APIError) && !(error instanceof ReplyRefusedError)) {
-        throw new AssistantNotConfiguredError();
-      }
-      throw error;
-    }
-  },
+  chat: (request) => withClaude(() => chat(anthropic, request)),
+  searchDoctors,
+  checkDoctor: (request) => withClaude(() => checkDoctor(anthropic, request)),
   staticDir: config.production ? path.resolve('dist') : undefined,
 });
 

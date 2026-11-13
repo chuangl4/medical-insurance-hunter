@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { nextGaps, type ChatUpdates } from '../src/domain/onboarding';
+import { CASH_REASONS } from '../src/domain/cashMeds';
 import { CARE_CATEGORIES, CATEGORY_LABELS, type Profile } from '../src/domain/profile';
 import { PLAN_YEAR } from '../src/domain/rules2027';
 import type { ChatRequest } from './schema';
@@ -46,6 +47,10 @@ const outputSchema = z.object({
         perYear: z.number().int(),
         monthlyCost: z.number().nullable(),
         notes: z.string(),
+        cashReason: z
+          .enum(CASH_REASONS)
+          .nullable()
+          .describe('For selfPay only: notOnDrugList, usuallyNotCovered (such as compounded or cosmetic products), or preferCash'),
       }),
     ),
     removeItemIds: z.array(z.string()),
@@ -95,7 +100,7 @@ Categories (id: meaning):
 ${CARE_CATEGORIES.map((c) => `- ${c}: ${CATEGORY_LABELS[c]}`).join('\n')}
 - Split each need into the services a plan bills separately. For example a yearly heart checkup is a specialist visit plus lab work plus an echocardiogram (diagnosticTests), as described.
 - perYear is times per year. A daily or monthly prescription is 12 fills; a 90-day supply is 4.
-- Medications: generic goes to genericFills, brand-name to brandFills. Use selfPay only when they say they pay without insurance or plans don't cover it, or for things health plans almost never cover (such as cosmetic or compounded products). For selfPay set monthlyCost to the monthly cash price (use the reference notes when they apply, otherwise a typical U.S. retail estimate) and say it's an estimate in notes; monthlyCost is null for every other category.
+- Medications: generic goes to genericFills, brand-name to brandFills. Use selfPay only when they say they pay without insurance or plans don't cover it, or for things health plans almost never cover (such as cosmetic or compounded products). For selfPay set monthlyCost to the monthly cash price (use the reference notes when they apply, otherwise a typical U.S. retail estimate) and say it's an estimate in notes; monthlyCost is null for every other category. Also set cashReason for selfPay: notOnDrugList when the user says the plan or drug list doesn't cover it, usuallyNotCovered for things plans almost never cover, preferCash when they choose to pay cash; null for other categories.
 - Only add care the user describes, or that a described treatment clearly requires (such as the specialist visits that come with a prescription). Put "Estimated" and the reason in notes for anything you inferred.
 
 ## Updates
@@ -215,6 +220,7 @@ export function cleanOutput(raw: RawOutput, request: Pick<ChatRequest, 'profile'
             perYear: selfPay ? 12 : clampInt(i.perYear, 0, 366),
             monthlyCost: selfPay ? Math.min(100_000, Math.max(0, i.monthlyCost ?? 0)) : null,
             notes: trimmed(i.notes, 500),
+            cashReason: selfPay ? i.cashReason : null,
           };
         }),
       removeItemIds: u.removeItemIds.filter((id) => itemIds.has(id)),

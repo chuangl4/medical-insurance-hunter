@@ -1,3 +1,4 @@
+import type { ClinicCheck, DoctorRecord } from './domain/doctors';
 import type { ChatUpdates } from './domain/onboarding';
 import type { Profile } from './domain/profile';
 
@@ -48,4 +49,8 @@ export const api = {
     hints: string[];
     knownHospitals: { id: string; name: string }[];
   }) => call<{ reply: string; quickReplies: string[]; updates: ChatUpdates }>('/api/chat', { method: 'POST', body }),
+  searchDoctors: (query: { first: string; last: string; city: string }) =>
+    call<{ doctors: DoctorRecord[] }>('/api/doctors/search', { method: 'POST', body: query }).then((r) => r.doctors),
+  checkDoctor: (body: { doctor: DoctorRecord; carriers: string[]; hospitals: { id: string; name: string }[] }) =>
+    call<{ check: ClinicCheck }>('/api/doctors/check', { method: 'POST', body }).then((r) => r.check),
 };

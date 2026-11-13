@@ -12,7 +12,8 @@ export type CareCounts = Pick<
   | 'erVisits'
   | 'hospitalStays'
 >;
-export type NetworkStatus = 'in' | 'limited' | 'not-listed' | 'unknown';
+/** 'out' is confirmed out of network; 'not-listed' only means the hospital's list didn't name the plan. */
+export type NetworkStatus = 'in' | 'limited' | 'out' | 'not-listed' | 'unknown';
 
 export interface CareNeed {
   label: string;

@@ -19,7 +19,7 @@ describe('what the chat still needs', () => {
           { ref: 'new-1', label: 'Me', age: 41 },
           { ref: 'new-2', label: 'Jo', age: null },
         ],
-        addItems: [{ memberRef: 'new-1', name: 'Cardiologist', category: 'specialistVisits', perYear: 2, monthlyCost: null, notes: '' }],
+        addItems: [{ memberRef: 'new-1', name: 'Cardiologist', category: 'specialistVisits', perYear: 2, monthlyCost: null, notes: '', cashReason: null }],
         careComplete: ['new-1'],
       }),
     );
@@ -72,7 +72,7 @@ describe('applying chat updates', () => {
   it('replaces corrected items, records providers once, and describes the changes', () => {
     const u = updates({
       removeItemIds: ['c1'],
-      addItems: [{ memberRef: 'm1', name: 'Generic pill', category: 'genericFills', perYear: 12, monthlyCost: null, notes: '' }],
+      addItems: [{ memberRef: 'm1', name: 'Generic pill', category: 'genericFills', perYear: 12, monthlyCost: null, notes: '', cashReason: null }],
       providers: [{ name: 'Hospital One', hospitalId: 'h1' }],
     });
     const next = applyChatUpdates(start, u);
@@ -96,7 +96,7 @@ describe('applying chat updates', () => {
   it('ignores updates for unknown people', () => {
     const next = applyChatUpdates(
       start,
-      updates({ addItems: [{ memberRef: 'ghost', name: 'X', category: 'labTests', perYear: 1, monthlyCost: null, notes: '' }] }),
+      updates({ addItems: [{ memberRef: 'ghost', name: 'X', category: 'labTests', perYear: 1, monthlyCost: null, notes: '', cashReason: null }] }),
     );
     expect(next.members[0].careItems).toHaveLength(1);
   });

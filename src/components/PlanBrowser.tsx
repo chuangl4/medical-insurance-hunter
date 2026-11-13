@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
-import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, hospitalStatus } from '../data/hospitalNetworks';
+import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
+import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
+import type { Provider } from '../domain/profile';
+import { DoctorHelp } from './DoctorHelp';
 import {
   EMPTY_FILTERS,
   SORT_LABELS,
@@ -23,6 +26,10 @@ interface Props {
   maxCompare: number;
   onToggleCompare: (id: string) => void;
   onOpenCompare: () => void;
+  /** Must-have doctors and clinics (providers that aren't tracked hospitals). */
+  doctors: Provider[];
+  /** Doctors being looked up right now. */
+  checkingDoctors: string[];
 }
 
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -80,7 +87,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 }
 
 export function PlanBrowser(props: Props) {
-  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare } = props;
+  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors } = props;
   const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
   const [descending, setDescending] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -89,15 +96,15 @@ export function PlanBrowser(props: Props) {
   const carriers = useMemo(() => [...new Set(plans.map((p) => p.plan.carrier))].sort(), [plans]);
   const counts = useMemo(
     () => ({
-      metals: optionCounts(plans, filters, 'metals', (p) => p.metal),
-      networks: optionCounts(plans, filters, 'networks', networkOf),
-      carriers: optionCounts(plans, filters, 'carriers', (p) => p.carrier),
+      metals: optionCounts(plans, filters, 'metals', (p) => p.metal, doctors),
+      networks: optionCounts(plans, filters, 'networks', networkOf, doctors),
+      carriers: optionCounts(plans, filters, 'carriers', (p) => p.carrier, doctors),
     }),
-    [plans, filters],
+    [plans, filters, doctors],
   );
   const visible = useMemo(
-    () => sortPlans(applyFilters(plans, filters), sortKey, descending),
-    [plans, filters, sortKey, descending],
+    () => sortPlans(applyFilters(plans, filters, doctors), sortKey, descending),
+    [plans, filters, doctors, sortKey, descending],
   );
 
   return (
@@ -134,7 +141,7 @@ export function PlanBrowser(props: Props) {
             <option value="direct">Directly from the insurer (no credit)</option>
           </select>
         </label>
-        {HOSPITAL_IDS.length > 0 && (
+        {HOSPITAL_IDS.length + doctors.length > 0 && (
         <fieldset className="filter-group">
           <legend>Must be in network</legend>
           {HOSPITAL_IDS.map((id) => (
@@ -147,6 +154,19 @@ export function PlanBrowser(props: Props) {
               <span>{HOSPITALS[id].name}</span>
             </label>
           ))}
+          {doctors.map((d) => (
+            <label className="check" key={d.id}>
+              <input
+                type="checkbox"
+                checked={filters.doctors.includes(d.id)}
+                onChange={() => set({ doctors: toggled(filters.doctors, d.id) })}
+              />
+              <span>{d.name}</span>
+            </label>
+          ))}
+          {doctors.length > 0 && (
+            <small className="hint">A doctor hides a plan only after you mark them out of network for its insurer.</small>
+          )}
         </fieldset>
         )}
         <CheckGroup
@@ -270,6 +290,7 @@ export function PlanBrowser(props: Props) {
                   <div className="metric-lead">
                     <dt>Expected year</dt>
                     <dd>{moneyOrUnknown(item.expectedYear)}</dd>
+                    {item.selfPayYear > 0 && plan.benefits && <small>incl. {money(item.selfPayYear)} cash meds</small>}
                   </div>
                   <div>
                     <dt>Bad year</dt>
@@ -288,9 +309,6 @@ export function PlanBrowser(props: Props) {
                     <dd>{moneyOrUnknown(item.oopMax)}</dd>
                   </div>
                 </dl>
-                {item.selfPayYear > 0 && plan.benefits && (
-                  <p className="muted plan-copays">Yearly costs include {money(item.selfPayYear)} for medications paid without insurance.</p>
-                )}
                 {HOSPITAL_IDS.length > 0 && (
                 <ul className="hospital-list">
                   {HOSPITAL_IDS.map((id) => {
@@ -302,6 +320,21 @@ export function PlanBrowser(props: Props) {
                     );
                   })}
                 </ul>
+                )}
+                {doctors.length > 0 && (
+                  <ul className="hospital-list">
+                    {doctors.map((d) => {
+                      const { status } = doctorStatusFor(d, plan);
+                      const checking = checkingDoctors.includes(d.id);
+                      return (
+                        <li key={d.id} className={`hospital doctor-${status}`}>
+                          <span className="hospital-name">{d.name}:</span>{' '}
+                          {checking && status === 'unknown' ? 'Checking…' : DOCTOR_STATUS_LABELS[status]}{' '}
+                          <DoctorHelp provider={d} plan={plan} checking={checking} />
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
                 {plan.benefits ? (
                   <p className="muted plan-copays">

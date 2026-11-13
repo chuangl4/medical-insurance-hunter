@@ -227,6 +227,17 @@ describe('hospital networks', () => {
     expect(applyFilters(evaluated, { ...EMPTY_FILTERS, hospitals: ['testHospital'] }).map((p) => p.plan.name)).toEqual(['In']);
     expect(applyFilters(evaluated, EMPTY_FILTERS)).toHaveLength(2);
   });
+
+  it('hides a plan only when a doctor is confirmed out of network for its insurer', () => {
+    const plans = [plan({ id: 'a', name: 'In', carrier: 'Carrier In' }), plan({ id: 'b', name: 'Out', carrier: 'Carrier Out' })].map((p) =>
+      evaluatePlan(p, household(), 0),
+    );
+    const doctor = { id: 'd1', name: 'Test Doctor', hospitalId: null, confirmed: { 'Carrier Out': 'out' as const } };
+    const filters = { ...EMPTY_FILTERS, doctors: ['d1'] };
+    expect(applyFilters(plans, filters, [doctor]).map((p) => p.plan.name)).toEqual(['In']);
+    expect(applyFilters(plans, filters, [{ ...doctor, confirmed: {} }])).toHaveLength(2);
+    expect(applyFilters(plans, EMPTY_FILTERS, [doctor])).toHaveLength(2);
+  });
 });
 
 describe('King County data', () => {

@@ -144,7 +144,7 @@ export function checklist(profile: Profile): ChecklistStep[] {
 export interface ChatUpdates {
   newMembers: { ref: string; label: string; age: number | null }[];
   memberChanges: { memberRef: string; label: string | null; age: number | null }[];
-  addItems: (Omit<CareItem, 'id'> & { memberRef: string })[];
+  addItems: (Omit<CareItem, 'id' | 'cashReason'> & { memberRef: string; cashReason: CareItem['cashReason'] | null })[];
   removeItemIds: string[];
   /** People whose care list the user confirmed is complete. */
   careComplete: string[];
@@ -206,7 +206,11 @@ export function applyChatUpdates(profile: Profile, u: ChatUpdates): Profile {
         ...member.careItems.filter((item) => !removed.has(item.id)),
         ...u.addItems
           .filter((item) => refToId.get(item.memberRef) === member.id)
-          .map(({ memberRef: _ref, ...item }) => ({ ...item, id: newId('care') })),
+          .map(({ memberRef: _ref, cashReason, ...item }): CareItem => ({
+            ...item,
+            id: newId('care'),
+            ...(item.category === 'selfPay' && cashReason ? { cashReason } : {}),
+          })),
       ],
     };
     if (needsAge && change?.age == null) next.needsAge = true;

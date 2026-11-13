@@ -1,4 +1,6 @@
-import { hospitalStatus, type HospitalId } from '../data/hospitalNetworks';
+import { doctorStatusFor, hospitalStatus, type HospitalId } from '../data/hospitalNetworks';
+import { excludesPlan } from './doctors';
+import type { Provider } from './profile';
 import type { Channel, EvaluatedPlan, Metal, NetworkType, Plan } from './types';
 
 /** A plan's network type, or 'unconfirmed' when its documents didn't say. */
@@ -39,6 +41,8 @@ export interface Filters {
   maxOopMax: number | null;
   /** Hospitals a plan must have in network. */
   hospitals: HospitalId[];
+  /** Doctors (provider ids) a plan must not be confirmed out of network for. */
+  doctors: string[];
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -53,6 +57,7 @@ export const EMPTY_FILTERS: Filters = {
   maxDeductible: null,
   maxOopMax: null,
   hospitals: [],
+  doctors: [],
 };
 
 function routeAllows(route: BuyingRoute, channel: Channel): boolean {
@@ -61,7 +66,8 @@ function routeAllows(route: BuyingRoute, channel: Channel): boolean {
   return true;
 }
 
-export function applyFilters(plans: EvaluatedPlan[], f: Filters): EvaluatedPlan[] {
+export function applyFilters(plans: EvaluatedPlan[], f: Filters, providers: Provider[] = []): EvaluatedPlan[] {
+  const doctors = providers.filter((p) => f.doctors.includes(p.id));
   const search = f.search.trim().toLowerCase();
   return plans.filter(({ plan, netMonthly, deductible, oopMax }) => {
     if (search && !`${plan.name} ${plan.carrier}`.toLowerCase().includes(search)) return false;
@@ -72,6 +78,7 @@ export function applyFilters(plans: EvaluatedPlan[], f: Filters): EvaluatedPlan[
     if (f.hsaOnly && !plan.hsaEligible) return false;
     if (f.cascadeOnly && !plan.cascadeCare) return false;
     if (f.hospitals.some((hospital) => hospitalStatus(plan, hospital) !== 'in')) return false;
+    if (doctors.some((d) => excludesPlan(doctorStatusFor(d, plan).status))) return false;
     if (f.maxMonthly !== null && netMonthly > f.maxMonthly) return false;
     if (f.maxDeductible !== null && (deductible === null || deductible > f.maxDeductible)) return false;
     if (f.maxOopMax !== null && (oopMax === null || oopMax > f.maxOopMax)) return false;
@@ -88,9 +95,10 @@ export function optionCounts<K extends 'metals' | 'networks' | 'carriers'>(
   f: Filters,
   field: K,
   keyOf: (plan: Plan) => string,
+  providers: Provider[] = [],
 ): Record<string, number> {
   const counts: Record<string, number> = {};
-  for (const { plan } of applyFilters(plans, { ...f, [field]: [] })) counts[keyOf(plan)] = (counts[keyOf(plan)] ?? 0) + 1;
+  for (const { plan } of applyFilters(plans, { ...f, [field]: [] }, providers)) counts[keyOf(plan)] = (counts[keyOf(plan)] ?? 0) + 1;
   return counts;
 }
 

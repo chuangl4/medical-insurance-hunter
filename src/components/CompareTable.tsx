@@ -1,4 +1,8 @@
-import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, hospitalStatus } from '../data/hospitalNetworks';
+import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
+import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
+import type { Provider } from '../domain/profile';
+import type { ReactNode } from 'react';
+import { DoctorHelp } from './DoctorHelp';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
 
@@ -6,13 +10,17 @@ interface Props {
   plans: EvaluatedPlan[];
   onRemove: (id: string) => void;
   onBrowse: () => void;
+  doctors: Provider[];
+  checkingDoctors: string[];
 }
 
 interface Row {
   label: string;
-  text: (p: EvaluatedPlan) => string;
+  text: (p: EvaluatedPlan) => ReactNode;
   /** Rows with a numeric value mark the lowest plan. */
   value?: (p: EvaluatedPlan) => number | null;
+  /** Hide the row when this is true for every plan. */
+  hideIf?: (p: EvaluatedPlan) => boolean;
 }
 
 const ROWS: Row[] = [
@@ -25,6 +33,11 @@ const ROWS: Row[] = [
   { label: 'Expected year', text: (p) => moneyOrUnknown(p.expectedYear), value: (p) => p.expectedYear },
   { label: 'Bad year', text: (p) => moneyOrUnknown(p.badYear), value: (p) => p.badYear },
   { label: 'Worst case', text: (p) => moneyOrUnknown(p.worstCase), value: (p) => p.worstCase },
+  {
+    label: 'Cash medications (in each total above)',
+    text: (p) => `${money(p.selfPayYear)} a year`,
+    hideIf: (p) => p.selfPayYear === 0,
+  },
   { label: 'Deductible', text: (p) => moneyOrUnknown(p.deductible), value: (p) => p.deductible },
   { label: 'Out-of-pocket limit', text: (p) => moneyOrUnknown(p.oopMax), value: (p) => p.oopMax },
   { label: 'Primary care', text: (p) => primaryCareText(p.plan.benefits) },
@@ -45,7 +58,17 @@ const ROWS: Row[] = [
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];
 
-export function CompareTable({ plans, onRemove, onBrowse }: Props) {
+export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors }: Props) {
+  const doctorRows: Row[] = doctors.map((d) => ({
+    label: d.name,
+    text: (p) => (
+      <>
+        {DOCTOR_STATUS_LABELS[doctorStatusFor(d, p.plan).status]}{' '}
+        <DoctorHelp provider={d} plan={p.plan} checking={checkingDoctors.includes(d.id)} />
+      </>
+    ),
+  }));
+  const rows = [...ROWS.slice(0, HOSPITAL_IDS.length), ...doctorRows, ...ROWS.slice(HOSPITAL_IDS.length)];
   if (plans.length === 0) {
     return (
       <div className="empty">
@@ -77,7 +100,7 @@ export function CompareTable({ plans, onRemove, onBrowse }: Props) {
           </tr>
         </thead>
         <tbody>
-          {ROWS.map((row) => {
+          {rows.filter((row) => !row.hideIf || !plans.every(row.hideIf)).map((row) => {
             const values = row.value ? plans.map(row.value).filter((v): v is number => v !== null) : [];
             const lowest = values.length ? Math.min(...values) : null;
             const showBest = plans.length > 1 && lowest !== null && values.some((v) => v !== lowest);

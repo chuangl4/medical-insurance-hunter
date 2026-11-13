@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, type User } from './api';
+import { CashMedsSummary } from './components/CashMedsSummary';
 import { ChatOnboarding, type ChatMessage } from './components/ChatOnboarding';
 import { CompareTable } from './components/CompareTable';
 import { PlanBrowser } from './components/PlanBrowser';
@@ -13,6 +14,7 @@ import { REQUIRED_HOSPITALS } from './data/hospitalNetworks';
 import { EMPTY_FILTERS, type Filters } from './domain/filter';
 import { EMPTY_PROFILE, householdFromProfile, profileFromLegacy, type LegacyHousehold, type Profile } from './domain/profile';
 import { ENROLLMENT, PLAN_YEAR } from './domain/rules2027';
+import { useDoctorLookups } from './useDoctorLookups';
 
 /** Where earlier versions kept the household. It's moved into the account on first sign-in. */
 const LEGACY_STORAGE_KEY = 'mih.household.v1';
@@ -57,6 +59,7 @@ export function App() {
   // Kept in memory only, so the conversation survives switching tabs but not a reload.
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const lastSaved = useRef<Profile | null>(null);
+  const doctorLookups = useDoctorLookups(profile, setProfile);
 
   const startSession = useCallback((signedIn: User) => {
     setUser(signedIn);
@@ -114,6 +117,13 @@ export function App() {
     if (!providerHospitals) return;
     setFilters((f) => ({ ...f, hospitals: [...new Set([...f.hospitals, ...providerHospitals.split(',')])] }));
   }, [providerHospitals]);
+  // Doctors and clinics: everything else on the must-have list. Each one joins the filter when added.
+  const doctors = useMemo(() => (profile?.providers ?? []).filter((p) => !p.hospitalId && p.name.trim()), [profile?.providers]);
+  const doctorIds = doctors.map((d) => d.id).join(',');
+  useEffect(() => {
+    if (!doctorIds) return;
+    setFilters((f) => ({ ...f, doctors: [...new Set([...f.doctors, ...doctorIds.split(',')])] }));
+  }, [doctorIds]);
 
   const household = useMemo(() => householdFromProfile(profile ?? EMPTY_PROFILE), [profile]);
   const subsidy = useMemo(() => estimateSubsidy(KING_COUNTY_PLANS, household), [household]);
@@ -194,7 +204,11 @@ export function App() {
   }
 
   const hasPeople = profile.members.length > 0;
-  const uncheckedProviders = (profile.providers ?? []).filter((p) => !p.hospitalId && p.name.trim()).map((p) => p.name.trim());
+  // Doctors the automatic lookup couldn't finish on its own.
+  const uncheckedProviders = doctors
+    .filter((d) => !d.clinicCheck && !doctorLookups.checking.includes(d.id) && !Object.keys(d.confirmed ?? {}).length)
+    .filter((d) => d.lookup?.registry || d.lookup?.websites)
+    .map((d) => d.name.trim());
   return (
     <div className="app">
       {header}
@@ -234,13 +248,33 @@ export function App() {
               onUseForm={() => setChatOpen(false)}
             />
           ) : (
-            <ProfileForm profile={profile} onChange={setProfile} onDone={() => setTab('plans')} onOpenChat={() => setChatOpen(true)} />
+            <ProfileForm
+              profile={profile}
+              onChange={setProfile}
+              onDone={() => setTab('plans')}
+              onOpenChat={() => setChatOpen(true)}
+              onPatchProvider={(id, patch) =>
+                setProfile((prev) =>
+                  prev && { ...prev, providers: (prev.providers ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) },
+                )
+              }
+              checking={doctorLookups.checking}
+              onRecheck={doctorLookups.recheck}
+            />
           ))}
+        {tab === 'plans' && (
+          <CashMedsSummary
+            profile={profile}
+            onEdit={() => {
+              setChatOpen(false);
+              setTab('household');
+            }}
+          />
+        )}
         {tab === 'plans' && uncheckedProviders.length > 0 && (
           <p className="sample-banner" role="note">
-            <strong>Check these yourself:</strong> {uncheckedProviders.join(', ')}. The app can't check{' '}
-            {uncheckedProviders.length === 1 ? 'its network' : 'their networks'} yet, so look them up in each insurer's provider
-            directory before you enroll.
+            <strong>Needs your help:</strong> the app couldn't finish looking up {uncheckedProviders.join(', ')}. Use the ? next
+            to each name to see what it tried, then pick the right person or mark each insurer in Your household.
           </p>
         )}
         {tab === 'plans' && (
@@ -252,10 +286,12 @@ export function App() {
             maxCompare={MAX_COMPARE}
             onToggleCompare={toggleCompare}
             onOpenCompare={() => setTab('compare')}
+            doctors={doctors}
+            checkingDoctors={doctorLookups.checking}
           />
         )}
         {tab === 'compare' && (
-          <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => setTab('plans')} />
+          <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => setTab('plans')} doctors={doctors} checkingDoctors={doctorLookups.checking} />
         )}
       </main>
     </div>

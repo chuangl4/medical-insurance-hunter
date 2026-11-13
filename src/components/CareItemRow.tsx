@@ -1,4 +1,6 @@
+import { CASH_REASONS, CASH_REASON_LABELS, CASH_RULE, HSA_TIP, cashActions, type CashReason } from '../domain/cashMeds';
 import { CARE_CATEGORIES, CATEGORY_LABELS, type CareCategory, type CareItem } from '../domain/profile';
+import { money } from '../format';
 
 type EditableItem = Omit<CareItem, 'id'>;
 
@@ -19,6 +21,7 @@ export function CareItemRow<T extends EditableItem>({ item, onChange, onRemove }
       category,
       perYear: category === 'selfPay' ? 12 : item.perYear,
       monthlyCost: category === 'selfPay' ? (item.monthlyCost ?? 0) : null,
+      cashReason: category === 'selfPay' ? (item.cashReason ?? 'notOnDrugList') : undefined,
     });
 
   return (
@@ -63,6 +66,36 @@ export function CareItemRow<T extends EditableItem>({ item, onChange, onRemove }
         Remove
       </button>
       {item.notes && <small className="care-notes">{item.notes}</small>}
+      {selfPay && (
+        <div className="cash-detail">
+          <p>
+            {money(item.monthlyCost ?? 0)} a month × 12 = <strong>{money((item.monthlyCost ?? 0) * 12)} a year</strong>. {CASH_RULE}
+          </p>
+          <div className="cash-detail-row">
+            <label className="inline-field">
+              <span>Why it's paid in cash</span>
+              <select
+                value={item.cashReason ?? 'notOnDrugList'}
+                onChange={(e) => onChange({ ...item, cashReason: e.target.value as CashReason })}
+              >
+                {CASH_REASONS.map((r) => (
+                  <option key={r} value={r}>
+                    {CASH_REASON_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <details className="cash-steps-toggle">
+              <summary>What to do</summary>
+              <ul>
+                {[...cashActions(item.name || 'this medication', item.cashReason), HSA_TIP].map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ul>
+            </details>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
