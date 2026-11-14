@@ -115,6 +115,10 @@ export interface EvaluatedPlan {
   expectedYear: number | null;
   badYear: number | null;
   worstCase: number | null;
+  /** The parts of the yearly totals, for explaining them. Care amounts are null without a benefit summary. */
+  premiumYear: number;
+  careExpected: number | null;
+  careBadYear: number | null;
   deductible: number | null;
   oopMax: number | null;
 }

@@ -3,6 +3,8 @@ import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus
 import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import type { Provider } from '../domain/profile';
 import { DoctorHelp } from './DoctorHelp';
+import { SeverityMark } from './ScenarioGuide';
+import { ScenarioMath } from './ScenarioMath';
 import {
   EMPTY_FILTERS,
   SORT_LABELS,
@@ -30,6 +32,8 @@ interface Props {
   doctors: Provider[];
   /** Doctors being looked up right now. */
   checkingDoctors: string[];
+  /** Who the bad-year hospital stay is for. */
+  firstName: string;
 }
 
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -87,7 +91,8 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 }
 
 export function PlanBrowser(props: Props) {
-  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors } = props;
+  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName } = props;
+  const [mathOpen, setMathOpen] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
   const [descending, setDescending] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -288,16 +293,22 @@ export function PlanBrowser(props: Props) {
                     {item.creditMonthly > 0 && <small>{money(item.fullMonthly)} before credit</small>}
                   </div>
                   <div className="metric-lead">
-                    <dt>Expected year</dt>
+                    <dt>
+                      <SeverityMark level={1} /> Expected year
+                    </dt>
                     <dd>{moneyOrUnknown(item.expectedYear)}</dd>
                     {item.selfPayYear > 0 && plan.benefits && <small>incl. {money(item.selfPayYear)} cash meds</small>}
                   </div>
                   <div>
-                    <dt>Bad year</dt>
+                    <dt>
+                      <SeverityMark level={2} /> Bad year
+                    </dt>
                     <dd>{moneyOrUnknown(item.badYear)}</dd>
                   </div>
                   <div>
-                    <dt>Worst case</dt>
+                    <dt>
+                      <SeverityMark level={3} /> Worst case
+                    </dt>
                     <dd>{moneyOrUnknown(item.worstCase)}</dd>
                   </div>
                   <div>
@@ -309,6 +320,17 @@ export function PlanBrowser(props: Props) {
                     <dd>{moneyOrUnknown(item.oopMax)}</dd>
                   </div>
                 </dl>
+                {plan.benefits && (
+                  <button
+                    type="button"
+                    className="link-button math-toggle"
+                    aria-expanded={mathOpen.includes(plan.id)}
+                    onClick={() => setMathOpen((open) => toggled(open, plan.id))}
+                  >
+                    {mathOpen.includes(plan.id) ? 'Hide the math' : 'See the math'}
+                  </button>
+                )}
+                {mathOpen.includes(plan.id) && <ScenarioMath item={item} firstName={firstName} />}
                 {HOSPITAL_IDS.length > 0 && (
                 <ul className="hospital-list">
                   {HOSPITAL_IDS.map((id) => {
@@ -376,8 +398,8 @@ export function PlanBrowser(props: Props) {
               .{' '}
             </>
           )}
-          Yearly costs include premiums and in-network care, using rough price assumptions. A bad year adds one three-day
-          hospital stay for the first person listed. Worst case is premiums plus the out-of-pocket limit.
+          Yearly costs include premiums and in-network care, using rough price assumptions. See the guide above the list, or
+          "See the math" on any plan, for how each number is worked out.
         </p>
       </section>
     </div>

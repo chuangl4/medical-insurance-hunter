@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, type User } from './api';
 import { CashMedsSummary } from './components/CashMedsSummary';
+import { ScenarioGuide } from './components/ScenarioGuide';
 import { ChatOnboarding, type ChatMessage } from './components/ChatOnboarding';
 import { CompareTable } from './components/CompareTable';
 import { PlanBrowser } from './components/PlanBrowser';
@@ -271,6 +272,9 @@ export function App() {
             }}
           />
         )}
+        {tab === 'plans' && (
+          <ScenarioGuide members={household.members} hasCash={household.members.some((m) => Object.values(m.selfPayDrugs).some((c) => c > 0))} />
+        )}
         {tab === 'plans' && uncheckedProviders.length > 0 && (
           <p className="sample-banner" role="note">
             <strong>Needs your help:</strong> the app couldn't finish looking up {uncheckedProviders.join(', ')}. Use the ? next
@@ -288,6 +292,7 @@ export function App() {
             onOpenCompare={() => setTab('compare')}
             doctors={doctors}
             checkingDoctors={doctorLookups.checking}
+            firstName={household.members[0]?.label || 'the first person listed'}
           />
         )}
         {tab === 'compare' && (

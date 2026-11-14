@@ -288,3 +288,49 @@ a { color: var(--accent); }
 .step-done .step-mark { color: var(--accent); }
 .step-failed .step-mark, .step-missing .step-mark { color: var(--warn-text); }
 .step-running .step-mark { color: var(--muted); }
+
+/* Scenario explanations. Chart colors are the validated categorical slots 1–3 (blue, orange, aqua). */
+:root { --part-premiums: #2a78d6; --part-care: #eb6834; --part-cash: #1baf7a; }
+@media (prefers-color-scheme: dark) {
+  :root { --part-premiums: #3987e5; --part-care: #d95926; --part-cash: #199e70; }
+}
+.severity { display: inline-flex; align-items: flex-end; gap: 2px; height: 0.8em; margin-right: 2px; vertical-align: baseline; }
+.severity span { width: 3px; border-radius: 1px; background: var(--border); }
+.severity span:nth-child(1) { height: 40%; }
+.severity span:nth-child(2) { height: 70%; }
+.severity span:nth-child(3) { height: 100%; }
+.severity span.on { background: var(--muted); }
+.severity-3 span.on { background: var(--warn-text); }
+
+.scenario-guide { margin-bottom: 16px; }
+.scenario-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.scenario-head h2 { margin: 0 0 12px; font-size: 1.05rem; }
+.scenario-cards { list-style: none; margin: 0 0 8px; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.scenario-card { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.scenario-card p { margin: 0; font-size: 0.9rem; }
+.scenario-title { display: flex; align-items: center; gap: 6px; }
+.scenario-title h3 { margin: 0; font-size: 1rem; }
+.scenario-question { font-weight: 600; }
+.scenario-use { color: var(--muted); margin-top: auto !important; }
+.scenario-reopen { display: inline-block; margin: 2px 0 14px; }
+@media (max-width: 760px) { .scenario-cards { grid-template-columns: 1fr; } }
+
+.math-toggle { margin: 4px 0 2px; align-self: flex-start; justify-self: start; text-align: left; }
+.scenario-takeaway { font-size: 0.95rem; }
+.scenario-math { border-top: 1px solid var(--border); padding-top: 10px; margin: 6px 0 4px; display: flex; flex-direction: column; gap: 10px; }
+.scenario-math p { margin: 0; }
+.chart-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.85rem; color: var(--muted); }
+.chart-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.part-premiums { background: var(--part-premiums); }
+.part-care { background: var(--part-care); }
+.part-cash { background: var(--part-cash); }
+.scenario-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.scenario-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; font-size: 0.92rem; }
+.scenario-row-name { display: inline-flex; align-items: center; gap: 4px; }
+.stack-track { display: flex; gap: 2px; height: 14px; }
+.stack-seg { display: block; height: 100%; min-width: 3px; }
+.stack-seg:first-child { border-radius: 4px 0 0 4px; }
+.stack-seg:last-child { border-radius: 0 4px 4px 0; }
+.stack-seg:only-child { border-radius: 4px; }
+.scenario-explain { font-size: 0.85rem; color: var(--muted); margin-top: 4px !important; }

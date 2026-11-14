@@ -225,16 +225,20 @@ export function evaluatePlan(
       (sum, m) => sum + Object.values(m.selfPayDrugs).reduce((total, cost) => total + (cost ?? 0), 0),
       0,
     ) * 12;
-  const base = { plan, fullMonthly, creditMonthly, netMonthly, selfPayYear };
+  const base = { plan, fullMonthly, creditMonthly, netMonthly, selfPayYear, premiumYear: annualPremium };
   if (!benefits) {
-    return { ...base, expectedYear: null, badYear: null, worstCase: null, deductible: null, oopMax: null };
+    return { ...base, expectedYear: null, badYear: null, worstCase: null, deductible: null, oopMax: null, careExpected: null, careBadYear: null };
   }
   const oopMax = isFamily ? benefits.oopMax.family : benefits.oopMax.individual;
+  const careExpected = outOfPocket(benefits, household.members);
+  const careBadYear = outOfPocket(benefits, household.members, 1);
 
   return {
     ...base,
-    expectedYear: annualPremium + selfPayYear + outOfPocket(benefits, household.members),
-    badYear: annualPremium + selfPayYear + outOfPocket(benefits, household.members, 1),
+    careExpected,
+    careBadYear,
+    expectedYear: annualPremium + selfPayYear + careExpected,
+    badYear: annualPremium + selfPayYear + careBadYear,
     worstCase: annualPremium + selfPayYear + oopMax,
     deductible: isFamily ? benefits.deductible.family : benefits.deductible.individual,
     oopMax,
