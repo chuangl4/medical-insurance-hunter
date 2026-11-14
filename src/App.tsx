@@ -15,7 +15,7 @@ import { REQUIRED_HOSPITALS } from './data/hospitalNetworks';
 import { EMPTY_FILTERS, type Filters } from './domain/filter';
 import { EMPTY_PROFILE, householdFromProfile, profileFromLegacy, type LegacyHousehold, type Profile } from './domain/profile';
 import { ENROLLMENT, PLAN_YEAR } from './domain/rules2027';
-import { useDoctorLookups } from './useDoctorLookups';
+import { requiredHospitalsOf, useDoctorLookups } from './useDoctorLookups';
 
 /** Where earlier versions kept the household. It's moved into the account on first sign-in. */
 const LEGACY_STORAGE_KEY = 'mih.household.v1';
@@ -293,10 +293,11 @@ export function App() {
             doctors={doctors}
             checkingDoctors={doctorLookups.checking}
             firstName={household.members[0]?.label || 'the first person listed'}
+            requiredIds={requiredHospitalsOf(profile)}
           />
         )}
         {tab === 'compare' && (
-          <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => setTab('plans')} doctors={doctors} checkingDoctors={doctorLookups.checking} />
+          <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => setTab('plans')} doctors={doctors} checkingDoctors={doctorLookups.checking} requiredIds={requiredHospitalsOf(profile)} />
         )}
       </main>
     </div>

@@ -334,3 +334,28 @@ a { color: var(--accent); }
 .stack-seg:last-child { border-radius: 0 4px 4px 0; }
 .stack-seg:only-child { border-radius: 4px; }
 .scenario-explain { font-size: 0.85rem; color: var(--muted); margin-top: 4px !important; }
+
+/* Hospital access grid */
+.hospital-access { margin-bottom: 16px; }
+.hospital-access > summary { display: flex; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; }
+.hospital-access > summary::-webkit-details-marker { display: none; }
+.hospital-access[open] > summary { margin-bottom: 10px; }
+.access-grid { border-collapse: collapse; font-size: 0.85rem; min-width: 820px; width: 100%; table-layout: fixed; }
+.access-grid col.insurer-col { width: 190px; }
+.access-grid th, .access-grid td { padding: 6px 6px; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
+.access-grid tbody th { text-align: left; font-weight: 600; }
+.access-grid th small, .access-grid td small { display: block; font-weight: 400; color: var(--muted); font-size: 0.75rem; }
+.access-grid .facility-col { font-weight: 600; line-height: 1.2; }
+.access-grid .tier-row th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--border); }
+.access-grid .tier-mustHave { color: var(--accent); }
+.access-grid tr > :is(td, th).access:first-of-type { border-left: 0; }
+.access-in { color: var(--accent); font-weight: 700; }
+.access-out { color: var(--muted); }
+.access-flag { background: var(--warn-bg); }
+.flag-mark { color: var(--warn-text); font-weight: 700; margin-left: 2px; }
+.flag-note { display: block; font-size: 0.68rem; line-height: 1.2; font-weight: 400; color: var(--warn-text); }
+.access-grid tr.dimmed { opacity: 0.45; }
+.access-line { margin: 2px 0 0; font-size: 0.88rem; color: var(--warn-text); }
+.access-line.access-full { color: var(--accent); }
+.flag-inline { color: var(--warn-text); font-size: 0.82rem; }
+.flag-list { list-style: none; margin: 10px 0 0; padding: 8px 12px; background: var(--warn-bg); border-radius: 8px; font-size: 0.85rem; color: var(--warn-text); display: flex; flex-direction: column; gap: 4px; }

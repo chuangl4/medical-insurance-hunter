@@ -3,6 +3,8 @@ import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import type { Provider } from '../domain/profile';
 import type { ReactNode } from 'react';
 import { DoctorHelp } from './DoctorHelp';
+import { FACILITIES, facilityStatus } from '../data/facilityNetworks';
+import { disagreements } from '../domain/hospitalAccess';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
 
@@ -12,6 +14,7 @@ interface Props {
   onBrowse: () => void;
   doctors: Provider[];
   checkingDoctors: string[];
+  requiredIds: string[];
 }
 
 interface Row {
@@ -58,7 +61,18 @@ const ROWS: Row[] = [
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];
 
-export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors }: Props) {
+export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors, requiredIds }: Props) {
+  const hospitalRows: Row[] = HOSPITAL_IDS.map((id) => ({
+    label: HOSPITALS[id].name,
+    text: (p) => {
+      const flag = disagreements(p.plan, [id], hospitalStatus)[0];
+      return `${STATUS_LABELS[hospitalStatus(p.plan, id)]}${flag ? ` (Healthplanfinder: ${flag.directorySays === 'in' ? 'in network' : 'not covered'})` : ''}`;
+    },
+  }));
+  const facilityRows: Row[] = FACILITIES.filter((f) => !requiredIds.includes(f.id) && !HOSPITAL_IDS.includes(f.id)).map((f) => ({
+    label: `${f.name}${f.why ? ` (${f.why.split(' (')[0].toLowerCase()})` : ''}`,
+    text: (p) => ({ in: 'In network', out: 'Not covered', unknown: 'Not checked' })[facilityStatus(p.plan, f.id)],
+  }));
   const doctorRows: Row[] = doctors.map((d) => ({
     label: d.name,
     text: (p) => (
@@ -68,7 +82,7 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
       </>
     ),
   }));
-  const rows = [...ROWS.slice(0, HOSPITAL_IDS.length), ...doctorRows, ...ROWS.slice(HOSPITAL_IDS.length)];
+  const rows = [...hospitalRows, ...doctorRows, ...ROWS.slice(HOSPITAL_IDS.length), ...facilityRows];
   if (plans.length === 0) {
     return (
       <div className="empty">

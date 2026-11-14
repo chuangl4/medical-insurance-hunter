@@ -4,6 +4,8 @@ import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import type { Provider } from '../domain/profile';
 import { DoctorHelp } from './DoctorHelp';
 import { SeverityMark } from './ScenarioGuide';
+import { HospitalAccess } from './HospitalAccess';
+import { disagreements, otherAccess } from '../domain/hospitalAccess';
 import { ScenarioMath } from './ScenarioMath';
 import {
   EMPTY_FILTERS,
@@ -34,6 +36,8 @@ interface Props {
   checkingDoctors: string[];
   /** Who the bad-year hospital stay is for. */
   firstName: string;
+  /** Hospitals that must be in network (ids shared with the hospital-access data). */
+  requiredIds: string[];
 }
 
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -91,7 +95,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 }
 
 export function PlanBrowser(props: Props) {
-  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName } = props;
+  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName, requiredIds } = props;
   const [mathOpen, setMathOpen] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
   const [descending, setDescending] = useState(false);
@@ -253,6 +257,8 @@ export function PlanBrowser(props: Props) {
           </div>
         )}
 
+        <HospitalAccess plans={plans} visible={visible} requiredIds={requiredIds} />
+
         <ul className="plan-list">
           {visible.map((item) => {
             const { plan } = item;
@@ -335,14 +341,31 @@ export function PlanBrowser(props: Props) {
                 <ul className="hospital-list">
                   {HOSPITAL_IDS.map((id) => {
                     const status = hospitalStatus(plan, id);
+                    const flag = disagreements(plan, [id], hospitalStatus)[0];
                     return (
                       <li key={id} className={`hospital status-${status}`}>
                         <span className="hospital-name">{HOSPITALS[id].name}:</span> {STATUS_LABELS[status]}
+                        {flag && (
+                          <span className="flag-inline">
+                            {' '}
+                            · Healthplanfinder says {flag.directorySays === 'in' ? 'in network' : 'not covered'}; confirm
+                          </span>
+                        )}
                       </li>
                     );
                   })}
                 </ul>
                 )}
+                {(() => {
+                  const access = otherAccess(plan, requiredIds);
+                  if (!access.known) return null;
+                  return (
+                    <p className={`access-line${access.missing.length ? '' : ' access-full'}`}>
+                      <span className="hospital-name">Other hospitals:</span> {access.inCount} of {access.total} in network
+                      {access.missing.length > 0 && <> · not {access.missing.map((f) => f.short).join(', ')}</>}
+                    </p>
+                  );
+                })()}
                 {doctors.length > 0 && (
                   <ul className="hospital-list">
                     {doctors.map((d) => {

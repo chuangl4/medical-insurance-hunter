@@ -12,6 +12,8 @@ New users are greeted by Scout, a setup chat that asks for what plan selection n
 
 For a must-have doctor, the app looks them up automatically in the national provider registry (NPPES), picks the match when it is clear, then checks their clinic's and health system's websites for accepted insurance, using Claude with web search (`server/doctors.ts`). It also checks whether Premera's public provider directory lists the doctor; that directory doesn't say which network, so it's only a hint. Website findings show as "likely" or "likely out" on each plan, and a ? next to each status lists what the app tried and what is left to confirm. Plans are hidden only after you mark a doctor out of network for that insurer yourself, since clinic sites list insurers rather than plans and can be out of date.
 
+The Plans page also shows hospital access by insurer for ten Seattle-area hospitals (your must-haves, specialty centers such as Fred Hutch, Seattle Children's and Harborview, and other nearby hospitals), from Washington Healthplanfinder's facility search (`src/data/facilityNetworks.ts`, dated). Where it disagrees with a must-have hospital's own insurance list, the grid and plan cards flag it; the plan filter keeps following the hospital list.
+
 A household saved in the browser by earlier versions moves into your account the first time you sign in.
 
 ## Set up
@@ -39,6 +41,7 @@ On the server, from a fresh clone (so no personal presets get bundled): `npm ci`
 - `src/domain/calc.ts`: premiums, tax credit estimate, and out-of-pocket costs
 - `src/domain/filter.ts`: filtering and sorting
 - `src/data/hospitalNetworks.ts`: hospital network status, using your personal presets
+- `src/data/facilityNetworks.ts`: hospital access by insurer from Healthplanfinder, with the date checked
 - `src/components/`: sign-in, profile and care editors, plan browser, and comparison table
 
 ## Personal presets
