@@ -1,3 +1,4 @@
+import type { DrugLine } from './drugs';
 export type Metal = 'bronze' | 'silver' | 'gold' | 'platinum';
 export type NetworkType = 'HMO' | 'PPO' | 'EPO';
 /** Where a plan can be bought: the exchange, directly from the insurer, or either. */
@@ -41,7 +42,11 @@ export interface Benefits {
   primary: CostShare;
   specialist: CostShare;
   genericRx: CostShare;
+  /** Preferred brand-name drugs. */
   brandRx: CostShare;
+  /** Unset when the plan's summary doesn't list it; preferred brand is used instead, marked as an estimate. */
+  nonPreferredBrandRx?: CostShare;
+  specialtyRx?: CostShare;
   lab: CostShare;
   /** X-rays and other non-advanced tests, such as ultrasounds and eye tests. */
   diagnostic: CostShare;
@@ -69,6 +74,8 @@ export interface Member {
   hospitalStays: number;
   /** Monthly cost of each medication paid for without insurance. */
   selfPayDrugs: Record<string, number>;
+  /** Medications linked to a drug, priced per plan from its coverage. */
+  drugs?: DrugLine[];
 }
 
 export type FilingStatus = 'single' | 'joint' | 'separate';

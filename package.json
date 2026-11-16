@@ -10,7 +10,8 @@
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "formularies": "node --max-old-space-size=6144 --import tsx scripts/build-formularies.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

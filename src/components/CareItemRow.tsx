@@ -1,6 +1,9 @@
 import { CASH_REASONS, CASH_REASON_LABELS, CASH_RULE, HSA_TIP, cashActions, type CashReason } from '../domain/cashMeds';
 import { CARE_CATEGORIES, CATEGORY_LABELS, type CareCategory, type CareItem } from '../domain/profile';
 import { money } from '../format';
+import { DrugLink } from './DrugLink';
+
+const MEDICATION: CareCategory[] = ['genericFills', 'brandFills', 'selfPay'];
 
 type EditableItem = Omit<CareItem, 'id'>;
 
@@ -15,12 +18,15 @@ const wholeNumber = (text: string, max: number): number => Math.min(max, Math.ma
 /** One editable care entry: what it is, how it's billed, and how often or how much. */
 export function CareItemRow<T extends EditableItem>({ item, onChange, onRemove }: Props<T>) {
   const selfPay = item.category === 'selfPay';
+  const medication = MEDICATION.includes(item.category);
+  const linkedFill = Boolean(item.drug) && !selfPay;
   const setCategory = (category: CareCategory) =>
     onChange({
       ...item,
       category,
       perYear: category === 'selfPay' ? 12 : item.perYear,
-      monthlyCost: category === 'selfPay' ? (item.monthlyCost ?? 0) : null,
+      monthlyCost: category === 'selfPay' ? (item.monthlyCost ?? 0) : item.drug ? item.monthlyCost : null,
+      drug: MEDICATION.includes(category) ? item.drug : undefined,
       cashReason: category === 'selfPay' ? (item.cashReason ?? 'notOnDrugList') : undefined,
     });
 
@@ -42,7 +48,7 @@ export function CareItemRow<T extends EditableItem>({ item, onChange, onRemove }
       </label>
       {selfPay ? (
         <label className="field field-small">
-          <span>$ per month</span>
+          <span>{item.drug ? '$ per month, cash price' : '$ per month'}</span>
           <input
             type="number"
             min={0}
@@ -62,14 +68,30 @@ export function CareItemRow<T extends EditableItem>({ item, onChange, onRemove }
           />
         </label>
       )}
+      {linkedFill && (
+        <label className="field field-small">
+          <span>$ per fill, cash price</span>
+          <input
+            type="number"
+            min={0}
+            placeholder="Typical"
+            value={item.monthlyCost ?? ''}
+            onChange={(e) => onChange({ ...item, monthlyCost: e.target.value === '' ? null : Math.max(0, Number(e.target.value) || 0) })}
+          />
+        </label>
+      )}
       <button type="button" className="link-button" onClick={onRemove} aria-label={`Remove ${item.name || 'this care'}`}>
         Remove
       </button>
+      {medication && <DrugLink name={item.name} drug={item.drug} onChange={(drug) => onChange({ ...item, drug })} />}
       {item.notes && <small className="care-notes">{item.notes}</small>}
       {selfPay && (
         <div className="cash-detail">
           <p>
-            {money(item.monthlyCost ?? 0)} a month × 12 = <strong>{money((item.monthlyCost ?? 0) * 12)} a year</strong>. {CASH_RULE}
+            {money(item.monthlyCost ?? 0)} a month × 12 = <strong>{money((item.monthlyCost ?? 0) * 12)} a year</strong>.{' '}
+            {item.drug
+              ? "This is what a plan that doesn't cover it costs you. Plans that cover it use their own price instead; see Prescription coverage on the Plans page."
+              : CASH_RULE}
           </p>
           <div className="cash-detail-row">
             <label className="inline-field">

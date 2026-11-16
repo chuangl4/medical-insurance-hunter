@@ -34,6 +34,8 @@ let store: Store;
 const chat = vi.fn();
 const searchDoctors = vi.fn();
 const checkDoctor = vi.fn();
+const searchDrugs = vi.fn();
+const drugCoverage = vi.fn();
 
 function start(overrides: Partial<ServerConfig> = {}) {
   const config: ServerConfig = {
@@ -51,6 +53,8 @@ function start(overrides: Partial<ServerConfig> = {}) {
     chat,
     searchDoctors,
     checkDoctor,
+    searchDrugs,
+    drugCoverage,
   });
   return new Promise<void>((resolve) => {
     server = app.listen(0, () => {
@@ -76,6 +80,8 @@ afterEach(() => {
   chat.mockReset();
   searchDoctors.mockReset();
   checkDoctor.mockReset();
+  searchDrugs.mockReset();
+  drugCoverage.mockReset();
 });
 
 describe('server configuration', () => {
@@ -197,6 +203,31 @@ describe('doctor lookups', () => {
     const failed = await post('/api/doctors/check', { doctor, carriers: ['A'] }, cookie);
     expect(failed.status).toBe(502);
     expect(JSON.stringify(await failed.json())).not.toContain('upstream secret');
+  });
+});
+
+describe('drug lookups', () => {
+  it('searches RxNorm for signed-in users and hides failure details', async () => {
+    expect((await post('/api/drugs/search', { name: 'test' })).status).toBe(401);
+    const cookie = await signIn();
+    expect((await post('/api/drugs/search', { name: 'x' }, cookie)).status).toBe(400);
+    searchDrugs.mockResolvedValue({ query: 'testdrug', options: [] });
+    expect(await (await post('/api/drugs/search', { name: 'testdrug' }, cookie)).json()).toEqual({ query: 'testdrug', options: [] });
+    searchDrugs.mockRejectedValue(new Error('upstream secret'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const failed = await post('/api/drugs/search', { name: 'testdrug' }, cookie);
+    expect(failed.status).toBe(502);
+    expect(JSON.stringify(await failed.json())).not.toContain('upstream secret');
+  });
+});
+
+describe('drug coverage lookups', () => {
+  it('returns coverage by plan for a valid RxNorm id', async () => {
+    const cookie = await signIn();
+    expect((await post('/api/drugs/coverage', { rxcui: 'abc' }, cookie)).status).toBe(400);
+    drugCoverage.mockResolvedValue({ P1: { covered: false } });
+    expect(await (await post('/api/drugs/coverage', { rxcui: '123' }, cookie)).json()).toEqual({ plans: { P1: { covered: false } } });
+    expect(drugCoverage).toHaveBeenCalledWith('123');
   });
 });
 

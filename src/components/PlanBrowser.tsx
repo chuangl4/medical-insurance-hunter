@@ -6,6 +6,7 @@ import { DoctorHelp } from './DoctorHelp';
 import { SeverityMark } from './ScenarioGuide';
 import { HospitalAccess } from './HospitalAccess';
 import { disagreements, otherAccess } from '../domain/hospitalAccess';
+import { RESTRICTION_LABELS, TIER_LABELS, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { ScenarioMath } from './ScenarioMath';
 import {
   EMPTY_FILTERS,
@@ -38,6 +39,9 @@ interface Props {
   firstName: string;
   /** Hospitals that must be in network (ids shared with the hospital-access data). */
   requiredIds: string[];
+  /** Medications linked to drugs, priced per plan. */
+  drugLines: DrugLine[];
+  drugLookup: CoverageLookup;
 }
 
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -95,7 +99,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 }
 
 export function PlanBrowser(props: Props) {
-  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName, requiredIds } = props;
+  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName, requiredIds, drugLines, drugLookup } = props;
   const [mathOpen, setMathOpen] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
   const [descending, setDescending] = useState(false);
@@ -366,6 +370,24 @@ export function PlanBrowser(props: Props) {
                     </p>
                   );
                 })()}
+                {plan.benefits && drugLines.length > 0 && (
+                  <ul className="hospital-list rx-list">
+                    {drugLines.map((line) => {
+                      const how = resolveDrug(line, plan, plan.benefits!, drugLookup);
+                      const text =
+                        how.kind === 'cash'
+                          ? `${how.source === 'checked' ? 'Not covered' : 'Not checked, assumed not covered'} → ${money(line.price * line.fillsPerYear)}/yr cash`
+                          : how.source === 'checked'
+                            ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}${how.estimated ? ' (tier cost estimated)' : ''}${how.restrictions.length ? ` · ${how.restrictions.map((r) => RESTRICTION_LABELS[r]).join(', ')}` : ''}`
+                            : `Not checked, assumed ${line.assume === 'generic' ? 'a generic' : 'a brand-name'} fill`;
+                      return (
+                        <li key={line.itemId} className={`hospital rx-${how.kind === 'cash' ? 'out' : how.source === 'checked' ? 'in' : 'unknown'}`}>
+                          <span className="hospital-name">{line.name}:</span> {text}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
                 {doctors.length > 0 && (
                   <ul className="hospital-list">
                     {doctors.map((d) => {

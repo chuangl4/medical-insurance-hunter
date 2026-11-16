@@ -1,3 +1,4 @@
+import { resolveDrug, type CoverageLookup, type DrugLine, type ResolvedDrug } from './drugs';
 import {
   APPLE_HEALTH_ADULT_FPL,
   APPLICABLE_PERCENTAGE_BANDS,
@@ -145,7 +146,12 @@ function costAmount(share: Extract<CostShare, { kind: 'copay' }>): number {
  * Household out-of-pocket cost for in-network care. Each person has their own deductible and
  * out-of-pocket limit inside the family totals.
  */
-export function outOfPocket(benefits: Benefits, members: Member[], extraStaysForFirstMember = 0): number {
+export function outOfPocket(
+  benefits: Benefits,
+  members: Member[],
+  extraStaysForFirstMember = 0,
+  resolve?: (line: DrugLine) => ResolvedDrug,
+): number {
   const isFamily = members.length > 1;
   let familyDeductibleLeft = isFamily ? benefits.deductible.family : benefits.deductible.individual;
   let familyOopLeft = isFamily ? benefits.oopMax.family : benefits.oopMax.individual;
@@ -200,6 +206,10 @@ export function outOfPocket(benefits: Benefits, members: Member[], extraStaysFor
     repeat(member.hospitalStays + (index === 0 ? extraStaysForFirstMember : 0), () =>
       charge(CARE_PRICES.hospitalStay, benefits.hospital),
     );
+    for (const line of member.drugs ?? []) {
+      const how = resolve ? resolve(line) : null;
+      if (how?.kind === 'plan') repeat(line.fillsPerYear, () => charge(line.price, how.share));
+    }
   });
   return total;
 }
@@ -209,6 +219,7 @@ export function evaluatePlan(
   household: Household,
   monthlyCredit: number,
   buyDirect = false,
+  coverage?: CoverageLookup,
 ): EvaluatedPlan {
   const isFamily = household.members.length > 1;
   const fullMonthly = monthlyPremium(
@@ -220,18 +231,25 @@ export function evaluatePlan(
   const netMonthly = fullMonthly - creditMonthly;
   const annualPremium = netMonthly * 12;
   const { benefits } = plan;
+  const resolve = (line: DrugLine) => (benefits ? resolveDrug(line, plan, benefits, coverage) : ({ kind: line.assume === 'cash' ? 'cash' : 'plan', source: 'assumed' } as ResolvedDrug));
+  // Medications a plan doesn't cover are paid in cash, outside its deductible and out-of-pocket limit.
+  const cashDrugsYear = household.members
+    .flatMap((m) => m.drugs ?? [])
+    .reduce((sum, line) => sum + (resolve(line).kind === 'cash' ? line.price * line.fillsPerYear : 0), 0);
   const selfPayYear =
     household.members.reduce(
       (sum, m) => sum + Object.values(m.selfPayDrugs).reduce((total, cost) => total + (cost ?? 0), 0),
       0,
-    ) * 12;
+    ) *
+      12 +
+    cashDrugsYear;
   const base = { plan, fullMonthly, creditMonthly, netMonthly, selfPayYear, premiumYear: annualPremium };
   if (!benefits) {
     return { ...base, expectedYear: null, badYear: null, worstCase: null, deductible: null, oopMax: null, careExpected: null, careBadYear: null };
   }
   const oopMax = isFamily ? benefits.oopMax.family : benefits.oopMax.individual;
-  const careExpected = outOfPocket(benefits, household.members);
-  const careBadYear = outOfPocket(benefits, household.members, 1);
+  const careExpected = outOfPocket(benefits, household.members, 0, resolve);
+  const careBadYear = outOfPocket(benefits, household.members, 1, resolve);
 
   return {
     ...base,

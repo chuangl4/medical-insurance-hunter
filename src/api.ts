@@ -51,6 +51,13 @@ export const api = {
   }) => call<{ reply: string; quickReplies: string[]; updates: ChatUpdates }>('/api/chat', { method: 'POST', body }),
   searchDoctors: (query: { first: string; last: string; city: string }) =>
     call<{ doctors: DoctorRecord[] }>('/api/doctors/search', { method: 'POST', body: query }).then((r) => r.doctors),
+  searchDrugs: (name: string) =>
+    call<{ query: string; options: { rxcui: string; name: string; brand: boolean }[] }>('/api/drugs/search', { method: 'POST', body: { name } }),
+  drugCoverage: (rxcui: string) =>
+    call<{ plans: Record<string, { covered: boolean; tier?: string; restrictions?: string[]; carrier: string; source: string; sourceUrl: string; builtAt: string; matchedRxcui: string }> }>(
+      '/api/drugs/coverage',
+      { method: 'POST', body: { rxcui } },
+    ).then((r) => r.plans),
   checkDoctor: (body: { doctor: DoctorRecord; carriers: string[]; hospitals: { id: string; name: string }[] }) =>
     call<{ check: ClinicCheck }>('/api/doctors/check', { method: 'POST', body }).then((r) => r.check),
 };

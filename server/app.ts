@@ -6,7 +6,9 @@ import { newToken } from './crypto';
 import type { Store, User } from './db';
 import { AssistantNotConfiguredError, ReplyRefusedError, type ChatResult } from './chat';
 import type { ClinicCheck, DoctorRecord } from '../src/domain/doctors';
-import { chatRequestSchema, doctorCheckSchema, doctorSearchSchema, profileSchema, type ChatRequest, type DoctorCheckRequest } from './schema';
+import type { DrugOption } from './drugs';
+import type { FoundCoverage } from './formularyData';
+import { chatRequestSchema, drugCoverageRequestSchema, drugSearchSchema, doctorCheckSchema, doctorSearchSchema, profileSchema, type ChatRequest, type DoctorCheckRequest } from './schema';
 
 export const SESSION_COOKIE = 'mih_session';
 const CHAT_TURNS_PER_HOUR = 150;
@@ -30,6 +32,10 @@ export interface AppDeps {
   chat: (request: ChatRequest) => Promise<ChatResult>;
   /** Searches the national provider registry. */
   searchDoctors: (query: { first: string; last: string; city: string }) => Promise<DoctorRecord[]>;
+  /** Looks a medication up in RxNorm. */
+  searchDrugs: (name: string) => Promise<{ query: string; options: DrugOption[] }>;
+  /** Coverage of one drug on every plan with a loaded drug list, by plan id. */
+  drugCoverage: (rxcui: string) => Promise<Record<string, FoundCoverage>>;
   /** Checks a doctor's clinic websites and directories. */
   checkDoctor: (request: DoctorCheckRequest) => Promise<ClinicCheck>;
   /** Built front end to serve in production. */
@@ -46,7 +52,7 @@ function readCookie(req: Request, name: string): string | null {
   return null;
 }
 
-export function createApp({ config, store, verifyGoogleToken, chat, searchDoctors, checkDoctor, staticDir }: AppDeps) {
+export function createApp({ config, store, verifyGoogleToken, chat, searchDoctors, checkDoctor, searchDrugs, drugCoverage, staticDir }: AppDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.use((_req, res, next) => {
@@ -206,6 +212,37 @@ export function createApp({ config, store, verifyGoogleToken, chat, searchDoctor
     } catch (error) {
       console.error('doctor search failed:', error instanceof Error ? error.message : error);
       res.status(502).json({ error: "The national provider registry didn't answer. Try again in a moment." });
+    }
+  });
+
+  const drugSearchAllowed = limiter(DOCTOR_SEARCHES_PER_HOUR, 'Too many searches this hour. Please try again later.');
+  app.post('/api/drugs/search', requireUser, async (req: AuthedRequest, res) => {
+    const parsed = drugSearchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Enter at least 2 letters of the medication name.' });
+      return;
+    }
+    if (!drugSearchAllowed(req, res)) return;
+    try {
+      res.json(await searchDrugs(parsed.data.name));
+    } catch (error) {
+      console.error('drug search failed:', error instanceof Error ? error.message : error);
+      res.status(502).json({ error: "The national drug database (RxNorm) didn't answer. Try again in a moment." });
+    }
+  });
+
+  app.post('/api/drugs/coverage', requireUser, async (req: AuthedRequest, res) => {
+    const parsed = drugCoverageRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'That drug could not be looked up.' });
+      return;
+    }
+    if (!drugSearchAllowed(req, res)) return;
+    try {
+      res.json({ plans: await drugCoverage(parsed.data.rxcui) });
+    } catch (error) {
+      console.error('drug coverage lookup failed:', error instanceof Error ? error.message : error);
+      res.status(502).json({ error: "The drug lists couldn't be searched right now. Try again in a moment." });
     }
   });
 

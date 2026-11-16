@@ -1,0 +1,48 @@
+import type { DrugRef } from '../src/domain/drugs';
+
+const RXNAV = 'https://rxnav.nlm.nih.gov/REST';
+const TIMEOUT_MS = 15_000;
+/** Branded and generic clinical drugs, and packs, which carry a strength and form. */
+const KINDS = ['SBD', 'SCD', 'BPCK', 'GPCK'];
+
+export interface DrugOption extends DrugRef {
+  /** True for a brand-name product. */
+  brand: boolean;
+}
+
+async function getJson(url: string): Promise<unknown> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { Accept: 'application/json' } });
+  if (!res.ok) throw new Error(`RxNav answered ${res.status}`);
+  return res.json();
+}
+
+type DrugsResponse = { drugGroup?: { conceptGroup?: { tty: string; conceptProperties?: { rxcui: string; name: string }[] }[] } };
+
+/** Turns an RxNav drugs.json response into options, brands and generics alike. Exported for tests. */
+export function toOptions(data: DrugsResponse): DrugOption[] {
+  return (data.drugGroup?.conceptGroup ?? [])
+    .filter((g) => KINDS.includes(g.tty))
+    .flatMap((g) => (g.conceptProperties ?? []).map((c) => ({ rxcui: c.rxcui, name: c.name, brand: g.tty === 'SBD' || g.tty === 'BPCK' })))
+    .slice(0, 30);
+}
+
+/** Looks a medication up in RxNorm by name, correcting spelling when the exact name finds nothing. */
+export async function searchDrugs(name: string): Promise<{ query: string; options: DrugOption[] }> {
+  const exact = toOptions((await getJson(`${RXNAV}/drugs.json?name=${encodeURIComponent(name)}`)) as DrugsResponse);
+  if (exact.length) return { query: name, options: exact };
+  const approx = (await getJson(`${RXNAV}/approximateTerm.json?term=${encodeURIComponent(name)}&maxEntries=5`)) as {
+    approximateGroup?: { candidate?: { name?: string }[] };
+  };
+  const corrected = approx.approximateGroup?.candidate?.find((c) => c.name)?.name;
+  if (!corrected || corrected.toLowerCase() === name.toLowerCase()) return { query: name, options: [] };
+  return { query: corrected, options: toOptions((await getJson(`${RXNAV}/drugs.json?name=${encodeURIComponent(corrected)}`)) as DrugsResponse) };
+}
+
+/** The drug itself first, then the same drug in other forms (brand <-> generic, packs), from RxNorm. */
+export async function equivalentRxcuis(rxcui: string): Promise<string[]> {
+  const data = (await getJson(`${RXNAV}/rxcui/${encodeURIComponent(rxcui)}/related.json?tty=${KINDS.join('+')}`)) as {
+    relatedGroup?: { conceptGroup?: { conceptProperties?: { rxcui: string }[] }[] };
+  };
+  const related = (data.relatedGroup?.conceptGroup ?? []).flatMap((g) => (g.conceptProperties ?? []).map((c) => c.rxcui));
+  return [rxcui, ...new Set(related.filter((id) => id !== rxcui))];
+}

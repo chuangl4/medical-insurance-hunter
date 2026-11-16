@@ -359,3 +359,21 @@ a { color: var(--accent); }
 .access-line.access-full { color: var(--accent); }
 .flag-inline { color: var(--warn-text); font-size: 0.82rem; }
 .flag-list { list-style: none; margin: 10px 0 0; padding: 8px 12px; background: var(--warn-bg); border-radius: 8px; font-size: 0.85rem; color: var(--warn-text); display: flex; flex-direction: column; gap: 4px; }
+
+/* Prescription coverage */
+.drug-link { margin: 2px 0 0; font-size: 0.85rem; grid-column: 1 / -1; }
+.drug-badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0 5px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
+.drug-search { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; }
+.drug-search-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.drug-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; }
+.drug-results li { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-size: 0.85rem; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.rx-grid { min-width: 900px; }
+.rx-grid col, .rx-grid th:first-child { width: auto; }
+.rx-grid tbody th { width: 220px; }
+.rx-cell select { width: 100%; font-size: 0.78rem; padding: 3px 4px; }
+.rx-cell.rx-in { background: var(--accent-soft); }
+.rx-cell.rx-out { background: var(--warn-bg); }
+.rx-pa { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; justify-content: center; margin-top: 2px; }
+.rx-list .rx-in { color: var(--accent); }
+.rx-list .rx-out { color: var(--warn-text); }
+.rx-list .rx-unknown { color: var(--muted); }

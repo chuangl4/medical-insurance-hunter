@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CLINIC_FINDINGS, LOOKUP_OUTCOMES } from '../src/domain/doctors';
+import { DRUG_TIERS, RESTRICTIONS } from '../src/domain/drugs';
 import { CASH_REASONS } from '../src/domain/cashMeds';
 import { ANSWER_KEYS, CARE_CATEGORIES } from '../src/domain/profile';
 
@@ -13,6 +14,16 @@ export const careItemSchema = z.object({
   monthlyCost: z.number().min(0).max(100_000).nullable(),
   notes: text(500),
   cashReason: z.enum(CASH_REASONS).optional(),
+  drug: z.object({ rxcui: z.string().regex(/^\d{1,10}$/), name: text(300).min(1) }).optional(),
+});
+
+const drugCoverageSchema = z.object({
+  checkedAt: text(40),
+  source: text(300),
+  plans: z.record(
+    text(80),
+    z.object({ covered: z.boolean(), tier: z.enum(DRUG_TIERS).optional(), restrictions: z.array(z.enum(RESTRICTIONS)).max(3).optional() }),
+  ),
 });
 
 export const doctorSchema = z.object({
@@ -88,7 +99,14 @@ export const profileSchema = z.object({
     .max(30)
     .optional(),
   answered: z.array(z.enum(ANSWER_KEYS)).max(ANSWER_KEYS.length).optional(),
+  drugCoverage: z
+    .record(z.string().regex(/^\d{1,10}$/), drugCoverageSchema)
+    .refine((r) => Object.keys(r).length <= 40, 'Too many drugs.')
+    .optional(),
 });
+
+export const drugSearchSchema = z.object({ name: text(100).min(2) });
+export const drugCoverageRequestSchema = z.object({ rxcui: z.string().regex(/^\d{1,10}$/) });
 
 export const chatRequestSchema = z.object({
   messages: z

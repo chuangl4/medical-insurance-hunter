@@ -8,6 +8,8 @@ import type { Plan } from '../domain/types';
  * - Cascade Care benefits: CHPW 2027 Benefit Highlights. Healthplanfinder says Cascade Care plans at
  *   a metal level share cost sharing, and Premera's Cascade Silver and Bronze summaries match.
  * - Other benefits: each insurer's 2027 Summary of Benefits and Coverage, linked per plan.
+ * - Drug tiers beyond generic and preferred brand (nonPreferredBrandRx, specialtyRx): the CHPW 2027 Benefit
+ *   Highlights for Cascade Care plans, and Premera's 2027 SBCs for Preferred Gold and Bronze. Added 2026-11-14.
  * - benefits is null where no 2027 summary could be found.
  * - network is null where the source for that plan didn't confirm it. networkNote marks a type taken
  *   from an earlier year's documents.
@@ -83,6 +85,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
       }
     }
   },
@@ -155,6 +165,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "copay",
         "amount": 60,
+        "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
         "afterDeductible": false
       }
     }
@@ -229,6 +249,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 60,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
       }
     }
   },
@@ -302,6 +332,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -375,6 +413,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -520,6 +566,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   },
@@ -597,6 +653,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   },
@@ -666,6 +732,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "rate": 0.4
       },
       "brandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
         "kind": "coinsurance",
         "rate": 0.4
       }
@@ -741,6 +815,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 60,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
       }
     }
   },
@@ -814,6 +898,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -891,6 +983,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   },
@@ -960,6 +1062,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "rate": 0.4
       },
       "brandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
         "kind": "coinsurance",
         "rate": 0.4
       }
@@ -1035,6 +1145,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 60,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
       }
     }
   },
@@ -1108,6 +1228,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -1185,6 +1313,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   },
@@ -1384,6 +1522,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
       }
     }
   },
@@ -1525,6 +1671,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 60,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
       }
     }
   },
@@ -1598,6 +1754,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -1879,6 +2043,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   },
@@ -2218,6 +2392,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
       }
     }
   },
@@ -2291,6 +2473,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "copay",
         "amount": 60,
+        "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
         "afterDeductible": false
       }
     }
@@ -2366,6 +2558,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -2444,6 +2644,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   },
@@ -2513,6 +2723,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "rate": 0.4
       },
       "brandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
         "kind": "coinsurance",
         "rate": 0.4
       }
@@ -2586,6 +2804,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.45
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -2658,6 +2884,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "copay",
         "amount": 60,
+        "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
         "afterDeductible": false
       }
     }
@@ -2732,6 +2968,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -2803,6 +3047,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.3
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.45
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -2880,6 +3132,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   },
@@ -3185,6 +3447,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
       }
     }
   },
@@ -3324,6 +3594,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 60,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
       }
     }
   },
@@ -3397,6 +3677,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -3603,6 +3891,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   },
@@ -4011,6 +4309,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
       }
     }
   },
@@ -4246,7 +4552,7 @@ export const KING_COUNTY_PLANS: Plan[] = [
     "counties": [
       "King"
     ],
-    "basePremium": 729.0,
+    "basePremium": 729,
     "ratesSource": "https://www.insurance.wa.gov/sites/default/files/2026-09/uhc-oregon-ind-rate-2027.pdf",
     "benefits": {
       "deductible": {
@@ -4369,6 +4675,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 60,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
       }
     }
   },
@@ -4442,6 +4758,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -4882,6 +5206,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   },
@@ -4954,6 +5288,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "copay",
         "amount": 60,
+        "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 100,
+        "afterDeductible": false
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 100,
         "afterDeductible": false
       }
     }
@@ -5028,6 +5372,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.2
       }
     }
   },
@@ -5105,6 +5457,16 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 75,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
+      },
+      "specialtyRx": {
+        "kind": "copay",
+        "amount": 250,
+        "afterDeductible": true
       }
     }
   }

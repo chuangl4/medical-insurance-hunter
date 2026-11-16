@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { DoctorHelp } from './DoctorHelp';
 import { FACILITIES, facilityStatus } from '../data/facilityNetworks';
 import { disagreements } from '../domain/hospitalAccess';
+import { TIER_LABELS, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
 
@@ -15,6 +16,8 @@ interface Props {
   doctors: Provider[];
   checkingDoctors: string[];
   requiredIds: string[];
+  drugLines: DrugLine[];
+  drugLookup: CoverageLookup;
 }
 
 interface Row {
@@ -61,7 +64,16 @@ const ROWS: Row[] = [
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];
 
-export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors, requiredIds }: Props) {
+export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors, requiredIds, drugLines, drugLookup }: Props) {
+  const drugRows: Row[] = drugLines.map((line) => ({
+    label: line.name,
+    text: (p) => {
+      if (!p.plan.benefits) return 'See plan details';
+      const how = resolveDrug(line, p.plan, p.plan.benefits, drugLookup);
+      if (how.kind === 'cash') return `${how.source === 'checked' ? 'Not covered' : 'Not checked'}: ${money(line.price * line.fillsPerYear)}/yr cash`;
+      return how.source === 'checked' ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}: ${costShareText(how.share)}` : 'Not checked';
+    },
+  }));
   const hospitalRows: Row[] = HOSPITAL_IDS.map((id) => ({
     label: HOSPITALS[id].name,
     text: (p) => {
@@ -82,7 +94,9 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
       </>
     ),
   }));
-  const rows = [...hospitalRows, ...doctorRows, ...ROWS.slice(HOSPITAL_IDS.length), ...facilityRows];
+  const base = ROWS.slice(HOSPITAL_IDS.length);
+  const cashIndex = base.findIndex((r) => r.label.startsWith('Cash medications'));
+  const rows = [...hospitalRows, ...doctorRows, ...base.slice(0, cashIndex + 1), ...drugRows, ...base.slice(cashIndex + 1), ...facilityRows];
   if (plans.length === 0) {
     return (
       <div className="empty">

@@ -338,3 +338,29 @@ describe('filters and sorting', () => {
     expect(names(sortPlans(plans, 'netMonthly', true))).toEqual(['Rich', 'Mid', 'Cheap']);
   });
 });
+
+describe('medications priced per plan', () => {
+  const line = { itemId: 'd1', name: 'Test drops', rxcui: '111', price: 400, fillsPerYear: 12, assume: 'cash' as const };
+  const withDrug = household({ members: [member(40, { drugs: [line] })] });
+  const copayPlan = plan({ id: 'p1', benefits: benefits({ brandRx: { kind: 'copay', amount: 75, afterDeductible: false } }) });
+
+  it('uses the plan cost share when the plan covers the drug', () => {
+    const covered = evaluatePlan(copayPlan, withDrug, 0, false, () => ({ covered: true, tier: 'preferredBrand' }));
+    expect(covered.careExpected).toBe(900);
+    expect(covered.selfPayYear).toBe(0);
+  });
+
+  it('charges cash when the plan does not cover it, or when coverage is unknown and cash is assumed', () => {
+    const notCovered = evaluatePlan(copayPlan, withDrug, 0, false, () => ({ covered: false }));
+    expect(notCovered.selfPayYear).toBe(4800);
+    expect(notCovered.careExpected).toBe(0);
+    expect(evaluatePlan(copayPlan, withDrug, 0, false).selfPayYear).toBe(4800);
+  });
+
+  it('falls back to the brand share for a tier the summary does not list', () => {
+    const tiered = evaluatePlan(copayPlan, withDrug, 0, false, () => ({ covered: true, tier: 'specialty' }));
+    expect(tiered.careExpected).toBe(900);
+    const specialty = plan({ id: 'p2', benefits: benefits({ brandRx: { kind: 'copay', amount: 75, afterDeductible: false }, specialtyRx: { kind: 'copay', amount: 150, afterDeductible: false } }) });
+    expect(evaluatePlan(specialty, withDrug, 0, false, () => ({ covered: true, tier: 'specialty' })).careExpected).toBe(1800);
+  });
+});

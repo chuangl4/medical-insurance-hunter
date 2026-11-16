@@ -1,5 +1,7 @@
 import type { DoctorFields } from './doctors';
 import type { CashReason } from './cashMeds';
+import type { DrugCoverage, DrugLine, DrugRef } from './drugs';
+import { CARE_PRICES } from './rules2027';
 import type { FilingStatus, Household, ImmigrationStatus, Member } from './types';
 
 /** What a care item counts as when costing plans. `selfPay` is paid in cash on every plan. */
@@ -37,8 +39,13 @@ export interface CareItem {
   category: CareCategory;
   /** Times per year. Monthly prescriptions are 12 fills. Not used for self-pay items. */
   perYear: number;
-  /** Monthly cash cost, used only for self-pay items. */
+  /**
+   * Monthly cash cost for self-pay items. For a medication linked to a drug, the price of one fill without
+   * insurance, which plans that cover it apply their cost share to.
+   */
   monthlyCost: number | null;
+  /** The RxNorm drug this medication is, so its coverage can be checked plan by plan. */
+  drug?: DrugRef;
   notes: string;
   /** For self-pay items: why the plan won't pay, which decides the suggested next steps. */
   cashReason?: CashReason;
@@ -82,6 +89,8 @@ export interface Profile {
   inKingCounty?: boolean;
   providers?: Provider[];
   answered?: AnswerKey[];
+  /** Drug coverage by RxNorm id, then plan id. */
+  drugCoverage?: Record<string, DrugCoverage>;
 }
 
 export const EMPTY_PROFILE: Profile = {
@@ -114,14 +123,34 @@ const emptyCounts = (): Record<CountCategory, number> => ({
 export function memberForCalc(member: ProfileMember): Member {
   const counts = emptyCounts();
   const selfPayDrugs: Record<string, number> = {};
+  const drugs: DrugLine[] = [];
   for (const item of member.careItems) {
-    if (item.category === 'selfPay') {
+    const line = drugLine(item);
+    if (line) {
+      drugs.push(line);
+    } else if (item.category === 'selfPay') {
       if (item.monthlyCost) selfPayDrugs[item.id] = item.monthlyCost;
     } else {
       counts[item.category] += item.perYear;
     }
   }
-  return { id: member.id, label: member.label, age: member.age, ...counts, selfPayDrugs };
+  return { id: member.id, label: member.label, age: member.age, ...counts, selfPayDrugs, ...(drugs.length ? { drugs } : {}) };
+}
+
+/** A medication linked to a drug becomes a line priced per plan; anything else is counted as before. */
+export function drugLine(item: CareItem): DrugLine | null {
+  if (!item.drug) return null;
+  const assume = item.category === 'genericFills' ? 'generic' : item.category === 'brandFills' ? 'brand' : item.category === 'selfPay' ? 'cash' : null;
+  if (!assume) return null;
+  const fallbackPrice = assume === 'generic' ? CARE_PRICES.genericFill : CARE_PRICES.brandFill;
+  return {
+    itemId: item.id,
+    name: item.name || item.drug.name,
+    rxcui: item.drug.rxcui,
+    price: item.monthlyCost ?? fallbackPrice,
+    fillsPerYear: assume === 'cash' ? 12 : item.perYear,
+    assume,
+  };
 }
 
 export function householdFromProfile(profile: Profile): Household {

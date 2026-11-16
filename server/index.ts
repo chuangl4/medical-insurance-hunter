@@ -6,6 +6,8 @@ import { loadConfig } from './config';
 import { Store } from './db';
 import { AssistantNotConfiguredError, chat, ReplyRefusedError } from './chat';
 import { checkDoctor, CheckRefusedError, searchDoctors } from './doctors';
+import { equivalentRxcuis, searchDrugs } from './drugs';
+import { loadFormularies, lookupCoverage } from './formularyData';
 
 try {
   process.loadEnvFile();
@@ -31,6 +33,9 @@ async function withClaude<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 
+const formularies = loadFormularies();
+console.log(`Drug lists loaded: ${formularies.map((f) => `${f.carrier} (${f.planIds.length} plans)`).join(', ') || 'none'}`);
+
 const app = createApp({
   config,
   store,
@@ -42,6 +47,8 @@ const app = createApp({
   },
   chat: (request) => withClaude(() => chat(anthropic, request)),
   searchDoctors,
+  searchDrugs,
+  drugCoverage: async (rxcui) => lookupCoverage(formularies, await equivalentRxcuis(rxcui)),
   checkDoctor: (request) => withClaude(() => checkDoctor(anthropic, request)),
   staticDir: config.production ? path.resolve('dist') : undefined,
 });

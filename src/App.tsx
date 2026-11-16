@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, type User } from './api';
 import { CashMedsSummary } from './components/CashMedsSummary';
 import { ScenarioGuide } from './components/ScenarioGuide';
+import { PrescriptionCoverage } from './components/PrescriptionCoverage';
 import { ChatOnboarding, type ChatMessage } from './components/ChatOnboarding';
 import { CompareTable } from './components/CompareTable';
 import { PlanBrowser } from './components/PlanBrowser';
@@ -16,6 +17,7 @@ import { EMPTY_FILTERS, type Filters } from './domain/filter';
 import { EMPTY_PROFILE, householdFromProfile, profileFromLegacy, type LegacyHousehold, type Profile } from './domain/profile';
 import { ENROLLMENT, PLAN_YEAR } from './domain/rules2027';
 import { requiredHospitalsOf, useDoctorLookups } from './useDoctorLookups';
+import { coverageLookup } from './domain/drugs';
 
 /** Where earlier versions kept the household. It's moved into the account on first sign-in. */
 const LEGACY_STORAGE_KEY = 'mih.household.v1';
@@ -127,13 +129,14 @@ export function App() {
   }, [doctorIds]);
 
   const household = useMemo(() => householdFromProfile(profile ?? EMPTY_PROFILE), [profile]);
+  const drugLookup = useMemo(() => coverageLookup(profile?.drugCoverage), [profile?.drugCoverage]);
   const subsidy = useMemo(() => estimateSubsidy(KING_COUNTY_PLANS, household), [household]);
   const evaluated = useMemo(
     () =>
       KING_COUNTY_PLANS.filter((p) => isSoldIn(p, household.county)).map((p) =>
-        evaluatePlan(p, household, subsidy.monthlyCredit, filters.route === 'direct'),
+        evaluatePlan(p, household, subsidy.monthlyCredit, filters.route === 'direct', drugLookup),
       ),
-    [household, subsidy.monthlyCredit, filters.route],
+    [household, subsidy.monthlyCredit, filters.route, drugLookup],
   );
   // Plans not sold in the current county drop out of the comparison and don't use up a slot.
   const compared = evaluated.filter((p) => compareIds.includes(p.plan.id));
@@ -266,6 +269,10 @@ export function App() {
         {tab === 'plans' && (
           <CashMedsSummary
             profile={profile}
+            coveredBy={(rxcui) => {
+              const plans = profile.drugCoverage?.[rxcui]?.plans ?? {};
+              return { covered: evaluated.filter((p) => plans[p.plan.id]?.covered).length, total: evaluated.length };
+            }}
             onEdit={() => {
               setChatOpen(false);
               setTab('household');
@@ -274,6 +281,9 @@ export function App() {
         )}
         {tab === 'plans' && (
           <ScenarioGuide members={household.members} hasCash={household.members.some((m) => Object.values(m.selfPayDrugs).some((c) => c > 0))} />
+        )}
+        {tab === 'plans' && (
+          <PrescriptionCoverage profile={profile} plans={evaluated} onChange={(update) => setProfile((prev) => prev && update(prev))} />
         )}
         {tab === 'plans' && uncheckedProviders.length > 0 && (
           <p className="sample-banner" role="note">
@@ -294,10 +304,17 @@ export function App() {
             checkingDoctors={doctorLookups.checking}
             firstName={household.members[0]?.label || 'the first person listed'}
             requiredIds={requiredHospitalsOf(profile)}
+            drugLines={household.members.flatMap((m) => m.drugs ?? [])}
+            drugLookup={drugLookup}
           />
         )}
         {tab === 'compare' && (
-          <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => setTab('plans')} doctors={doctors} checkingDoctors={doctorLookups.checking} requiredIds={requiredHospitalsOf(profile)} />
+          <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => setTab('plans')} doctors={doctors}
+            checkingDoctors={doctorLookups.checking}
+            requiredIds={requiredHospitalsOf(profile)}
+            drugLines={household.members.flatMap((m) => m.drugs ?? [])}
+            drugLookup={drugLookup}
+          />
         )}
       </main>
     </div>

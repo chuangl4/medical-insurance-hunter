@@ -14,6 +14,8 @@ For a must-have doctor, the app looks them up automatically in the national prov
 
 The Plans page also shows hospital access by insurer for ten Seattle-area hospitals (your must-haves, specialty centers such as Fred Hutch, Seattle Children's and Harborview, and other nearby hospitals), from Washington Healthplanfinder's facility search (`src/data/facilityNetworks.ts`, dated). Where it disagrees with a must-have hospital's own insurance list, the grid and plan cards flag it; the plan filter keeps following the hospital list.
 
+Medications can be linked to RxNorm, the National Library of Medicine's drug database. Coverage for each linked drug is recorded per plan (covered at a tier, or not covered) in the encrypted profile, from Healthplanfinder's prescription search or the insurer's drug list, and each plan prices the drug accordingly: through its drug benefit, counting toward the deductible and out-of-pocket limit, or at the cash price when it doesn't cover it. Non-preferred brand and specialty cost shares are in the plan data for Cascade Care plans and Premera's Preferred plans; elsewhere the preferred-brand share is used and marked as an estimate.
+
 A household saved in the browser by earlier versions moves into your account the first time you sign in.
 
 ## Set up
@@ -28,6 +30,8 @@ A household saved in the browser by earlier versions moves into your account the
 3. `npm run dev` starts the API on port 3001 and the web app on http://localhost:5173.
 
 Run the tests with `npm test`.
+
+Drug lists from insurers that publish machine-readable files are built into `server/formularies/` with `npm run formularies` (downloads several hundred MB; rerun when insurers update their lists). The sources are in `src/data/formularySources.ts`.
 
 ## Deploy
 
@@ -71,4 +75,4 @@ export default config;
 
 ## Not modeled yet
 
-Cost-sharing reductions, Cascade Care Savings amounts, networks of individual doctors (beyond the website hints above), whether specific drugs are covered, specialty drugs, catastrophic plans, and counties other than King.
+Cost-sharing reductions, Cascade Care Savings amounts, networks of individual doctors (beyond the website hints above), automatic drug coverage lookups (coverage is entered per insurer), specialty drugs, catastrophic plans, and counties other than King.
