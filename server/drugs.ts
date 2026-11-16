@@ -18,24 +18,42 @@ async function getJson(url: string): Promise<unknown> {
 
 type DrugsResponse = { drugGroup?: { conceptGroup?: { tty: string; conceptProperties?: { rxcui: string; name: string }[] }[] } };
 
-/** Turns an RxNav drugs.json response into options, brands and generics alike. Exported for tests. */
-export function toOptions(data: DrugsResponse): DrugOption[] {
-  return (data.drugGroup?.conceptGroup ?? [])
+/**
+ * Turns an RxNav drugs.json response into options, brands and generics alike, most likely first: single-drug
+ * products before combinations, then generic before brand (brand first when the search was a brand name), then
+ * tablets and capsules, then lowest strength. Exported for tests.
+ */
+export function toOptions(data: DrugsResponse, query = ''): DrugOption[] {
+  const q = query.trim().toLowerCase();
+  const all = (data.drugGroup?.conceptGroup ?? [])
     .filter((g) => KINDS.includes(g.tty))
-    .flatMap((g) => (g.conceptProperties ?? []).map((c) => ({ rxcui: c.rxcui, name: c.name, brand: g.tty === 'SBD' || g.tty === 'BPCK' })))
-    .slice(0, 30);
+    .flatMap((g) => (g.conceptProperties ?? []).map((c) => ({ rxcui: c.rxcui, name: c.name, brand: g.tty === 'SBD' || g.tty === 'BPCK' })));
+  const brandSearch = q !== '' && all.some((o) => o.brand && (o.name.match(/\[([^\]]+)\]$/)?.[1].toLowerCase() ?? '').startsWith(q));
+  const rank = (o: DrugOption) => {
+    const combo = / \/ /.test(o.name.replace(/\[.*\]$/, '').replace(/\d+(\.\d+)?\s*\w+\/\w+/g, '')) ? 1 : 0;
+    const startsWithQuery = q && o.name.toLowerCase().startsWith(q) ? 0 : 1;
+    const brandOrder = brandSearch ? (o.brand ? 0 : 1) : o.brand ? 1 : 0;
+    const pill = /\b(Tablet|Capsule)\b/.test(o.name) ? 0 : 1;
+    return [combo, startsWithQuery, brandOrder, pill, parseFloat(o.name.match(/\d+(\.\d+)?/)?.[0] ?? '0')];
+  };
+  const cmp = (a: DrugOption, b: DrugOption) => {
+    const [x, y] = [rank(a), rank(b)];
+    for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i];
+    return a.name.localeCompare(b.name);
+  };
+  return all.sort(cmp).slice(0, 40);
 }
 
 /** Looks a medication up in RxNorm by name, correcting spelling when the exact name finds nothing. */
 export async function searchDrugs(name: string): Promise<{ query: string; options: DrugOption[] }> {
-  const exact = toOptions((await getJson(`${RXNAV}/drugs.json?name=${encodeURIComponent(name)}`)) as DrugsResponse);
+  const exact = toOptions((await getJson(`${RXNAV}/drugs.json?name=${encodeURIComponent(name)}`)) as DrugsResponse, name);
   if (exact.length) return { query: name, options: exact };
   const approx = (await getJson(`${RXNAV}/approximateTerm.json?term=${encodeURIComponent(name)}&maxEntries=5`)) as {
     approximateGroup?: { candidate?: { name?: string }[] };
   };
   const corrected = approx.approximateGroup?.candidate?.find((c) => c.name)?.name;
   if (!corrected || corrected.toLowerCase() === name.toLowerCase()) return { query: name, options: [] };
-  return { query: corrected, options: toOptions((await getJson(`${RXNAV}/drugs.json?name=${encodeURIComponent(corrected)}`)) as DrugsResponse) };
+  return { query: corrected, options: toOptions((await getJson(`${RXNAV}/drugs.json?name=${encodeURIComponent(corrected)}`)) as DrugsResponse, corrected) };
 }
 
 /** The drug itself first, then the same drug in other forms (brand <-> generic, packs), from RxNorm. */
