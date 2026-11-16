@@ -6,6 +6,7 @@ import { DoctorHelp } from './DoctorHelp';
 import { FACILITIES, facilityStatus } from '../data/facilityNetworks';
 import { disagreements } from '../domain/hospitalAccess';
 import { TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
 
@@ -18,6 +19,7 @@ interface Props {
   requiredIds: string[];
   drugLines: DrugLine[];
   drugLookup: CoverageLookup;
+  ifApproved: Record<string, number | null>;
 }
 
 interface Row {
@@ -64,7 +66,7 @@ const ROWS: Row[] = [
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];
 
-export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors, requiredIds, drugLines, drugLookup }: Props) {
+export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors, requiredIds, drugLines, drugLookup, ifApproved }: Props) {
   const drugRows: Row[] = drugLines.map((line) => ({
     label: line.name,
     text: (p) => {
@@ -72,7 +74,12 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
       const how = resolveDrug(line, p.plan, p.plan.benefits, drugLookup);
       const note = line.rxcui ? listNote(drugLookup(line.rxcui, p.plan)) : '';
       const suffix = note ? ` (${note})` : '';
-      if (how.kind === 'cash') return `${how.source === 'checked' ? 'Not covered' : 'Not checked'}: ${money(line.price * line.fillsPerYear)}/yr cash${suffix}`;
+      if (how.kind === 'cash') {
+        if (how.source !== 'checked') return `Not checked: ${money(line.price * line.fillsPerYear)}/yr cash${suffix}`;
+        const approved = ifApproved[p.plan.id];
+        const ifOk = approved !== null && approved !== undefined && p.expectedYear !== null ? `; if approved, expected year ≈ ${money(approved)}` : '';
+        return `${EXCEPTION_TERM}: ${money(line.price * line.fillsPerYear)}/yr cash${ifOk}${suffix}`;
+      }
       return how.source === 'checked' ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}: ${costShareText(how.share)}${suffix}` : 'Not checked';
     },
   }));

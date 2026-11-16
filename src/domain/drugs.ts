@@ -113,8 +113,26 @@ export function resolveDrug(line: DrugLine, plan: Plan, benefits: Benefits, look
 
 export const coverageLookup =
   (coverage: Record<string, DrugCoverage> | undefined): CoverageLookup =>
-  (rxcui, plan) =>
-    coverage?.[rxcui]?.plans[plan.id] ?? coverage?.[rxcui]?.fromLists?.[plan.id];
+  (rxcui, plan) => {
+    const mine = coverage?.[rxcui]?.plans[plan.id];
+    const list = coverage?.[rxcui]?.fromLists?.[plan.id];
+    // Your answer wins; it picks up the list's restrictions (such as prior authorization) when it has none and agrees.
+    if (mine && list && !mine.restrictions?.length && list.restrictions?.length && mine.covered === list.covered && (!mine.tier || mine.tier === list.tier)) {
+      return { ...mine, restrictions: list.restrictions };
+    }
+    return mine ?? list;
+  };
+
+/**
+ * The same coverage, as if every drug a plan doesn't list were approved through a formulary exception, at the
+ * plan's highest brand tier. Used to show "if approved" costs beside the worst case.
+ */
+export const ifExceptionApproved =
+  (lookup: CoverageLookup): CoverageLookup =>
+  (rxcui, plan) => {
+    const status = lookup(rxcui, plan);
+    return status && !status.covered ? { covered: true, tier: 'nonPreferredBrand' } : status;
+  };
 
 /** A short note on a list answer for plan cards: "from Kaiser's drug list", "as generic", "2026 list", etc. */
 export function listNote(status: PlanDrugStatus | undefined): string {

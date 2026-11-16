@@ -3,6 +3,8 @@ import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus
 import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import type { Provider } from '../domain/profile';
 import { DoctorHelp } from './DoctorHelp';
+import { ExceptionHelp } from './ExceptionHelp';
+import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { SeverityMark } from './ScenarioGuide';
 import { HospitalAccess } from './HospitalAccess';
 import { disagreements, otherAccess } from '../domain/hospitalAccess';
@@ -42,6 +44,8 @@ interface Props {
   /** Medications linked to drugs, priced per plan. */
   drugLines: DrugLine[];
   drugLookup: CoverageLookup;
+  /** Each plan's expected year if every drug it doesn't list were approved by exception. */
+  ifApproved: Record<string, number | null>;
 }
 
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -99,7 +103,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 }
 
 export function PlanBrowser(props: Props) {
-  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName, requiredIds, drugLines, drugLookup } = props;
+  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName, requiredIds, drugLines, drugLookup, ifApproved } = props;
   const [mathOpen, setMathOpen] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
   const [descending, setDescending] = useState(false);
@@ -375,16 +379,20 @@ export function PlanBrowser(props: Props) {
                     {drugLines.map((line) => {
                       const how = resolveDrug(line, plan, plan.benefits!, drugLookup);
                       const note = line.rxcui ? listNote(drugLookup(line.rxcui, plan)) : '';
+                      const exception = how.kind === 'cash' && how.source === 'checked';
                       const text =
                         how.kind === 'cash'
-                          ? `${how.source === 'checked' ? 'Not covered' : 'Not checked, assumed not covered'} → ${money(line.price * line.fillsPerYear)}/yr cash`
+                          ? `${exception ? EXCEPTION_TERM : 'Not checked, assumed not covered'} → ${money(line.price * line.fillsPerYear)}/yr cash`
                           : how.source === 'checked'
                             ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}${how.estimated ? ' (tier cost estimated)' : ''}${how.restrictions.length ? ` · ${how.restrictions.map((r) => RESTRICTION_LABELS[r]).join(', ')}` : ''}`
                             : `Not checked, assumed ${line.assume === 'generic' ? 'a generic' : 'a brand-name'} fill`;
                       return (
                         <li key={line.itemId} className={`hospital rx-${how.kind === 'cash' ? 'out' : how.source === 'checked' ? 'in' : 'unknown'}`}>
                           <span className="hospital-name">{line.name}:</span> {text}
-                          {note && <small className="muted"> ({note})</small>}
+                          {note && <small className="muted"> ({note})</small>}{' '}
+                          {exception && (
+                            <ExceptionHelp carrier={plan.carrier} drugName={line.name} expectedYear={item.expectedYear} ifApproved={ifApproved[plan.id] ?? null} />
+                          )}
                         </li>
                       );
                     })}

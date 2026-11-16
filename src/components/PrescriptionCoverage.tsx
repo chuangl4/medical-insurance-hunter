@@ -44,7 +44,7 @@ type CellValue = '' | 'not' | `in:${(typeof DRUG_TIERS)[number]}` | 'mixed';
 
 const valueOf = (s: PlanDrugStatus | undefined): CellValue => (!s ? '' : !s.covered ? 'not' : `in:${s.tier ?? 'preferredBrand'}`);
 const uniform = (values: CellValue[]): CellValue => (new Set(values).size === 1 ? values[0] : 'mixed');
-const shortOf = (v: CellValue) => (v === 'not' ? 'Not covered' : v === 'mixed' ? 'Differs by plan' : v ? SHORT_TIER[v.slice(3) as (typeof DRUG_TIERS)[number]] : '');
+const shortOf = (v: CellValue) => (v === 'not' ? 'Not on list' : v === 'mixed' ? 'Differs by plan' : v ? SHORT_TIER[v.slice(3) as (typeof DRUG_TIERS)[number]] : '');
 
 /** Medications by insurer: covered (and at which tier) or not. Setting a cell applies to all of that insurer's plans. */
 export function PrescriptionCoverage({ profile, plans, onChange, checking, errors, onRecheck }: Props) {
@@ -56,8 +56,11 @@ export function PrescriptionCoverage({ profile, plans, onChange, checking, error
   const cell = (rxcui: string, carrier: string) => {
     const cov = profile.drugCoverage?.[rxcui];
     const ids = planIds(carrier);
-    const mineSet = ids.some((id) => cov?.plans[id]);
-    const value = mineSet ? uniform(ids.map((id) => valueOf(cov?.plans[id]))) : '';
+    // Your answers may cover only some plans (Healthplanfinder shows bronze and gold only); compare just those.
+    const answered = ids.filter((id) => cov?.plans[id]);
+    const mineSet = answered.length > 0;
+    const value = mineSet ? uniform(answered.map((id) => valueOf(cov?.plans[id]))) : '';
+    const partial = mineSet && answered.length < ids.length ? `your answer on ${answered.length} of ${ids.length} plans; the rest ${cov?.fromLists ? 'from drug list' : 'not checked'}` : '';
     const list = cov?.fromLists && ids.some((id) => cov.fromLists![id]) ? uniform(ids.map((id) => valueOf(cov.fromLists![id]))) : '';
     const effective = value || list;
     const statuses = ids.map((id) => cov?.plans[id] ?? cov?.fromLists?.[id]);
@@ -68,7 +71,7 @@ export function PrescriptionCoverage({ profile, plans, onChange, checking, error
     const own = all.find((e) => !e.assumption);
     const assumed = all.filter((e) => e.assumption).length;
     const evidence = own ? { ...own, ...(assumed ? { assumption: `${assumed} of ${ids.length} plans assumed to use this list` } : {}) } : all[0];
-    return { value, list, effective, prior, disagree, evidence, mineSet };
+    return { value, list, effective, prior, disagree, evidence, mineSet, partial };
   };
 
   const set = (rxcui: string, carrier: string, value: CellValue, priorAuth: boolean) =>
@@ -156,9 +159,9 @@ export function PrescriptionCoverage({ profile, plans, onChange, checking, error
                     )}
                   </th>
                   {carriers.map((carrier) => {
-                    const { value, list, effective, prior, disagree, evidence, mineSet } = cell(drug.rxcui, carrier);
+                    const { value, list, effective, prior, disagree, evidence, mineSet, partial } = cell(drug.rxcui, carrier);
                     const tip = [
-                      mineSet ? `Your answer: ${shortOf(value)}` : '',
+                      mineSet ? `Your answer: ${shortOf(value)}${partial ? ` (${partial})` : ''}` : '',
                       list && evidence ? `Drug list: ${shortOf(list)} (${describeEvidence(carrier, evidence)})` : '',
                     ]
                       .filter(Boolean)
@@ -176,7 +179,7 @@ export function PrescriptionCoverage({ profile, plans, onChange, checking, error
                         >
                           <option value="">{list ? shortOf(list) : isChecking ? 'Checking…' : 'Not checked'}</option>
                           {value === 'mixed' && <option value="mixed">Differs by plan</option>}
-                          <option value="not">Not covered</option>
+                          <option value="not">Not on drug list</option>
                           <optgroup label="Covered as">
                             {DRUG_TIERS.map((t) => (
                               <option key={t} value={`in:${t}`}>
@@ -193,7 +196,7 @@ export function PrescriptionCoverage({ profile, plans, onChange, checking, error
                           !mineSet && prior && <small className="rx-pa">Prior auth</small>
                         )}
                         <small className="rx-origin">
-                          {mineSet ? 'Your answer' : list ? 'From drug list' : ''}
+                          {mineSet ? (partial ? <span title={partial}>Your answer (some plans)</span> : 'Your answer') : list ? 'From drug list' : ''}
                           {disagree && (
                             <span className="flag-mark" title={`The drug list says ${shortOf(list)}`}>
                               {' '}
