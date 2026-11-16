@@ -6,7 +6,7 @@ import { loadConfig } from './config';
 import { Store } from './db';
 import { AssistantNotConfiguredError, chat, ReplyRefusedError } from './chat';
 import { checkDoctor, CheckRefusedError, searchDoctors } from './doctors';
-import { equivalentRxcuis, searchDrugs } from './drugs';
+import { drugNames, equivalentRxcuis, searchDrugs } from './drugs';
 import { loadFormularies, lookupCoverage } from './formularyData';
 
 try {
@@ -48,7 +48,10 @@ const app = createApp({
   chat: (request) => withClaude(() => chat(anthropic, request)),
   searchDoctors,
   searchDrugs,
-  drugCoverage: async (rxcui) => lookupCoverage(formularies, await equivalentRxcuis(rxcui)),
+  drugCoverage: async (rxcui) => {
+    const [ids, names] = await Promise.all([equivalentRxcuis(rxcui), drugNames(rxcui)]);
+    return lookupCoverage(formularies, ids, names);
+  },
   checkDoctor: (request) => withClaude(() => checkDoctor(anthropic, request)),
   staticDir: config.production ? path.resolve('dist') : undefined,
 });

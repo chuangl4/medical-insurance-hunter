@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compactFromCms, lookupCoverage, tierFromName } from './formularyData';
+import { compactFromCms, lookupCoverage, matchRow, tierFromName } from './formularyData';
 
 const plan = (plan_id: string, drug_tier: string, extra = {}) => ({ plan_id, drug_tier, years: [2027], ...extra });
 
@@ -31,5 +31,28 @@ describe('drug files in the common format', () => {
     expect(r.P2).toMatchObject({ covered: true, tier: 'preferredBrand', matchedRxcui: '222' });
     expect(lookupCoverage([formulary], ['999']).P1).toMatchObject({ covered: false });
     expect(r.P3).toBeUndefined();
+  });
+});
+
+
+describe('matching printed drug-list rows', () => {
+  const rows: [string, 'generic' | 'preferredBrand' | 'nonPreferredBrand', number][] = [
+    ['amlodipine-benazepril oral capsule', 'generic', 0],
+    ['testolol oral tablet 10 mg', 'generic', 0],
+    ['testolol ophth soln 0.5%', 'nonPreferredBrand', 1],
+    ['TESTBRAND OPHTHALMIC SOLUTION 0.5% (testolol)', 'preferredBrand', 0],
+  ];
+  const eyeDrop = { name: 'testolol 5 MG/ML Ophthalmic Solution [Testbrand]', brand: true, ingredients: ['testolol'], brands: ['Testbrand'] };
+
+  it('prefers the brand row for a brand drug, in the same form', () => {
+    expect(matchRow(rows, eyeDrop)).toEqual({ row: rows[3], asGeneric: false });
+  });
+  it('covers a brand as its generic when only the generic is listed, never a different form', () => {
+    expect(matchRow(rows.slice(0, 3), eyeDrop)).toEqual({ row: rows[2], asGeneric: true });
+    expect(matchRow(rows.slice(0, 2), eyeDrop)).toBeNull();
+  });
+  it('matches generic and combination drugs by ingredient', () => {
+    expect(matchRow(rows, { name: 'testolol 10 MG Oral Tablet', brand: false, ingredients: ['testolol'], brands: [] })?.row).toBe(rows[1]);
+    expect(matchRow(rows, { name: 'amlodipine 5 MG / benazepril 10 MG Oral Capsule', brand: false, ingredients: ['amlodipine', 'benazepril'], brands: [] })?.row).toBe(rows[0]);
   });
 });

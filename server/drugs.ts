@@ -46,3 +46,33 @@ export async function equivalentRxcuis(rxcui: string): Promise<string[]> {
   const related = (data.relatedGroup?.conceptGroup ?? []).flatMap((g) => (g.conceptProperties ?? []).map((c) => c.rxcui));
   return [rxcui, ...new Set(related.filter((id) => id !== rxcui))];
 }
+
+export interface DrugNames {
+  /** The product's full RxNorm name, e.g. "atorvastatin 10 MG Oral Tablet [Lipitor]". */
+  name: string;
+  brand: boolean;
+  /** Ingredient names; a combination product has several. */
+  ingredients: string[];
+  brands: string[];
+}
+
+/** Names a printed drug list might use for this product, from RxNorm. */
+export async function drugNames(rxcui: string): Promise<DrugNames> {
+  const [props, related] = (await Promise.all([
+    getJson(`${RXNAV}/rxcui/${encodeURIComponent(rxcui)}/properties.json`),
+    getJson(`${RXNAV}/rxcui/${encodeURIComponent(rxcui)}/related.json?tty=IN+MIN+BN`),
+  ])) as [
+    { properties?: { name?: string; tty?: string } },
+    { relatedGroup?: { conceptGroup?: { tty: string; conceptProperties?: { name: string }[] }[] } },
+  ];
+  const groups = related.relatedGroup?.conceptGroup ?? [];
+  const names = (tty: string) => groups.filter((g) => g.tty === tty).flatMap((g) => (g.conceptProperties ?? []).map((c) => c.name));
+  const min = names('MIN');
+  return {
+    name: props.properties?.name ?? '',
+    brand: props.properties?.tty === 'SBD' || props.properties?.tty === 'BPCK',
+    // A combination's ingredients come from its MIN entry ("amlodipine / benazepril").
+    ingredients: min.length ? min[0].split(/\s*\/\s*/) : names('IN'),
+    brands: names('BN'),
+  };
+}

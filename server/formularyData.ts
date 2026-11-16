@@ -17,6 +17,13 @@ export interface CompactFormulary {
   planIds: string[];
   /** RxNorm id -> one entry per covering plan: [plan index, tier, restriction flags (PA=1, ST=2, QL=4)]. */
   drugs: Record<string, [number, DrugTier, number][]>;
+  /**
+   * For lists converted from PDFs, which name drugs rather than RxNorm ids: [name as printed, tier, flags], the
+   * same for every plan in `planIds`.
+   */
+  rows?: [string, DrugTier, number][];
+  /** Plans given another plan's list because their own isn't published, with why. */
+  assumed?: Record<string, string>;
 }
 
 /** Tier names seen in insurers' files, mapped to the app's tiers. Unknown names are reported, not guessed. */
@@ -98,6 +105,66 @@ export function compactFromCms(
 const restrictionsOf = (flags: number): Restriction[] =>
   (Object.keys(FLAG) as Restriction[]).filter((r) => flags & FLAG[r]);
 
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+/** Dosage-form families, so an eye drop doesn't match a tablet row for the same ingredient. */
+const FORMS: [string, RegExp][] = [
+  ['eye', /\b(ophthalmic|ophth|eye)\b/],
+  ['ear', /\b(otic|ear)\b/],
+  ['nose', /\b(nasal|nose)\b/],
+  ['inhaled', /\b(inhal\w*|nebuli\w*|aerosol)\b/],
+  ['skin', /\b(topical|cream|ointment|gel|lotion|transdermal|patch|foam|shampoo)\b/],
+  ['injected', /\b(inject\w*|syringe|pen|vial|auto ?injector|subcutaneous|intramuscular|intravenous)\b/],
+  ['vaginal', /\b(vaginal|vag)\b/],
+  ['rectal', /\b(rectal|suppositor\w*|enema)\b/],
+  ['oral', /\b(oral|tablet|tab|capsule|cap|chewable|odt|elixir|syrup|suspension)\b/],
+];
+const formOf = (text: string): string | null => FORMS.find(([, re]) => re.test(text))?.[0] ?? null;
+
+export interface NamedDrug {
+  name: string;
+  brand: boolean;
+  ingredients: string[];
+  brands: string[];
+}
+
+/**
+ * The drug-list row that covers a drug, matched by brand or ingredient name and dosage form. A brand-name drug
+ * that only matches a generic row is covered as its generic.
+ */
+export function matchRow(rows: [string, DrugTier, number][], drug: NamedDrug): { row: [string, DrugTier, number]; asGeneric: boolean } | null {
+  const name = norm(drug.name);
+  const form = formOf(name);
+  const brands = drug.brands.map(norm).filter(Boolean);
+  const ingredients = drug.ingredients.map(norm).filter(Boolean);
+  if (!ingredients.length && !brands.length) return null;
+  const startsWith = (text: string, word: string) => text === word || text.startsWith(`${word} `);
+  const extended = (t: string) => /\b(er|xr|xl|sr|cr|dr|la|extended|delayed|24 hr|12 hr|osmotic)\b/.test(t);
+  const strengths = (t: string) => new Set(t.match(/\d+(\.\d+)?/g) ?? []);
+  const drugStrengths = strengths(name);
+  const tierRank = (t: DrugTier) => ['preventive', 'generic', 'preferredBrand', 'nonPreferredBrand', 'specialty'].indexOf(t);
+
+  // Score each matching row: brand rows for a brand drug first, then same release type, then same strength.
+  let best: { row: [string, DrugTier, number]; asGeneric: boolean; score: number } | null = null;
+  for (const row of rows) {
+    const text = norm(row[0]);
+    const rowForm = formOf(text);
+    if (form && rowForm && rowForm !== form) continue;
+    const brandHit = brands.some((b) => startsWith(text, b));
+    const head = text.split(/\b(oral|ophth\w*|topical|inject\w*|nasal|tab\w*|cap\w*|sol\w*|\d)/)[0];
+    const ingredientHit = ingredients.length === 1 ? startsWith(text, ingredients[0]) : ingredients.every((i) => head.includes(i));
+    if (!brandHit && !ingredientHit) continue;
+    const asGeneric = drug.brand && !brandHit;
+    let score = brandHit && drug.brand ? 100 : 0;
+    score += extended(text) === extended(name) ? 20 : 0;
+    if ([...strengths(text)].some((n) => drugStrengths.has(n))) score += 10;
+    if (rowForm === form) score += 5;
+    score -= tierRank(row[1]); // Among equals, the cheaper listing.
+    if (!best || score > best.score) best = { row, asGeneric, score };
+  }
+  return best ? { row: best.row, asGeneric: best.asGeneric } : null;
+}
+
 export interface FoundCoverage extends PlanDrugStatus {
   carrier: string;
   source: CompactFormulary['sourceKind'];
@@ -105,17 +172,36 @@ export interface FoundCoverage extends PlanDrugStatus {
   builtAt: string;
   /** The RxNorm id the list matched: the drug itself, or an equivalent product such as its generic. */
   matchedRxcui: string;
+  /** For printed lists: the row that matched, as printed. */
+  matchedRow?: string;
+  /** A brand-name drug the list covers only as its generic. */
+  asGeneric?: boolean;
+  /** The list is from another plan year (an insurer hasn't posted its new list yet). */
+  planYear: number;
+  /** Set when this plan's own list isn't published and another plan's is used instead. */
+  assumption?: string;
 }
 
 /**
  * Coverage of one drug on every plan the loaded lists cover. `rxcuis` is the drug first, then equivalent products;
  * an exact match wins over an equivalent one for the same plan.
  */
-export function lookupCoverage(formularies: CompactFormulary[], rxcuis: string[]): Record<string, FoundCoverage> {
+export function lookupCoverage(formularies: CompactFormulary[], rxcuis: string[], names?: NamedDrug): Record<string, FoundCoverage> {
   const out: Record<string, FoundCoverage> = {};
   for (const f of formularies) {
-    const base = { carrier: f.carrier, source: f.sourceKind, sourceUrl: f.sourceUrl, builtAt: f.builtAt };
+    const base = { carrier: f.carrier, source: f.sourceKind, sourceUrl: f.sourceUrl, builtAt: f.builtAt, planYear: f.planYear };
     for (const id of f.planIds) out[id] = { ...base, covered: false, matchedRxcui: rxcuis[0] };
+    if (f.rows) {
+      const hit = names ? matchRow(f.rows, names) : null;
+      if (hit) {
+        const [row, tier, flags] = hit.row;
+        const restrictions = restrictionsOf(flags);
+        for (const id of f.planIds) {
+          out[id] = { ...base, covered: true, tier, ...(restrictions.length ? { restrictions } : {}), matchedRxcui: rxcuis[0], matchedRow: row, ...(hit.asGeneric ? { asGeneric: true } : {}) };
+        }
+      }
+      continue;
+    }
     for (const rxcui of [...rxcuis].reverse()) {
       for (const [i, tier, flags] of f.drugs[rxcui] ?? []) {
         const restrictions = restrictionsOf(flags);
@@ -123,6 +209,7 @@ export function lookupCoverage(formularies: CompactFormulary[], rxcuis: string[]
       }
     }
   }
+  for (const f of formularies) for (const [id, why] of Object.entries(f.assumed ?? {})) if (out[id]) out[id].assumption = why;
   return out;
 }
 

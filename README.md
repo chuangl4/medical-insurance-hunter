@@ -31,7 +31,7 @@ A household saved in the browser by earlier versions moves into your account the
 
 Run the tests with `npm test`.
 
-Drug lists from insurers that publish machine-readable files are built into `server/formularies/` with `npm run formularies` (downloads several hundred MB; rerun when insurers update their lists). The sources are in `src/data/formularySources.ts`.
+Drug lists from insurers that publish machine-readable files are built into `server/formularies/` with `npm run formularies` (downloads several hundred MB; rerun when insurers update their lists). Insurers that only publish PDF drug lists are converted once with `npm run formularies:pdf` (needs `ANTHROPIC_API_KEY`; Claude reads each list's legend and Haiku copies each page's rows, cached, about $2 for all six lists). The sources are in `src/data/formularySources.ts`.
 
 ## Deploy
 

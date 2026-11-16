@@ -31,6 +31,11 @@ export interface CarrierFormulary {
   /** As in `Plan.carrier`. */
   carrier: string;
   source: FormularySource;
+  /**
+   * Plans missing from the source that are assumed to use the same list as a plan in it, with why. Shown to
+   * users as an assumption.
+   */
+  sameListAs?: { planIds: string[]; listedPlanId: string; reason: string };
   notes?: string;
 }
 
@@ -64,8 +69,13 @@ export const FORMULARY_SOURCES: CarrierFormulary[] = [
       urls: ['https://cms-machine-readable.cambiahealth.com/drugs1.json', 'https://cms-machine-readable.cambiahealth.com/drugs2.json'],
       index: 'https://cms-machine-readable.cambiahealth.com/index.json',
     },
-    notes:
-      "The 6 exchange plans are in both Cambia files for 2027. The 6 off-exchange plans (87718WA2150…) are in neither, so they need Regence's individual drug list PDF (step 3).",
+    sameListAs: {
+      planIds: ['87718WA2150029', '87718WA2150030', '87718WA2150001', '87718WA2150026', '87718WA2150003', '87718WA2150004'],
+      listedPlanId: '87718WA2170004',
+      reason:
+        "Regence's off-exchange plans aren't in its machine-readable files and it doesn't post a public PDF; assumed to use the same drug list as its exchange plans.",
+    },
+    notes: 'The 6 exchange plans are in both Cambia files for 2027.',
   },
   {
     carrier: 'Premera Blue Cross',
@@ -89,8 +99,9 @@ export const FORMULARY_SOURCES: CarrierFormulary[] = [
       page: 'https://www.molinahealthcare.com/ifp/wa/drugs',
       updated: '2026-10-16',
       evidence:
-        'The 2027 SBC (WA27SBCE_G7_1) points to molinamarketplace.com/WAFormulary2027, which now redirects to Molina\'s new site; this is the Washington Marketplace list linked there. Confirm the effective year from its text during conversion.',
+        "The 2027 SBC (WA27SBCE_G7_1) points to molinamarketplace.com/WAFormulary2027, which now redirects to Molina's new site. The list linked there is the 2026 edition (effective October 1, 2026); Molina's 2027 drug search goes to CVS Caremark's tool and no 2027 PDF is posted yet.",
     },
+    notes: 'Interim: 2026 list until Molina posts its 2027 list; the lookup reports the plan year so the app can say so.',
   },
   {
     carrier: 'Kaiser Permanente',

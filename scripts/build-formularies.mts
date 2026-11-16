@@ -30,13 +30,27 @@ async function download(url: string): Promise<string> {
 }
 
 let failed = false;
-for (const { carrier, source } of FORMULARY_SOURCES) {
+for (const { carrier, source, sameListAs } of FORMULARY_SOURCES) {
   if (source.kind !== 'file') continue;
   console.log(`${carrier}:`);
   const planIds = KING_COUNTY_PLANS.filter((p) => p.carrier === carrier).map((p) => p.id);
   const files = [];
   for (const url of source.urls) files.push(JSON.parse(readFileSync(await download(url), 'utf8')));
   const { formulary, unknownTiers } = compactFromCms(files, { carrier, sourceUrl: source.urls.join(' '), planIds, planYear: PLAN_YEAR });
+  if (sameListAs && formulary.planIds.includes(sameListAs.listedPlanId)) {
+    // Give the unlisted plans the listed plan's entries, and record the assumption.
+    const from = formulary.planIds.indexOf(sameListAs.listedPlanId);
+    formulary.assumed = {};
+    for (const id of sameListAs.planIds) {
+      if (formulary.planIds.includes(id)) continue;
+      const to = formulary.planIds.push(id) - 1;
+      formulary.assumed[id] = sameListAs.reason;
+      for (const entries of Object.values(formulary.drugs)) {
+        const e = entries.find(([i]) => i === from);
+        if (e) entries.push([to, e[1], e[2]]);
+      }
+    }
+  }
   const missing = planIds.filter((id) => !formulary.planIds.includes(id));
   const out = path.join(FORMULARY_DIR, `${slug(carrier)}.json`);
   writeFileSync(out, JSON.stringify(formulary));
