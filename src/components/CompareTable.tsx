@@ -7,6 +7,7 @@ import { FACILITIES, facilityStatus } from '../data/facilityNetworks';
 import { disagreements } from '../domain/hospitalAccess';
 import { TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
+import { OUT_OF_NETWORK_TEXT, REFERRAL_TEXT, networkRulesFor, networkTypeOf } from '../domain/networkRules';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
 
@@ -60,8 +61,13 @@ const ROWS: Row[] = [
   { label: 'Metal level', text: (p) => p.plan.metal.charAt(0).toUpperCase() + p.plan.metal.slice(1) },
   {
     label: 'Network',
-    text: (p) => (p.plan.network ? `${p.plan.network}${p.plan.networkNote ? ' (from 2026 documents; confirm)' : ''}` : 'See plan details'),
+    text: (p) => {
+      const net = networkTypeOf(p.plan);
+      return net.type ? `${net.type}${net.fromOlderDocs ? ' (from 2026 documents; confirm)' : ''}` : 'See plan details';
+    },
   },
+  { label: 'Specialist referral', text: (p) => { const r = networkRulesFor(p.plan); return r ? REFERRAL_TEXT[r.referral] : 'See plan details'; } },
+  { label: 'Outside the network', text: (p) => { const r = networkRulesFor(p.plan); return r ? OUT_OF_NETWORK_TEXT[r.outOfNetwork].replace('Outside the network: ', '').replace(/^./, (c) => c.toUpperCase()) : 'See plan details'; } },
   { label: 'HSA plan', text: (p) => (p.plan.hsaEligible ? 'Yes' : 'No') },
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];

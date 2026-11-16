@@ -1,11 +1,12 @@
 import { doctorStatusFor, hospitalStatus, type HospitalId } from '../data/hospitalNetworks';
 import { excludesPlan } from './doctors';
+import { networkTypeOf } from './networkRules';
 import type { Provider } from './profile';
 import type { Channel, EvaluatedPlan, Metal, NetworkType, Plan } from './types';
 
 /** A plan's network type, or 'unconfirmed' when its documents didn't say. */
 export type NetworkChoice = NetworkType | 'unconfirmed';
-export const networkOf = (plan: Plan): NetworkChoice => plan.network ?? 'unconfirmed';
+export const networkOf = (plan: Plan): NetworkChoice => networkTypeOf(plan).type ?? 'unconfirmed';
 
 export type SortKey =
   | 'expectedYear'

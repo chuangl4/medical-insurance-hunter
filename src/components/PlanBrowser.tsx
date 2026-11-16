@@ -4,6 +4,8 @@ import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import type { Provider } from '../domain/profile';
 import { DoctorHelp } from './DoctorHelp';
 import { ExceptionHelp } from './ExceptionHelp';
+import { NetworkRulesLine } from './NetworkRulesLine';
+import { networkTypeOf } from '../domain/networkRules';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { SeverityMark } from './ScenarioGuide';
 import { HospitalAccess } from './HospitalAccess';
@@ -290,12 +292,17 @@ export function PlanBrowser(props: Props) {
                 </div>
                 <div className="badges">
                   <span className={`badge metal-${plan.metal}`}>{plan.metal}</span>
-                  {plan.network && (
-                    <span className="badge" title={plan.networkNote}>
-                      {plan.network}
-                      {plan.networkNote && ' (2026)'}
-                    </span>
-                  )}
+                  {(() => {
+                    const net = networkTypeOf(plan);
+                    return (
+                      net.type && (
+                        <span className="badge" title={net.fromOlderDocs ? plan.networkNote : undefined}>
+                          {net.type}
+                          {net.fromOlderDocs && ' (2026)'}
+                        </span>
+                      )
+                    );
+                  })()}
                   <span className="badge">{CHANNEL_LABEL[plan.channel]}</span>
                   {plan.hsaEligible && <span className="badge">HSA</span>}
                   {plan.cascadeCare && <span className="badge">Cascade Care</span>}
@@ -334,6 +341,7 @@ export function PlanBrowser(props: Props) {
                     <dd>{moneyOrUnknown(item.oopMax)}</dd>
                   </div>
                 </dl>
+                <NetworkRulesLine plan={plan} />
                 {plan.benefits && (
                   <button
                     type="button"

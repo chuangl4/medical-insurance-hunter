@@ -384,3 +384,6 @@ a { color: var(--accent); }
 .rx-sources summary { cursor: pointer; font-size: 0.75rem; color: var(--accent); }
 .rx-sources ul { margin: 4px 0 0; padding-left: 16px; font-size: 0.72rem; }
 .rx-sources li { margin-bottom: 2px; }
+.network-rules { margin: 4px 0; font-size: 0.85rem; color: var(--muted); }
+.network-rules-referral { color: var(--text); }
+.network-help { display: flex; }

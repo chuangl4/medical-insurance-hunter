@@ -1,6 +1,18 @@
 import type { DrugLine } from './drugs';
 export type Metal = 'bronze' | 'silver' | 'gold' | 'platinum';
 export type NetworkType = 'HMO' | 'PPO' | 'EPO';
+
+/** A plan's network rules, from its Summary of Benefits and Coverage. */
+export interface NetworkRules {
+  type: 'HMO' | 'EPO' | 'PPO' | 'POS' | null;
+  /** Whether seeing a specialist needs a referral; 'yesSomeSelf' means yes, except some specialists you may see directly. */
+  referral: 'no' | 'yes' | 'yesSomeSelf' | 'unknown';
+  /** Whether care outside the network is paid: only emergencies (HMO/EPO), or partly (PPO). */
+  outOfNetwork: 'emergencyOnly' | 'partial' | 'unknown';
+  source: string;
+  /** Set when this plan's own summary wasn't found: the same-network plan whose rules it shares. */
+  inferredFrom?: string;
+}
 /** Where a plan can be bought: the exchange, directly from the insurer, or either. */
 export type Channel = 'on' | 'off' | 'both';
 
