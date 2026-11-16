@@ -58,12 +58,30 @@ async function download(url: string): Promise<Uint8Array> {
 async function pageLines(pdf: Awaited<ReturnType<typeof getDocumentProxy>>, n: number): Promise<string> {
   const page = await pdf.getPage(n);
   const content = await page.getTextContent();
-  type Item = { str: string; x: number; y: number; w: number };
   const items: Item[] = [];
   for (const it of content.items as { str?: string; transform?: number[]; width?: number }[]) {
     if (!it.str?.trim() || !it.transform) continue;
     items.push({ str: it.str, x: it.transform[4], y: it.transform[5], w: it.width ?? 0 });
   }
+  // Two-column pages (two tables side by side) are rebuilt one column at a time, left then right, so a line
+  // never mixes two drugs. A column start is a left edge many items share in the middle of the page.
+  const width = page.getViewport({ scale: 1 }).width;
+  // A tier column also starts mid-page, but holds short labels ("1", "Tier 2"); a second table starts with names.
+  const starts = new Map<number, string[]>();
+  for (const it of items) if (it.x > width * 0.4 && it.x < width * 0.65) starts.set(Math.round(it.x), [...(starts.get(Math.round(it.x)) ?? []), it.str.trim()]);
+  const split = [...starts]
+    .filter(([, strs]) => {
+      const names = strs.filter((t) => !/^(tier\s*)?[\dA-Z$]{1,4}\b/i.test(t) || t.length > 12);
+      return names.length >= 8 && names.length >= strs.length * 0.6 && names.reduce((n, t) => n + t.length, 0) / names.length >= 8;
+    })
+    .sort((a, b) => b[1].length - a[1].length)[0]?.[0];
+  const columns = split ? [items.filter((it) => it.x < split - 3), items.filter((it) => it.x >= split - 3)] : [items];
+  return columns.map((col) => linesOf(col)).filter(Boolean).join('\n');
+}
+
+type Item = { str: string; x: number; y: number; w: number };
+
+function linesOf(items: Item[]): string {
   items.sort((a, b) => b.y - a.y || a.x - b.x);
   const lines: Item[][] = [];
   for (const it of items) {
@@ -218,6 +236,7 @@ for (const { carrier, source } of FORMULARY_SOURCES) {
   const rows: [string, DrugTier, number][] = [];
   const unknownTiers = new Map<string, number>();
   const suspicious: string[] = [];
+  let corrected = 0;
   let done = 0;
   const queue = pages.map((text, i) => ({ text, i }));
   await Promise.all(
@@ -228,7 +247,9 @@ for (const { carrier, source } of FORMULARY_SOURCES) {
           done++;
           continue;
         }
-        let result = await cached(`${docKey}-p${i + 1}`, () => ask(ROW_MODEL, rowsSchema, ROWS_SYSTEM, text));
+        // The key includes the page text, so a change in how lines are rebuilt re-reads only the affected pages.
+        const pageKey = `${docKey}-p${i + 1}-${hash(text)}`;
+        let result = await cached(pageKey, () => ask(ROW_MODEL, rowsSchema, ROWS_SYSTEM, text));
         // Lines that end in a known tier value are almost certainly rows; far fewer rows than that means misses.
         const likely = text.split('\n').filter((l) => {
           const cells = l.split(' | ');
@@ -236,11 +257,34 @@ for (const { carrier, source } of FORMULARY_SOURCES) {
         }).length;
         if (likely >= 5 && result.rows.length < likely * 0.8) {
           // Read the page again with the stronger model and keep whichever found more rows.
-          const retry = await cached(`${docKey}-p${i + 1}-retry`, () => ask(LEGEND_MODEL, rowsSchema, ROWS_SYSTEM, text));
+          const retry = await cached(`${pageKey}-retry`, () => ask(LEGEND_MODEL, rowsSchema, ROWS_SYSTEM, text));
           if (retry.rows.length > result.rows.length) result = retry;
           if (result.rows.length < likely * 0.8) suspicious.push(`page ${i + 1}: ${result.rows.length} rows, ~${likely} expected`);
         }
+        // Check each copied tier against the page: find the row's own line and read the tier cell from it.
+        const lines = text.split('\n').map((l) => l.split(' | ').map((c) => c.trim()));
+        const key = (x: string) => x.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
         for (const r of result.rows) {
+          const name = key(r.name);
+          const known = (l: string) => tierOf.has(normLabel(l));
+          const line = name.length >= 4 ? lines.find((cells) => key(cells[0]) === name) : undefined;
+          let printed = line?.slice(1).map((c) => splitTierCell(c, known)).find((t) => known(t.label));
+          if (!printed && name.length >= 4) {
+            // Lines without column gaps: the tier is the text right after the name ("JARDIANCE 2 ST; QL").
+            for (const cells of lines) {
+              const joined = cells.join(' ');
+              if (!key(joined).startsWith(`${name} `)) continue;
+              const words = joined.split(/\s+/);
+              const after = words.slice(r.name.trim().split(/\s+/).length).join(' ');
+              const t = splitTierCell(after, known);
+              if (known(t.label)) printed = t;
+              break;
+            }
+          }
+          if (printed && normLabel(printed.label) !== normLabel(splitTierCell(r.tier, (l) => tierOf.has(normLabel(l))).label)) {
+            corrected++;
+            r.tier = [printed.label, printed.rest].filter(Boolean).join(' ');
+          }
           const { label, rest } = splitTierCell(r.tier, (l) => tierOf.has(normLabel(l)));
           r.notes = [rest, r.notes].filter(Boolean).join(' ');
           const tier = tierOf.get(normLabel(label)) as DrugTier | 'notCovered' | 'medicalBenefit' | 'unclear' | undefined;
@@ -271,5 +315,6 @@ for (const { carrier, source } of FORMULARY_SOURCES) {
   writeFileSync(path.join(FORMULARY_DIR, `${slug(carrier)}.json`), JSON.stringify(formulary));
   console.log(`  ${rows.length} rows for ${planIds.length} plans -> server/formularies/${slug(carrier)}.json`);
   if (unknownTiers.size) console.log(`  rows skipped for unmapped tiers: ${JSON.stringify(Object.fromEntries(unknownTiers))}`);
+  if (corrected) console.log(`  ${corrected} tiers corrected from the page's own line`);
   if (suspicious.length) console.log(`  CHECK these pages for missed rows:\n    ${suspicious.join('\n    ')}`);
 }

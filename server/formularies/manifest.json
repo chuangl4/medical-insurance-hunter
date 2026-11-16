@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-11-16T05:51:59.117Z",
+  "sources": {
+    "https://api.centene.com/ambetter/reference/drugs-AMB-WA.json": {
+      "size": "8462523",
+      "modified": "Thu, 12 Nov 2026 02:00:32 GMT",
+      "etag": "\"cc1ecc994972dd1:0\""
+    },
+    "https://cms-machine-readable.cambiahealth.com/drugs1.json": {
+      "size": "198863237",
+      "modified": "Fri, 13 Nov 2026 18:30:19 GMT",
+      "etag": "\"1c291f667ad2980b397571cbfeefa20a-24\""
+    },
+    "https://cms-machine-readable.cambiahealth.com/drugs2.json": {
+      "size": "198247449",
+      "modified": "Fri, 13 Nov 2026 18:31:01 GMT",
+      "etag": "\"7a04fdba52117c7bb04a0fa9f59ead6b-24\""
+    },
+    "https://www.premera.com/documents/062278_2027.pdf": {
+      "hash": "4820ab57aa2ce8c33718ecfa5667e1744853324f5309e76155cb5a92ec787f43"
+    },
+    "https://www.molinahealthcare.com/-/media/Project/PWS/Healthcare/PDF/PDF/IFP/WA/Drugs/MHWA-MARKETPLACE-FORMULARY-EN-508.pdf": {
+      "hash": "0c772e19d84c45900d88b24836218788850f58a8d997114c57c1c0e872721c0b"
+    },
+    "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/formularies/wa/if-sg-drug-formulary-wa-en.pdf": {
+      "hash": "6de75a9521ef20ac57da5d03a735e7449bfb11a3540f9a5b1072ff52e460bb32"
+    },
+    "https://www.uhc.com/content/dam/uhcdotcom/en/ifp/pdls/IFP_M58661-WA_UHC_IFP_PY27_PDL_v2.pdf": {
+      "hash": "92ff038d868cc73be0ad3604fdad83656443831c9f7ca8b71d76bd5a5322f45e"
+    },
+    "https://fm.formularynavigator.com/FBO/143/2027_Select_4_Tier_WA_IND.pdf": {
+      "hash": "78f7f7cfc7c54a5ddede3e866502238724809fad474435bfa4a2ea700a6bb716"
+    },
+    "https://individualandfamily.chpw.org/wp-content/uploads/cascade-select/content/member/pharmacy/CS_RX010_Formulary_2027.pdf": {
+      "hash": "002eeb0da8e72518600083ffd3f1b9796921c507bee733c9065dd28a9b7eb7b6"
+    }
+  }
+}

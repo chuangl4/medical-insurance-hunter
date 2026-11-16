@@ -159,6 +159,10 @@ export function matchRow(rows: [string, DrugTier, number][], drug: NamedDrug): {
     score += extended(text) === extended(name) ? 20 : 0;
     if ([...strengths(text)].some((n) => drugStrengths.has(n))) score += 10;
     if (rowForm === form) score += 5;
+    // Same product form within the family: tablet vs suspension, pen vs vial, and so on.
+    const subform = /\b(tablet|tab|capsule|cap|suspension|solution|chewable|granules|packet|pen|syringe|vial|auto injector|cream|ointment|gel|patch)\b/;
+    const want = name.match(subform)?.[1];
+    if (want && new RegExp(`\\b${want === 'tablet' ? 'tab' : want === 'capsule' ? 'cap' : want}`).test(text)) score += 3;
     score -= tierRank(row[1]); // Among equals, the cheaper listing.
     if (!best || score > best.score) best = { row, asGeneric, score };
   }
@@ -221,7 +225,7 @@ export const FORMULARY_DIR = path.resolve(import.meta.dirname, 'formularies');
 export function loadFormularies(dir = FORMULARY_DIR): CompactFormulary[] {
   try {
     return readdirSync(dir)
-      .filter((f) => f.endsWith('.json'))
+      .filter((f) => f.endsWith('.json') && f !== 'manifest.json')
       .map((f) => JSON.parse(readFileSync(path.join(dir, f), 'utf8')) as CompactFormulary);
   } catch {
     return [];

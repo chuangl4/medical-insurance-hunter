@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "formularies": "node --max-old-space-size=6144 --import tsx scripts/build-formularies.mts",
-    "formularies:pdf": "tsx scripts/convert-formulary-pdfs.mts"
+    "formularies:pdf": "tsx scripts/convert-formulary-pdfs.mts",
+    "formularies:check": "tsx scripts/check-formularies.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

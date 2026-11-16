@@ -33,6 +33,10 @@ Run the tests with `npm test`.
 
 Drug lists from insurers that publish machine-readable files are built into `server/formularies/` with `npm run formularies` (downloads several hundred MB; rerun when insurers update their lists). Insurers that only publish PDF drug lists are converted once with `npm run formularies:pdf` (needs `ANTHROPIC_API_KEY`; Claude reads each list's legend and Haiku copies each page's rows, cached, about $2 for all six lists). The sources are in `src/data/formularySources.ts`.
 
+`npm run formularies:check` reports when an insurer has changed its drug list (or posted a newer one) since the last build, and exits with code 1 so it can run on a schedule; after rebuilding, run it with `--record`. Lists change during the year, so check about monthly, and at the start of open enrollment.
+
+Accuracy, checked 2026-11-16 against Washington Healthplanfinder's prescription search: 89 of 90 drug-and-insurer answers matched (10 drugs, 9 insurers). The one miss came from Molina's interim 2026 list.
+
 ## Deploy
 
 On the server, from a fresh clone (so no personal presets get bundled): `npm ci`, `npm run build`, then `npm start`. It serves the app and API on `PORT` (default 3001). Put it behind HTTPS (for example Caddy or nginx), since the session cookie is marked Secure in production. The database lives in `DATA_DIR` (default `data/`); back it up along with `PROFILE_KEY`.
