@@ -54,7 +54,25 @@ export const api = {
   searchDrugs: (name: string) =>
     call<{ query: string; options: { rxcui: string; name: string; brand: boolean }[] }>('/api/drugs/search', { method: 'POST', body: { name } }),
   drugCoverage: (rxcui: string) =>
-    call<{ plans: Record<string, { covered: boolean; tier?: string; restrictions?: string[]; carrier: string; source: string; sourceUrl: string; builtAt: string; matchedRxcui: string }> }>(
+    call<{
+      plans: Record<
+        string,
+        {
+          covered: boolean;
+          tier?: string;
+          restrictions?: string[];
+          carrier: string;
+          source: string;
+          sourceUrl: string;
+          builtAt: string;
+          planYear: number;
+          matchedRxcui: string;
+          matchedRow?: string;
+          asGeneric?: boolean;
+          assumption?: string;
+        }
+      >;
+    }>(
       '/api/drugs/coverage',
       { method: 'POST', body: { rxcui } },
     ).then((r) => r.plans),

@@ -1,4 +1,4 @@
-import { DRUG_TIERS, TIER_LABELS, type DrugCoverage, type DrugRef, type PlanDrugStatus } from '../domain/drugs';
+import { DRUG_TIERS, describeEvidence, listDisagrees, type DrugCoverage, type DrugRef, type PlanDrugStatus } from '../domain/drugs';
 import type { Profile } from '../domain/profile';
 import type { EvaluatedPlan } from '../domain/types';
 
@@ -6,6 +6,10 @@ interface Props {
   profile: Profile;
   plans: EvaluatedPlan[];
   onChange: (update: (prev: Profile) => Profile) => void;
+  /** Drugs (RxNorm ids) being looked up in insurers' drug lists. */
+  checking: string[];
+  errors: Record<string, string>;
+  onRecheck: (rxcui: string) => void;
 }
 
 interface LinkedDrug {
@@ -39,9 +43,11 @@ const SHORT_TIER: Record<(typeof DRUG_TIERS)[number], string> = {
 type CellValue = '' | 'not' | `in:${(typeof DRUG_TIERS)[number]}` | 'mixed';
 
 const valueOf = (s: PlanDrugStatus | undefined): CellValue => (!s ? '' : !s.covered ? 'not' : `in:${s.tier ?? 'preferredBrand'}`);
+const uniform = (values: CellValue[]): CellValue => (new Set(values).size === 1 ? values[0] : 'mixed');
+const shortOf = (v: CellValue) => (v === 'not' ? 'Not covered' : v === 'mixed' ? 'Differs by plan' : v ? SHORT_TIER[v.slice(3) as (typeof DRUG_TIERS)[number]] : '');
 
 /** Medications by insurer: covered (and at which tier) or not. Setting a cell applies to all of that insurer's plans. */
-export function PrescriptionCoverage({ profile, plans, onChange }: Props) {
+export function PrescriptionCoverage({ profile, plans, onChange, checking, errors, onRecheck }: Props) {
   const drugs = linkedDrugs(profile);
   if (drugs.length === 0) return null;
   const carriers = [...new Set(plans.map((p) => p.plan.carrier))].sort();
@@ -49,10 +55,20 @@ export function PrescriptionCoverage({ profile, plans, onChange }: Props) {
 
   const cell = (rxcui: string, carrier: string) => {
     const cov = profile.drugCoverage?.[rxcui];
-    const values = new Set(planIds(carrier).map((id) => valueOf(cov?.plans[id])));
-    const value: CellValue = values.size === 1 ? [...values][0] : 'mixed';
-    const prior = planIds(carrier).some((id) => cov?.plans[id]?.restrictions?.includes('priorAuth'));
-    return { value, prior };
+    const ids = planIds(carrier);
+    const mineSet = ids.some((id) => cov?.plans[id]);
+    const value = mineSet ? uniform(ids.map((id) => valueOf(cov?.plans[id]))) : '';
+    const list = cov?.fromLists && ids.some((id) => cov.fromLists![id]) ? uniform(ids.map((id) => valueOf(cov.fromLists![id]))) : '';
+    const effective = value || list;
+    const statuses = ids.map((id) => cov?.plans[id] ?? cov?.fromLists?.[id]);
+    const prior = statuses.some((st) => st?.restrictions?.includes('priorAuth'));
+    const disagree = ids.some((id) => listDisagrees(cov, id));
+    // Describe the insurer's own list; note separately how many plans only assume it.
+    const all = ids.map((id) => cov?.fromLists?.[id]?.evidence).filter((e) => e !== undefined);
+    const own = all.find((e) => !e.assumption);
+    const assumed = all.filter((e) => e.assumption).length;
+    const evidence = own ? { ...own, ...(assumed ? { assumption: `${assumed} of ${ids.length} plans assumed to use this list` } : {}) } : all[0];
+    return { value, list, effective, prior, disagree, evidence, mineSet };
   };
 
   const set = (rxcui: string, carrier: string, value: CellValue, priorAuth: boolean) =>
@@ -67,7 +83,10 @@ export function PrescriptionCoverage({ profile, plans, onChange }: Props) {
       const sources = new Set([current.source, 'your entries'].filter(Boolean));
       return {
         ...prev,
-        drugCoverage: { ...prev.drugCoverage, [rxcui]: { checkedAt: new Date().toISOString(), source: [...sources].join('; '), plans: nextPlans } },
+        drugCoverage: {
+          ...prev.drugCoverage,
+          [rxcui]: { ...current, checkedAt: new Date().toISOString(), source: [...sources].join('; '), plans: nextPlans },
+        },
       };
     });
 
@@ -94,28 +113,68 @@ export function PrescriptionCoverage({ profile, plans, onChange }: Props) {
           <tbody>
             {drugs.map(({ drug, label }) => {
               const cov = profile.drugCoverage?.[drug.rxcui];
+              const isChecking = checking.includes(drug.rxcui);
               return (
                 <tr key={drug.rxcui}>
                   <th scope="row">
                     {label}
                     <small title={drug.name}>{drug.name.length > 60 ? `${drug.name.slice(0, 57)}…` : drug.name}</small>
-                    {cov?.checkedAt && (
+                    <small>
+                      {isChecking
+                        ? 'Searching insurers\' drug lists…'
+                        : cov?.listsCheckedAt
+                          ? `Drug lists searched ${cov.listsCheckedAt.slice(0, 10)}`
+                          : errors[drug.rxcui] ?? 'Drug lists not searched yet'}{' '}
+                      {!isChecking && (
+                        <button type="button" className="link-button" onClick={() => onRecheck(drug.rxcui)}>
+                          {cov?.listsCheckedAt ? 'Search again' : 'Search'}
+                        </button>
+                      )}
+                    </small>
+                    {cov?.checkedAt && Object.keys(cov.plans).length > 0 && (
                       <small>
-                        {cov.source} · {cov.checkedAt.slice(0, 10)}
+                        Your answers: {cov.source} · {cov.checkedAt.slice(0, 10)}
                       </small>
+                    )}
+                    {cov?.fromLists && (
+                      <details className="rx-sources">
+                        <summary>Where these come from</summary>
+                        <ul>
+                          {carriers.map((carrier) => {
+                            const c = cell(drug.rxcui, carrier);
+                            return c.evidence ? (
+                              <li key={carrier}>
+                                <a href={c.evidence.url} target="_blank" rel="noreferrer">
+                                  {describeEvidence(carrier, c.evidence)}
+                                </a>
+                                {c.list && `: ${shortOf(c.list)}`}
+                              </li>
+                            ) : null;
+                          })}
+                        </ul>
+                      </details>
                     )}
                   </th>
                   {carriers.map((carrier) => {
-                    const { value, prior } = cell(drug.rxcui, carrier);
+                    const { value, list, effective, prior, disagree, evidence, mineSet } = cell(drug.rxcui, carrier);
+                    const tip = [
+                      mineSet ? `Your answer: ${shortOf(value)}` : '',
+                      list && evidence ? `Drug list: ${shortOf(list)} (${describeEvidence(carrier, evidence)})` : '',
+                    ]
+                      .filter(Boolean)
+                      .join('\n');
                     return (
-                      <td key={carrier} className={`rx-cell rx-${value === '' ? 'unknown' : value === 'not' ? 'out' : value === 'mixed' ? 'mixed' : 'in'}`}>
+                      <td
+                        key={carrier}
+                        className={`rx-cell rx-${effective === '' ? 'unknown' : effective === 'not' ? 'out' : effective === 'mixed' ? 'mixed' : 'in'}`}
+                        title={tip || undefined}
+                      >
                         <select
                           aria-label={`${drug.name} with ${carrier}`}
-                          title={value.startsWith('in:') ? `Covered: ${TIER_LABELS[value.slice(3) as (typeof DRUG_TIERS)[number]]}` : undefined}
                           value={value}
                           onChange={(e) => set(drug.rxcui, carrier, e.target.value as CellValue, prior)}
                         >
-                          <option value="">Not checked</option>
+                          <option value="">{list ? shortOf(list) : isChecking ? 'Checking…' : 'Not checked'}</option>
                           {value === 'mixed' && <option value="mixed">Differs by plan</option>}
                           <option value="not">Not covered</option>
                           <optgroup label="Covered as">
@@ -126,11 +185,22 @@ export function PrescriptionCoverage({ profile, plans, onChange }: Props) {
                             ))}
                           </optgroup>
                         </select>
-                        {value.startsWith('in:') && (
+                        {value.startsWith('in:') ? (
                           <label className="rx-pa">
                             <input type="checkbox" checked={prior} onChange={(e) => set(drug.rxcui, carrier, value, e.target.checked)} /> Prior auth
                           </label>
+                        ) : (
+                          !mineSet && prior && <small className="rx-pa">Prior auth</small>
                         )}
+                        <small className="rx-origin">
+                          {mineSet ? 'Your answer' : list ? 'From drug list' : ''}
+                          {disagree && (
+                            <span className="flag-mark" title={`The drug list says ${shortOf(list)}`}>
+                              {' '}
+                              ! list says {shortOf(list)}
+                            </span>
+                          )}
+                        </small>
                       </td>
                     );
                   })}
@@ -141,10 +211,11 @@ export function PrescriptionCoverage({ profile, plans, onChange }: Props) {
         </table>
       </div>
       <p className="hint">
-        Each choice applies to all of that insurer's plans and updates their yearly costs: a covered drug is priced with the
-        plan's cost share for its tier and counts toward the deductible and out-of-pocket limit; a drug that isn't covered
-        is paid at your cash price. Check a drug in each insurer's 2027 drug list or Healthplanfinder's prescription search.
-        "Not checked" uses what you chose in Your household (generic, brand-name, or cash).
+        Each linked medication is searched in every insurer's 2027 drug list automatically ("From drug list"). Choosing a value
+        sets your own answer for all of that insurer's plans, for example after checking Healthplanfinder or calling the
+        insurer; your answer wins, and <strong>!</strong> marks where it disagrees with the list. A covered drug is priced
+        with the plan's cost share for its tier and counts toward the deductible and out-of-pocket limit; a drug that isn't
+        covered is paid at your cash price. Drug lists change, so confirm before enrolling.
       </p>
     </details>
   );

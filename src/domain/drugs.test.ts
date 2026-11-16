@@ -1,0 +1,35 @@
+import { describe, expect, it } from 'vitest';
+import { coverageLookup, describeEvidence, listDisagrees, listNote, type DrugCoverage } from './drugs';
+import type { Plan } from './types';
+
+const plan = (id: string) => ({ id, carrier: 'Test Insurer' }) as Plan;
+const evidence = { kind: 'drug list PDF', url: 'https://example.test/list.pdf', planYear: 2026, row: 'TESTBRAND', asGeneric: true };
+const cov: DrugCoverage = {
+  checkedAt: 'x',
+  source: 'your entries',
+  plans: { P1: { covered: true, tier: 'nonPreferredBrand' } },
+  fromLists: {
+    P1: { covered: false, evidence },
+    P2: { covered: true, tier: 'generic', evidence },
+  },
+};
+
+describe('drug coverage from lists and from you', () => {
+  const look = coverageLookup({ '123': cov });
+  it('uses your answer first, then the drug list', () => {
+    expect(look('123', plan('P1'))).toEqual({ covered: true, tier: 'nonPreferredBrand' });
+    expect(look('123', plan('P2'))).toMatchObject({ covered: true, tier: 'generic' });
+    expect(look('123', plan('P3'))).toBeUndefined();
+  });
+  it('flags where your answer and the list disagree', () => {
+    expect(listDisagrees(cov, 'P1')).toBe(true);
+    expect(listDisagrees(cov, 'P2')).toBe(false);
+  });
+  it('explains where a list answer came from', () => {
+    expect(listNote(look('123', plan('P2')))).toBe('from drug list, as generic, 2026 list');
+    expect(listNote(look('123', plan('P1')))).toBe('your answer');
+    expect(describeEvidence('Test Insurer (Brand)', evidence)).toBe(
+      'Test Insurer\'s 2026 drug list (PDF); row "TESTBRAND"; covered as the generic; the 2027 list isn\'t posted yet',
+    );
+  });
+});

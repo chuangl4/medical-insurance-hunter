@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { DoctorHelp } from './DoctorHelp';
 import { FACILITIES, facilityStatus } from '../data/facilityNetworks';
 import { disagreements } from '../domain/hospitalAccess';
-import { TIER_LABELS, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
 
@@ -70,8 +70,10 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
     text: (p) => {
       if (!p.plan.benefits) return 'See plan details';
       const how = resolveDrug(line, p.plan, p.plan.benefits, drugLookup);
-      if (how.kind === 'cash') return `${how.source === 'checked' ? 'Not covered' : 'Not checked'}: ${money(line.price * line.fillsPerYear)}/yr cash`;
-      return how.source === 'checked' ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}: ${costShareText(how.share)}` : 'Not checked';
+      const note = line.rxcui ? listNote(drugLookup(line.rxcui, p.plan)) : '';
+      const suffix = note ? ` (${note})` : '';
+      if (how.kind === 'cash') return `${how.source === 'checked' ? 'Not covered' : 'Not checked'}: ${money(line.price * line.fillsPerYear)}/yr cash${suffix}`;
+      return how.source === 'checked' ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}: ${costShareText(how.share)}${suffix}` : 'Not checked';
     },
   }));
   const hospitalRows: Row[] = HOSPITAL_IDS.map((id) => ({

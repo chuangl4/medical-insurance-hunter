@@ -23,6 +23,8 @@ export type FormularySource =
       page: string;
       /** The PDF's own modified date. */
       updated: string;
+      /** The plan year the list applies to, decided from its title and dates (not the effective date alone). */
+      planYear: number;
       /** What ties the list to the plans, so the mapping can be rechecked. */
       evidence: string;
     };
@@ -82,6 +84,7 @@ export const FORMULARY_SOURCES: CarrierFormulary[] = [
     source: {
       kind: 'pdf',
       title: 'Premera 2027 M4 drug list',
+      planYear: 2027,
       url: 'https://www.premera.com/documents/062278_2027.pdf',
       page: 'https://www.premera.com/visitor/covered-drugs',
       updated: '2026-11-12',
@@ -95,6 +98,7 @@ export const FORMULARY_SOURCES: CarrierFormulary[] = [
     source: {
       kind: 'pdf',
       title: 'Molina Healthcare of Washington Marketplace formulary',
+      planYear: 2026,
       url: 'https://www.molinahealthcare.com/-/media/Project/PWS/Healthcare/PDF/PDF/IFP/WA/Drugs/MHWA-MARKETPLACE-FORMULARY-EN-508.pdf',
       page: 'https://www.molinahealthcare.com/ifp/wa/drugs',
       updated: '2026-10-16',
@@ -108,6 +112,7 @@ export const FORMULARY_SOURCES: CarrierFormulary[] = [
     source: {
       kind: 'pdf',
       title: '2026-2027 Drug Formulary for Core, Connect, and Access PPO Plans',
+      planYear: 2027,
       url: 'https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/formularies/wa/if-sg-drug-formulary-wa-en.pdf',
       page: 'https://healthy.kaiserpermanente.org/washington/health-wellness/drug-formulary',
       updated: '2026-10-27',
@@ -120,6 +125,7 @@ export const FORMULARY_SOURCES: CarrierFormulary[] = [
     source: {
       kind: 'pdf',
       title: 'UnitedHealthcare Individual & Family plans Prescription Drug List, Washington, 2027',
+      planYear: 2027,
       url: 'https://www.uhc.com/content/dam/uhcdotcom/en/ifp/pdls/IFP_M58661-WA_UHC_IFP_PY27_PDL_v2.pdf',
       page: 'https://www.uhc.com/member-resources/pharmacy-benefits/prescription-drug-lists/individual-exchange',
       updated: '2026-10-27',
@@ -131,6 +137,7 @@ export const FORMULARY_SOURCES: CarrierFormulary[] = [
     source: {
       kind: 'pdf',
       title: 'Wellpoint Select 4 Tier Drug List, Washington individual, 2027',
+      planYear: 2027,
       url: 'https://fm.formularynavigator.com/FBO/143/2027_Select_4_Tier_WA_IND.pdf',
       page: 'https://www.wellpoint.com/pharmacy/drug-list-formulary',
       updated: '2026',
@@ -142,6 +149,7 @@ export const FORMULARY_SOURCES: CarrierFormulary[] = [
     source: {
       kind: 'pdf',
       title: 'Cascade Select Formulary 2027',
+      planYear: 2027,
       url: 'https://individualandfamily.chpw.org/wp-content/uploads/cascade-select/content/member/pharmacy/CS_RX010_Formulary_2027.pdf',
       page: 'https://individualandfamily.chpw.org/member-center/member-resources/prescription-drug-coverage/',
       updated: '2026-10-20',

@@ -32,11 +32,35 @@ export interface PlanDrugStatus {
   restrictions?: Restriction[];
 }
 
-/** What's known about one drug's coverage, by plan id. Saved in the (encrypted) profile, since it reveals medications. */
+/** Where a drug-list answer came from, so the app can explain it. */
+export interface ListEvidence {
+  /** "drug file" (insurer's machine-readable file) or "drug list PDF" (converted). */
+  kind: string;
+  url: string;
+  planYear: number;
+  /** The printed row that matched, for PDF lists. */
+  row?: string;
+  /** A brand-name drug the list covers only as its generic. */
+  asGeneric?: boolean;
+  /** Set when the plan's own list isn't published and another plan's list is used. */
+  assumption?: string;
+}
+
+export interface ListDrugStatus extends PlanDrugStatus {
+  evidence: ListEvidence;
+}
+
+/**
+ * What's known about one drug's coverage, by plan id, saved in the (encrypted) profile since it reveals
+ * medications. `plans` holds answers the user set or confirmed (from Healthplanfinder, the insurer, or the
+ * pharmacy); `fromLists` holds the automatic lookup in insurers' drug lists. The user's answer wins.
+ */
 export interface DrugCoverage {
   checkedAt: string;
   source: string;
   plans: Record<string, PlanDrugStatus>;
+  fromLists?: Record<string, ListDrugStatus>;
+  listsCheckedAt?: string;
 }
 
 export type CoverageLookup = (rxcui: string, plan: Plan) => PlanDrugStatus | undefined;
@@ -90,4 +114,32 @@ export function resolveDrug(line: DrugLine, plan: Plan, benefits: Benefits, look
 export const coverageLookup =
   (coverage: Record<string, DrugCoverage> | undefined): CoverageLookup =>
   (rxcui, plan) =>
-    coverage?.[rxcui]?.plans[plan.id];
+    coverage?.[rxcui]?.plans[plan.id] ?? coverage?.[rxcui]?.fromLists?.[plan.id];
+
+/** A short note on a list answer for plan cards: "from Kaiser's drug list", "as generic", "2026 list", etc. */
+export function listNote(status: PlanDrugStatus | undefined): string {
+  if (!status || !('evidence' in status)) return status ? 'your answer' : '';
+  const e = (status as ListDrugStatus).evidence;
+  return ['from drug list', e.asGeneric ? 'as generic' : '', e.planYear < 2027 ? `${e.planYear} list` : '', e.assumption ? 'assumed list' : '']
+    .filter(Boolean)
+    .join(', ');
+}
+
+/** True when the user's answer and the drug list disagree on coverage or tier. */
+export function listDisagrees(cov: DrugCoverage | undefined, planId: string): boolean {
+  const mine = cov?.plans[planId];
+  const list = cov?.fromLists?.[planId];
+  if (!mine || !list) return false;
+  return mine.covered !== list.covered || (mine.covered && Boolean(mine.tier && list.tier) && mine.tier !== list.tier);
+}
+
+/** One line on where a list answer came from, e.g. "Kaiser's 2027 drug list (PDF); row "LIPITOR"". */
+export function describeEvidence(carrier: string, e: ListEvidence): string {
+  const kind = e.kind === 'drug file' ? 'machine-readable drug list' : 'drug list (PDF)';
+  const parts = [`${carrier.replace(/ \(.*\)$/, '')}'s ${e.planYear} ${kind}`];
+  if (e.row) parts.push(`row "${e.row}"`);
+  if (e.asGeneric) parts.push('covered as the generic');
+  if (e.planYear < 2027) parts.push(`the ${e.planYear + 1} list isn't posted yet`);
+  if (e.assumption) parts.push(e.assumption);
+  return parts.join('; ');
+}

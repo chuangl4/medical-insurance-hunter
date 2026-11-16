@@ -205,7 +205,9 @@ export function lookupCoverage(formularies: CompactFormulary[], rxcuis: string[]
     for (const rxcui of [...rxcuis].reverse()) {
       for (const [i, tier, flags] of f.drugs[rxcui] ?? []) {
         const restrictions = restrictionsOf(flags);
-        out[f.planIds[i]] = { ...base, covered: true, tier, ...(restrictions.length ? { restrictions } : {}), matchedRxcui: rxcui };
+        // A brand-name drug found only under its generic's id is covered as the generic.
+        const asGeneric = Boolean(names?.brand) && rxcui !== rxcuis[0];
+        out[f.planIds[i]] = { ...base, covered: true, tier, ...(restrictions.length ? { restrictions } : {}), matchedRxcui: rxcui, ...(asGeneric ? { asGeneric } : {}) };
       }
     }
   }

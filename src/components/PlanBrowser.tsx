@@ -6,7 +6,7 @@ import { DoctorHelp } from './DoctorHelp';
 import { SeverityMark } from './ScenarioGuide';
 import { HospitalAccess } from './HospitalAccess';
 import { disagreements, otherAccess } from '../domain/hospitalAccess';
-import { RESTRICTION_LABELS, TIER_LABELS, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { RESTRICTION_LABELS, TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { ScenarioMath } from './ScenarioMath';
 import {
   EMPTY_FILTERS,
@@ -374,6 +374,7 @@ export function PlanBrowser(props: Props) {
                   <ul className="hospital-list rx-list">
                     {drugLines.map((line) => {
                       const how = resolveDrug(line, plan, plan.benefits!, drugLookup);
+                      const note = line.rxcui ? listNote(drugLookup(line.rxcui, plan)) : '';
                       const text =
                         how.kind === 'cash'
                           ? `${how.source === 'checked' ? 'Not covered' : 'Not checked, assumed not covered'} → ${money(line.price * line.fillsPerYear)}/yr cash`
@@ -383,6 +384,7 @@ export function PlanBrowser(props: Props) {
                       return (
                         <li key={line.itemId} className={`hospital rx-${how.kind === 'cash' ? 'out' : how.source === 'checked' ? 'in' : 'unknown'}`}>
                           <span className="hospital-name">{line.name}:</span> {text}
+                          {note && <small className="muted"> ({note})</small>}
                         </li>
                       );
                     })}

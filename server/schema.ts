@@ -17,13 +17,28 @@ export const careItemSchema = z.object({
   drug: z.object({ rxcui: z.string().regex(/^\d{1,10}$/), name: text(300).min(1) }).optional(),
 });
 
+const planDrugStatus = { covered: z.boolean(), tier: z.enum(DRUG_TIERS).optional(), restrictions: z.array(z.enum(RESTRICTIONS)).max(3).optional() };
 const drugCoverageSchema = z.object({
   checkedAt: text(40),
   source: text(300),
-  plans: z.record(
-    text(80),
-    z.object({ covered: z.boolean(), tier: z.enum(DRUG_TIERS).optional(), restrictions: z.array(z.enum(RESTRICTIONS)).max(3).optional() }),
-  ),
+  plans: z.record(text(80), z.object(planDrugStatus)),
+  fromLists: z
+    .record(
+      text(80),
+      z.object({
+        ...planDrugStatus,
+        evidence: z.object({
+          kind: text(40),
+          url: text(600),
+          planYear: z.number().int().min(2020).max(2100),
+          row: text(300).optional(),
+          asGeneric: z.boolean().optional(),
+          assumption: text(400).optional(),
+        }),
+      }),
+    )
+    .optional(),
+  listsCheckedAt: text(40).optional(),
 });
 
 export const doctorSchema = z.object({

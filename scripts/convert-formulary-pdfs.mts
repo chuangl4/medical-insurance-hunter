@@ -208,7 +208,7 @@ for (const { carrier, source } of FORMULARY_SOURCES) {
   const legend = await cached(`${docKey}-legend`, () =>
     ask(LEGEND_MODEL, legendSchema, LEGEND_SYSTEM, legendPages.map(({ t, i }) => `--- page ${i + 1} ---\n${t}`).join('\n\n')),
   );
-  console.log(`  plan year ${legend.planYear}, effective "${legend.effective}"`);
+  console.log(`  plan year ${source.planYear} (legend says ${legend.planYear}), effective "${legend.effective}"`);
   for (const t of legend.tiers) console.log(`    tier "${t.label}" = ${t.appTier}  (${t.meaning.slice(0, 80)})`);
   for (const c of legend.codes) console.log(`    code "${c.code}" = ${c.restriction}  (${c.meaning.slice(0, 60)})`);
   if (legendOnly) continue;
@@ -262,7 +262,8 @@ for (const { carrier, source } of FORMULARY_SOURCES) {
     sourceUrl: source.url,
     sourceKind: 'drug list PDF',
     builtAt: new Date().toISOString(),
-    planYear: legend.planYear,
+    // The legend's year can be an effective date ("current as of 10/01/2026") for a 2027 list; the source says.
+    planYear: source.planYear,
     planIds,
     drugs: {},
     rows: rows.sort((a, b) => a[0].localeCompare(b[0])),

@@ -17,6 +17,7 @@ import { EMPTY_FILTERS, type Filters } from './domain/filter';
 import { EMPTY_PROFILE, householdFromProfile, profileFromLegacy, type LegacyHousehold, type Profile } from './domain/profile';
 import { ENROLLMENT, PLAN_YEAR } from './domain/rules2027';
 import { requiredHospitalsOf, useDoctorLookups } from './useDoctorLookups';
+import { useDrugLookups } from './useDrugLookups';
 import { coverageLookup } from './domain/drugs';
 
 /** Where earlier versions kept the household. It's moved into the account on first sign-in. */
@@ -63,6 +64,7 @@ export function App() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const lastSaved = useRef<Profile | null>(null);
   const doctorLookups = useDoctorLookups(profile, setProfile);
+  const drugLookups = useDrugLookups(profile, setProfile);
 
   const startSession = useCallback((signedIn: User) => {
     setUser(signedIn);
@@ -270,8 +272,9 @@ export function App() {
           <CashMedsSummary
             profile={profile}
             coveredBy={(rxcui) => {
-              const plans = profile.drugCoverage?.[rxcui]?.plans ?? {};
-              return { covered: evaluated.filter((p) => plans[p.plan.id]?.covered).length, total: evaluated.length };
+              const cov = profile.drugCoverage?.[rxcui];
+              const status = (id: string) => cov?.plans[id] ?? cov?.fromLists?.[id];
+              return { covered: evaluated.filter((p) => status(p.plan.id)?.covered).length, total: evaluated.length };
             }}
             onEdit={() => {
               setChatOpen(false);
@@ -283,7 +286,14 @@ export function App() {
           <ScenarioGuide members={household.members} hasCash={household.members.some((m) => Object.values(m.selfPayDrugs).some((c) => c > 0))} />
         )}
         {tab === 'plans' && (
-          <PrescriptionCoverage profile={profile} plans={evaluated} onChange={(update) => setProfile((prev) => prev && update(prev))} />
+          <PrescriptionCoverage
+            profile={profile}
+            plans={evaluated}
+            onChange={(update) => setProfile((prev) => prev && update(prev))}
+            checking={drugLookups.checking}
+            errors={drugLookups.errors}
+            onRecheck={drugLookups.recheck}
+          />
         )}
         {tab === 'plans' && uncheckedProviders.length > 0 && (
           <p className="sample-banner" role="note">
