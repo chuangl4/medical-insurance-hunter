@@ -11,6 +11,16 @@ export interface QualityRating {
   planAdministration: number | null;
 }
 
+/** Members' answers from the CMS enrollee survey, on CMS's 0–100 scale (null when too few answered). */
+export interface MemberSurvey {
+  respondents: number;
+  planRating: number | null;
+  careRating: number | null;
+  gettingNeededCare: number | null;
+  gettingCareQuickly: number | null;
+  customerService: number | null;
+}
+
 /** A plan's network rules, from its Summary of Benefits and Coverage. */
 export interface NetworkRules {
   type: 'HMO' | 'EPO' | 'PPO' | 'POS' | null;

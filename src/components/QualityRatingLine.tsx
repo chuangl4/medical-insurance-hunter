@@ -1,14 +1,26 @@
 import { useState } from 'react';
-import { QUALITY_RATINGS_SOURCE, QUALITY_RATINGS_YEAR } from '../data/qualityRatings';
-import { qualityFor, starsText } from '../domain/quality';
+import { MEMBER_SURVEY_NATIONAL_MEDIAN, MEMBER_SURVEY_SOURCE, QUALITY_RATINGS_SOURCE, QUALITY_RATINGS_YEAR } from '../data/qualityRatings';
+import {
+  COMPANY_LOOKUP_URL,
+  LEGAL_NAMES,
+  SURVEY_LABELS,
+  compareToNation,
+  qualityFor,
+  starsText,
+  surveyFor,
+  surveyScoreText,
+  type SurveyMeasure,
+} from '../domain/quality';
 import type { Plan } from '../domain/types';
 
 /** The plan's CMS quality star rating, with a "?" that explains it. */
 export function QualityRatingLine({ plan }: { plan: Plan }) {
   const [open, setOpen] = useState(false);
   const rating = qualityFor(plan);
+  const survey = surveyFor(plan);
+  const legalName = LEGAL_NAMES[plan.carrier] ?? plan.carrier;
   return (
-    <p className="network-rules">
+    <div className="network-rules">
       Quality rating:{' '}
       {rating?.overall ? (
         <span className="stars" aria-label={`${rating.overall} of 5 stars`}>
@@ -42,6 +54,46 @@ export function QualityRatingLine({ plan }: { plan: Plan }) {
           ) : (
             <span>CMS didn’t rate this insurer, usually because it is new to Washington’s market or has too few members. That isn’t a low score.</span>
           )}
+          {survey ? (
+            <span>
+              <strong>What members said</strong> ({survey.respondents} members surveyed; compared with the middle of all insurers nationally):
+              <ul className="survey-list">
+                {(Object.keys(SURVEY_LABELS) as SurveyMeasure[]).map((m) => {
+                  const score = survey[m];
+                  const vs = compareToNation(m, score);
+                  return (
+                    <li key={m}>
+                      {SURVEY_LABELS[m]}:{' '}
+                      {score === null ? (
+                        'too few answers'
+                      ) : (
+                        <>
+                          {surveyScoreText(m, score)} <span className={`survey-${vs}`}>({vs === 'typical' ? 'typical' : `${vs} typical`})</span>
+                          <span className="muted"> · national middle {surveyScoreText(m, MEMBER_SURVEY_NATIONAL_MEDIAN[m])}</span>
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              <span className="muted">
+                With about {survey.respondents} answers, gaps under 5 points are within survey noise.{' '}
+                <a href={MEMBER_SURVEY_SOURCE} target="_blank" rel="noreferrer">
+                  CMS enrollee survey
+                </a>
+                , adjusted for members’ age, health and education.
+              </span>
+            </span>
+          ) : (
+            <span>No member survey results for this insurer (too new or too few members).</span>
+          )}
+          <span>
+            <strong>Complaints:</strong> the Insurance Commissioner keeps each company’s complaint history. Search “{legalName}” in its{' '}
+            <a href={COMPANY_LOOKUP_URL} target="_blank" rel="noreferrer">
+              company lookup
+            </a>
+            . Counts aren’t adjusted for company size and include all of the company’s business.
+          </span>
           <span className="muted">
             CMS{' '}
             <a href={QUALITY_RATINGS_SOURCE} target="_blank" rel="noreferrer">
@@ -51,6 +103,6 @@ export function QualityRatingLine({ plan }: { plan: Plan }) {
           </span>
         </span>
       )}
-    </p>
+    </div>
   );
 }

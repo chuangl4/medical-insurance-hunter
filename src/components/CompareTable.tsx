@@ -7,7 +7,7 @@ import { FACILITIES, facilityStatus } from '../data/facilityNetworks';
 import { disagreements } from '../domain/hospitalAccess';
 import { TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
-import { qualityFor, starsText } from '../domain/quality';
+import { SURVEY_LABELS, qualityFor, starsText, surveyFor, surveyScoreText } from '../domain/quality';
 import { OUT_OF_NETWORK_TEXT, REFERRAL_TEXT, networkRulesFor, networkTypeOf } from '../domain/networkRules';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
@@ -79,6 +79,12 @@ const ROWS: Row[] = [
     label: 'Medical care · experience · admin',
     text: (p) => { const q = qualityFor(p.plan); return q ? [q.medicalCare, q.memberExperience, q.planAdministration].map((s) => (s ? `${s}` : '–')).join(' · ') : 'Not rated'; },
   },
+  ...(['planRating', 'gettingCareQuickly', 'customerService'] as const).map((m) => ({
+    label: `Members: ${SURVEY_LABELS[m].replace(/ \(.*\)$/, '').toLowerCase()}`,
+    text: (p: EvaluatedPlan) => { const v = surveyFor(p.plan)?.[m]; return v === null || v === undefined ? 'No survey' : surveyScoreText(m, v); },
+    // Higher is better; rows mark the lowest value as best.
+    value: (p: EvaluatedPlan) => { const v = surveyFor(p.plan)?.[m]; return v === null || v === undefined ? null : -v; },
+  })),
   { label: 'HSA plan', text: (p) => (p.plan.hsaEligible ? 'Yes' : 'No') },
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];

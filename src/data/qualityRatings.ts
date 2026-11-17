@@ -1,4 +1,4 @@
-import type { QualityRating } from '../domain/types';
+import type { MemberSurvey, QualityRating } from '../domain/types';
 
 /**
  * CMS Quality Rating System star ratings (1–5) for Washington insurers, by HIOS issuer ID (the first five
@@ -78,5 +78,101 @@ export const QUALITY_RATINGS: Record<string, QualityRating> = {
     "medicalCare": 4,
     "memberExperience": 5,
     "planAdministration": 4
+  }
+};
+
+/**
+ * Members' answers from the CMS QHP Enrollee Experience Survey (case-mix adjusted, CMS's 0–100 scale: a 0–10 rating
+ * times 10, or an Always/Usually/Sometimes/Never average rescaled), by issuer ID, with the national median of all
+ * rated insurers. Generated from https://www.cms.gov/files/zip/enrollee-survey-puf-py2026.zip.
+ */
+export const MEMBER_SURVEY_SOURCE = 'https://www.cms.gov/files/zip/enrollee-survey-puf-py2026.zip';
+export const MEMBER_SURVEY_NATIONAL_MEDIAN: Record<Exclude<keyof MemberSurvey, 'respondents'>, number> = {
+  "planRating": 71,
+  "careRating": 80,
+  "gettingNeededCare": 70,
+  "gettingCareQuickly": 72,
+  "customerService": 74
+};
+export const MEMBER_SURVEY: Record<string, MemberSurvey> = {
+  "18581": {
+    "respondents": 131,
+    "planRating": 69,
+    "careRating": 75,
+    "gettingNeededCare": 60,
+    "gettingCareQuickly": 61,
+    "customerService": 67
+  },
+  "23371": {
+    "respondents": 237,
+    "planRating": 70,
+    "careRating": 78,
+    "gettingNeededCare": 63,
+    "gettingCareQuickly": 67,
+    "customerService": 79
+  },
+  "38498": {
+    "respondents": 184,
+    "planRating": 62,
+    "careRating": 75,
+    "gettingNeededCare": 65,
+    "gettingCareQuickly": 66,
+    "customerService": 71
+  },
+  "49831": {
+    "respondents": 143,
+    "planRating": 68,
+    "careRating": 81,
+    "gettingNeededCare": 68,
+    "gettingCareQuickly": 68,
+    "customerService": 67
+  },
+  "61836": {
+    "respondents": 256,
+    "planRating": 67,
+    "careRating": 73,
+    "gettingNeededCare": 62,
+    "gettingCareQuickly": 64,
+    "customerService": 65
+  },
+  "62650": {
+    "respondents": 138,
+    "planRating": 55,
+    "careRating": 71,
+    "gettingNeededCare": 64,
+    "gettingCareQuickly": 60,
+    "customerService": 64
+  },
+  "71281": {
+    "respondents": 123,
+    "planRating": 67,
+    "careRating": 78,
+    "gettingNeededCare": 65,
+    "gettingCareQuickly": 71,
+    "customerService": 68
+  },
+  "80473": {
+    "respondents": 177,
+    "planRating": 69,
+    "careRating": 79,
+    "gettingNeededCare": 63,
+    "gettingCareQuickly": 64,
+    "customerService": 74
+  },
+  "84481": {
+    "respondents": 129,
+    "planRating": 72,
+    "careRating": 78,
+    "gettingNeededCare": 62,
+    "gettingCareQuickly": 64,
+    "customerService": 67
+  },
+  "87718": {
+    "respondents": 168,
+    "planRating": 67,
+    "careRating": 79,
+    "gettingNeededCare": 70,
+    "gettingCareQuickly": 68,
+    "customerService": 71
   }
 };
