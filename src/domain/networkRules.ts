@@ -1,5 +1,5 @@
 import { NETWORK_RULES } from '../data/networkRules';
-import type { NetworkRules, NetworkType, Plan } from './types';
+import type { NetworkRules, NetworkType, Plan, PriorApprovalService } from './types';
 
 /**
  * The network rules on a Summary of Benefits and Coverage's first pages, or null if the text isn't a 2027 SBC.
@@ -16,7 +16,100 @@ export function parseSbc(text: string): Omit<NetworkRules, 'source'> | null {
   const row = t.split(/Specialist visit\.?\s*/i).slice(1).map((r) => r.slice(0, 160)).find((r) => /\$|%|no charge/i.test(r.slice(0, 40)));
   const outOfNetwork: NetworkRules['outOfNetwork'] = !row ? 'unknown' : /not covered/i.test(row.split(/Preventive/i)[0]) ? 'emergencyOnly' : 'partial';
   const directoryPhone = directoryPhoneOf(t);
-  return { type: type ?? null, referral, outOfNetwork, ...(directoryPhone ? { directoryPhone } : {}) };
+  const restrictions = restrictionsOf(t);
+  return { type: type ?? null, referral, outOfNetwork, ...(directoryPhone ? { directoryPhone } : {}), ...restrictions };
+}
+
+/** The template's service labels, which end one row of the cost table and start the next. */
+const ROW_LABELS =
+  /Primary care visit|Specialist visit|Preventive care|Diagnostic test|Imaging \(|Generic drugs|Preferred generic|Preferred brand|Non-preferred brand|Specialty drugs|Facility fee \(|Physician\/surgeon fee|Emergency room care|Emergency medical transportation|Urgent care|Outpatient services|Inpatient services|Office visits|Childbirth\/delivery|Home health care|Rehabilitation services|Habilitation services|Skilled nursing care|Durable medical equipment|Hospice services|Children.s eye exam|Children.s glasses|Children.s dental|If you |Excluded Services|Page \d+ of \d+|Common Medical Event/gi;
+
+/** The text of the cost-table row that starts with `label`, up to the next row's label. */
+function rowAfter(body: string, label: RegExp): string | null {
+  const m = body.match(label);
+  if (!m || m.index === undefined) return null;
+  const rest = body.slice(m.index + m[0].length);
+  ROW_LABELS.lastIndex = 0;
+  let end = rest.length;
+  for (const next of rest.matchAll(ROW_LABELS)) {
+    if (next.index! > 5) { end = next.index!; break; }
+  }
+  return rest.slice(0, Math.min(end, 400)).trim();
+}
+
+const APPROVAL = /authori[sz]ation|authori[sz]ed|pre-?certif|pre-?approv|prior approval|must be approved/i;
+const COST = /\$\s?\d[\d,]*(?:\.\d+)?[^$%]{0,45}?(?:visit|day|admission|trip|stay|prescription|copay)|\d+%\s*coinsurance|Not covered|Covered as In-Network|No charge/gi;
+const PRIOR_APPROVAL_ROWS: [PriorApprovalService, RegExp][] = [
+  ['hospitalStay', /Facility fee \(e\.g\.,? hospital room\)/i],
+  ['outpatientSurgery', /Facility fee \(e\.g\.,? ambulatory surgery center\)/i],
+  ['imaging', /Imaging \(CT\/?PET scans?,? ?MRI/i],
+  ['mentalHealthInpatient', /Inpatient services/i],
+  ['skilledNursing', /Skilled nursing care/i],
+  ['homeHealth', /Home health care/i],
+  ['rehabilitation', /Rehabilitation services/i],
+  ['equipment', /Durable medical equipment/i],
+  ['hospice', /Hospice services?/i],
+  ['specialtyDrugs', /Specialty drugs/i],
+];
+
+/**
+ * Sentences in a row that state a rule a member must follow (a deadline, a provider restriction), not cost details
+ * or reassurances such as "copay waived if admitted".
+ */
+const RULE = /notify|non-plan|not covered inside|limited to (?:the )?initial|transfer/i;
+function ruleSentences(row: string): string | undefined {
+  const found = row
+    .split(/(?<=[.;])\s+/)
+    .map((x) => x.replace(/^.*?(?=(?:Must|Non-Plan|You must|Members must|Limited)\b)/, '').trim())
+    .filter((x) => RULE.test(x));
+  return found.length ? found.join(' ').slice(0, 240) : undefined;
+}
+
+/** Restrictions in the cost table and the excluded/other-covered boxes. */
+export function restrictionsOf(t: string): Pick<NetworkRules, 'urgentCareAway' | 'emergencyNote' | 'priorApproval' | 'notCovered' | 'otherCovered'> {
+  const start = t.search(/Common Medical Event/i);
+  const body = start >= 0 ? t.slice(start) : t;
+
+  const priorApproval = PRIOR_APPROVAL_ROWS.filter(([, label]) => APPROVAL.test(rowAfter(body, label) ?? '')).map(([k]) => k);
+
+  // The row label, not a mention in another row's note: a cost follows it.
+  const urgentRow = rowAfter(body, /Urgent care(?=\s+(?:\$|\d|No charge|Not covered))/i);
+  let urgentCareAway: NetworkRules['urgentCareAway'] = { coverage: 'unknown' };
+  if (urgentRow) {
+    const costs = [...urgentRow.matchAll(COST)].map((m) => m[0].trim());
+    const away = costs[1] ?? '';
+    const note = ruleSentences(urgentRow);
+    const coverage = /not covered inside the service area/i.test(urgentRow)
+      ? 'outsideServiceAreaOnly'
+      : /^not covered/i.test(away)
+        ? 'notCovered'
+        : /covered as in-network/i.test(away) || (away && away.replace(/\s/g, '') === (costs[0] ?? '').replace(/\s/g, ''))
+          ? 'sameAsNetwork'
+          : away
+            ? 'covered'
+            : 'unknown';
+    urgentCareAway = { coverage, ...(note ? { note: note.slice(0, 200) } : {}) };
+  }
+
+  const emergencyNote = ruleSentences(rowAfter(body, /Emergency room care(?=\s+(?:\$|\d|No charge|Not covered))/i) ?? '');
+
+  const box = (re: RegExp) =>
+    (t.match(re)?.[1] ?? '')
+      .replace(/Page \d+ of \d+/gi, ' ')
+      .replace(/Services Your Plan Generally Does NOT Cover \([^)]*\)/gi, ' ')
+      .split(/[•●]/)
+      .map((s) => s.replace(/\s+/g, ' ').trim().replace(/\s*\d+ of \d+$/, ''))
+      .filter((s) => s.length > 2 && s.length < 90);
+  const notCovered = box(/Services Your Plan Generally Does NOT Cover \([^)]*\)(.*?)Other Covered Services/i);
+  const otherCovered = box(/Other Covered Services \([^)]*\)(.*?)(?:Your Rights to Continue|$)/i);
+
+  return {
+    urgentCareAway,
+    ...(emergencyNote ? { emergencyNote } : {}),
+    priorApproval,
+    ...(notCovered.length ? { notCovered } : {}),
+    ...(otherCovered.length ? { otherCovered } : {}),
+  };
 }
 
 /** The phone number in the summary's "Will you pay less if you use a network provider?" answer. */
@@ -52,3 +145,32 @@ export const NETWORK_TYPE_HELP: Record<NetworkType, string> = {
   EPO: 'EPO: you use the plan’s network, but usually without referrals. Like an HMO, care outside the network isn’t covered except emergencies.',
   PPO: 'PPO: the plan also pays part of the cost outside its network, usually at a higher share for you.',
 };
+
+export const PRIOR_APPROVAL_LABELS: Record<PriorApprovalService, string> = {
+  hospitalStay: 'hospital stays',
+  outpatientSurgery: 'outpatient surgery',
+  imaging: 'CT/PET/MRI scans',
+  mentalHealthInpatient: 'inpatient mental health care',
+  skilledNursing: 'skilled nursing',
+  homeHealth: 'home health care',
+  rehabilitation: 'rehabilitation',
+  equipment: 'medical equipment',
+  hospice: 'hospice',
+  specialtyDrugs: 'specialty drugs',
+};
+
+export const URGENT_AWAY_TEXT: Record<NonNullable<NetworkRules['urgentCareAway']>['coverage'], string> = {
+  sameAsNetwork: 'Urgent care at any clinic: covered at the in-network cost',
+  covered: 'Urgent care at any clinic: covered (cost may differ)',
+  outsideServiceAreaOnly: "Urgent care outside the network: covered only away from the plan's service area",
+  notCovered: 'Urgent care outside the network: not covered',
+  unknown: 'Urgent care outside the network: not stated',
+};
+
+/** Adult routine eye exams, which most of these plans exclude. */
+export const adultEyeExamsCovered = (r: NetworkRules): boolean | null =>
+  r.otherCovered?.some((x) => /eye/i.test(x)) ? true : r.notCovered?.some((x) => /eye/i.test(x)) ? false : null;
+
+/** Children's dental, which some plans leave to a separate dental plan. */
+export const childrensDentalExcluded = (r: NetworkRules): boolean =>
+  Boolean(r.notCovered?.some((x) => /dental/i.test(x) && /child|&|services/i.test(x)));

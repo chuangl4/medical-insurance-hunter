@@ -33,7 +33,29 @@ export interface NetworkRules {
   directoryPhone?: string;
   /** Set when this plan's own summary wasn't found: the same-network plan whose rules it shares. */
   inferredFrom?: string;
+  /** Urgent care from an out-of-network clinic, with the summary's own note. */
+  urgentCareAway?: { coverage: 'sameAsNetwork' | 'covered' | 'outsideServiceAreaOnly' | 'notCovered' | 'unknown'; note?: string };
+  /** The summary's note on emergency room care, when it says more than "none". */
+  emergencyNote?: string;
+  /** Services the summary says need prior approval (empty when it lists none, which doesn't mean none are needed). */
+  priorApproval?: PriorApprovalService[];
+  /** The "Services your plan generally does NOT cover" box. */
+  notCovered?: string[];
+  /** The "Other covered services" box. */
+  otherCovered?: string[];
 }
+
+export type PriorApprovalService =
+  | 'hospitalStay'
+  | 'outpatientSurgery'
+  | 'imaging'
+  | 'mentalHealthInpatient'
+  | 'skilledNursing'
+  | 'homeHealth'
+  | 'rehabilitation'
+  | 'equipment'
+  | 'hospice'
+  | 'specialtyDrugs';
 /** Where a plan can be bought: the exchange, directly from the insurer, or either. */
 export type Channel = 'on' | 'off' | 'both';
 

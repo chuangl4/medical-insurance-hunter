@@ -6,6 +6,7 @@ import { DoctorHelp } from './DoctorHelp';
 import { ExceptionHelp } from './ExceptionHelp';
 import { NetworkRulesLine } from './NetworkRulesLine';
 import { QualityRatingLine } from './QualityRatingLine';
+import { PlanRules } from './PlanRules';
 import { networkTypeOf } from '../domain/networkRules';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { SeverityMark } from './ScenarioGuide';
@@ -110,6 +111,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 export function PlanBrowser(props: Props) {
   const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName, requiredIds, drugLines, drugLookup, ifApproved, candidates } = props;
   const [mathOpen, setMathOpen] = useState<string[]>([]);
+  const [rulesOpen, setRulesOpen] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
   const [descending, setDescending] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -356,7 +358,16 @@ export function PlanBrowser(props: Props) {
                     {mathOpen.includes(plan.id) ? 'Hide the math' : 'See the math'}
                   </button>
                 )}
+                <button
+                  type="button"
+                  className="link-button math-toggle"
+                  aria-expanded={rulesOpen.includes(plan.id)}
+                  onClick={() => setRulesOpen((open) => toggled(open, plan.id))}
+                >
+                  {rulesOpen.includes(plan.id) ? 'Hide plan rules' : 'Plan rules'}
+                </button>
                 {mathOpen.includes(plan.id) && <ScenarioMath item={item} firstName={firstName} />}
+                {rulesOpen.includes(plan.id) && <PlanRules plan={plan} />}
                 {HOSPITAL_IDS.length > 0 && (
                 <ul className="hospital-list">
                   {HOSPITAL_IDS.map((id) => {

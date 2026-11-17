@@ -10,6 +10,40 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "type": "HMO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Dental care (Children)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care (10 visits/year)",
+      "Hearing aids (Limited to 1 per ear every 3 years)",
+      "Routine foot care"
+    ],
     "source": "https://api.centene.com/SBC/2027/61836WA0050036-01.pdf"
   },
   "61836WA0050018": {
@@ -17,24 +51,160 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-877-687-1197",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs",
+      "Dental care (Children)",
+      "Non-emergency care when traveling outside the U.S."
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care (10 visits/year)",
+      "Hearing aids (Limited to 1 per ear every 3 years)",
+      "Routine foot care"
+    ],
     "source": "https://api.centene.com/SBC/2027/61836WA0050018-01.pdf"
   },
   "61836WA0050038": {
     "type": "HMO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Dental care (Children)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care (10 visits/year)",
+      "Hearing aids (Limited to 1 per ear every 3 years)",
+      "Routine foot care"
+    ],
     "source": "https://api.centene.com/SBC/2027/61836WA0050038-01.pdf"
   },
   "61836WA0050016": {
     "type": "HMO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Dental care (Children)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care (10 visits/year)",
+      "Hearing aids (Limited to 1 per ear every 3 years)",
+      "Routine foot care"
+    ],
     "source": "https://api.centene.com/SBC/2027/61836WA0050016-01.pdf"
   },
   "61836WA0050022": {
     "type": "HMO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Dental care (Children)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care (10 visits/year)",
+      "Hearing aids (Limited to 1 per ear every 3 years)",
+      "Routine foot care"
+    ],
     "source": "https://api.centene.com/SBC/2027/61836WA0050022-01.pdf"
   },
   "61836WA0050008": {
@@ -42,18 +212,117 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-877-687-1197",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Dental care (Children)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care (10 visits/year)",
+      "Hearing aids (Limited to 1 per ear every 3 years)",
+      "Routine foot care"
+    ],
     "source": "https://api.centene.com/SBC/2027/61836WA0050008-01.pdf"
   },
   "61836WA0050037": {
     "type": "HMO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Dental care (Children)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Chiropractic care (10 visits/year)",
+      "Acupuncture",
+      "Hearing aids (Limited to 1 per ear every 3 years)"
+    ],
     "source": "https://api.centene.com/SBC/2027/61836WA0050037-01.pdf"
   },
   "61836WA0050017": {
     "type": "HMO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Dental care (Children)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Chiropractic care (10 visits/year)",
+      "Acupuncture",
+      "Hearing aids (Limited to 1 per ear every 3 years)"
+    ],
     "source": "https://api.centene.com/SBC/2027/61836WA0050017-01.pdf"
   },
   "53732WA0790026": {
@@ -61,6 +330,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9944",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://bridgespanhealth.com/go/2027/SBC/WA/CascadeBronzeIndividualValueEx.pdf"
   },
   "53732WA0790024": {
@@ -68,6 +359,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9944",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://bridgespanhealth.com/go/2027/SBC/WA/CascadeCompleteGoldIndividualValueEx.pdf"
   },
   "53732WA0790030": {
@@ -75,6 +388,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9944",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://bridgespanhealth.com/go/2027/SBC/WA/CascadeVitalGoldIndividualValueEx.pdf"
   },
   "53732WA0790025": {
@@ -82,30 +417,160 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9944",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://bridgespanhealth.com/go/2027/SBC/WA/CascadeSilverIndividualValueEx.pdf"
   },
   "18581WA0140003": {
     "type": "EPO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "mentalHealthInpatient",
+      "homeHealth",
+      "hospice"
+    ],
+    "notCovered": [
+      "Out-of-network providers",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Routine Eye Exams for Adults",
+      "Private Duty Nursing",
+      "Non-emergency care when traveling outside the U.S.",
+      "Dental Services",
+      "Adult Orthodontia"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing Aids",
+      "Routine Foot Care",
+      "Acupuncture",
+      "Newborn Care",
+      "Chiropractic Care (10 visits per calendar year)",
+      "Reconstruction Surgery"
+    ],
     "source": "https://individualandfamily.chpw.org/wp-content/uploads/cascade-select/content/plan/bronze/CHPW_Individual_and_Family_CascadeSelect_SBC_Bronze_2027.pdf"
   },
   "18581WA0140001": {
     "type": "EPO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "mentalHealthInpatient",
+      "homeHealth",
+      "hospice"
+    ],
+    "notCovered": [
+      "Out-of-network providers",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Routine Eye Exams for Adults",
+      "Private Duty Nursing",
+      "Non-emergency care when traveling outside the U.S.",
+      "Dental Services",
+      "Adult Orthodontia"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing Aids",
+      "Routine Foot Care",
+      "Acupuncture",
+      "Newborn Care",
+      "Chiropractic Care (10 visits per calendar year)",
+      "Reconstruction Surgery"
+    ],
     "source": "https://individualandfamily.chpw.org/wp-content/uploads/cascade-select/content/plan/gold/CHPW_Individual_and_Family_CascadeSelect_SBC_Complete_Gold_2027.pdf"
   },
   "18581WA0140004": {
     "type": "EPO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "mentalHealthInpatient",
+      "homeHealth",
+      "hospice"
+    ],
+    "notCovered": [
+      "Out-of-network providers",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Routine Eye Exams for Adults",
+      "Private Duty Nursing",
+      "Non-emergency care when traveling outside the U.S.",
+      "Dental Services",
+      "Adult Orthodontia"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing Aids",
+      "Routine Foot Care",
+      "Acupuncture",
+      "Newborn Care",
+      "Chiropractic Care (10 visits per calendar year)",
+      "Reconstruction Surgery"
+    ],
     "source": "https://individualandfamily.chpw.org/wp-content/uploads/cascade-select/content/plan/gold/CHPW_Individual_and_Family_CascadeSelect_SBC_Vital_Gold_2027.pdf"
   },
   "18581WA0140002": {
     "type": "EPO",
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "mentalHealthInpatient",
+      "homeHealth",
+      "hospice"
+    ],
+    "notCovered": [
+      "Out-of-network providers",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Routine Eye Exams for Adults",
+      "Private Duty Nursing",
+      "Non-emergency care when traveling outside the U.S.",
+      "Dental Services",
+      "Adult Orthodontia"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing Aids",
+      "Routine Foot Care",
+      "Acupuncture",
+      "Newborn Care",
+      "Chiropractic Care (10 visits per calendar year)",
+      "Reconstruction Surgery"
+    ],
     "source": "https://individualandfamily.chpw.org/wp-content/uploads/cascade-select/content/plan/silver/CHPW_Individual_and_Family_CascadeSelect_SBC_Silver_2027.pdf"
   },
   "80473WA1000019": {
@@ -113,6 +578,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000019-00-en-2027.pdf"
   },
   "80473WA1000017": {
@@ -120,6 +618,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000017-01-en-2027.pdf"
   },
   "80473WA1000007": {
@@ -127,6 +658,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000007-01-en-2027.pdf"
   },
   "80473WA1000020": {
@@ -134,6 +698,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000020-01-en-2027.pdf"
   },
   "80473WA1000005": {
@@ -141,6 +738,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000005-01-en-2027.pdf"
   },
   "80473WA1000011": {
@@ -148,6 +778,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000011-01-en-2027.pdf"
   },
   "80473WA1000013": {
@@ -155,6 +818,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000013-01-en-2027.pdf"
   },
   "80473WA1000002": {
@@ -162,6 +858,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000002-01-en-2027.pdf"
   },
   "80473WA1000014": {
@@ -169,6 +898,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000014-00-en-2027.pdf"
   },
   "80473WA1000006": {
@@ -176,6 +938,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000006-01-en-2027.pdf"
   },
   "80473WA1000018": {
@@ -183,6 +978,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000018-00-en-2027.pdf"
   },
   "80473WA1000012": {
@@ -190,6 +1018,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000012-00-en-2027.pdf"
   },
   "80473WA1000004": {
@@ -197,6 +1058,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000004-00-en-2027.pdf"
   },
   "80473WA1000015": {
@@ -204,6 +1098,39 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "yesSomeSelf",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-290-8900",
+    "urgentCareAway": {
+      "coverage": "outsideServiceAreaOnly",
+      "note": "Non-Plan providers are not covered inside the service area."
+    },
+    "emergencyNote": "Must notify Kaiser Permanente within 24 hours if admitted to a Non-Plan provider; limited to initial emergency only.",
+    "priorApproval": [
+      "hospitalStay",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "homeHealth",
+      "rehabilitation",
+      "equipment",
+      "hospice"
+    ],
+    "notCovered": [
+      "Bariatric Surgery",
+      "Cosmetic Surgery",
+      "Dental Care (Adult & Child)",
+      "Infertility Treatment (except for Artificial Insemination)",
+      "Long-Term Care",
+      "Non-Emergency Care when Traveling Outside the U.S.",
+      "Private-Duty Nursing",
+      "Weight Loss Programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic Care (10 visits / year)",
+      "Hearing Aids (1 aid per ear / 36 months)",
+      "Routine Eye Care (Adult)",
+      "Routine Foot Care"
+    ],
     "source": "https://healthy.kaiserpermanente.org/content/dam/kporg/final/documents/health-plan-documents/summary-of-benefits/wa/individual-family/2027/80473WA1000015-00-en-2027.pdf"
   },
   "84481WA0060007": {
@@ -211,6 +1138,36 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-858-3492",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing aids",
+      "Acupuncture",
+      "Routine foot care",
+      "Chiropractic care (10 visits/year)"
+    ],
     "source": "https://www.molinahealthcare.com/-/media/project/pws/healthcare/pdf/pdf/ifp/wa/materials/sbc/2027/english/WA27SBCE_B6_1.pdf"
   },
   "84481WA0060005": {
@@ -218,6 +1175,36 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-858-3492",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing aids",
+      "Acupuncture",
+      "Routine foot care",
+      "Chiropractic care (10 visits/year)"
+    ],
     "source": "https://www.molinahealthcare.com/-/media/project/pws/healthcare/pdf/pdf/ifp/wa/materials/sbc/2027/english/WA27SBCE_G6_1.pdf"
   },
   "84481WA0060009": {
@@ -225,6 +1212,36 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-858-3492",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing aids",
+      "Acupuncture",
+      "Routine foot care",
+      "Chiropractic care (10 visits/year)"
+    ],
     "source": "https://www.molinahealthcare.com/-/media/project/pws/healthcare/pdf/pdf/ifp/wa/materials/sbc/2027/english/WA27SBCE_G7_1.pdf"
   },
   "84481WA0060006": {
@@ -232,6 +1249,36 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-858-3492",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "hospice",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing aids",
+      "Acupuncture",
+      "Routine foot care",
+      "Chiropractic care (10 visits/year)"
+    ],
     "source": "https://www.molinahealthcare.com/-/media/project/pws/healthcare/pdf/pdf/ifp/wa/materials/sbc/2027/english/WA27SBCE_S6_1.pdf"
   },
   "49831WA1940007": {
@@ -239,6 +1286,38 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-607-0546",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "rehabilitation",
+      "equipment",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Assisted fertility treatment",
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Artificial Insemination",
+      "Chiropractic care or other spinal manipulations (10 visits/year)",
+      "Hearing aids",
+      "Routine Foot care"
+    ],
     "source": "https://apim.ag.prod.premera.net/api/v1.0/Document/Visitor/PBC%20WA/2027/MCA%20PBC%20WA%20Individual%20FINR%20SBC%20with%20PBC%20WA%20On%20Exchange%20(6adac2f4cf).pdf"
   },
   "49831WA1940003": {
@@ -246,6 +1325,38 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-607-0546",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "rehabilitation",
+      "equipment",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Assisted fertility treatment",
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Artificial Insemination",
+      "Chiropractic care or other spinal manipulations (10 visits/year)",
+      "Hearing aids",
+      "Routine Foot care"
+    ],
     "source": "https://apim.ag.prod.premera.net/api/v1.0/Document/Visitor/PBC%20WA/2027/MCA%20PBC%20WA%20Individual%20FINR%20SBC%20with%20PBC%20WA%20On%20Exchange%20(6adac2f476).pdf"
   },
   "49831WA1940005": {
@@ -253,6 +1364,36 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-607-0546",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "equipment",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Assisted fertility treatment",
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Artificial Insemination",
+      "Chiropractic care or other spinal manipulations (10 visits/year)",
+      "Hearing aids",
+      "Routine Foot care"
+    ],
     "source": "https://apim.ag.prod.premera.net/api/v1.0/Document/Visitor/PBC%20WA/2027/MCA%20PBC%20WA%20Individual%20FINR%20SBC%20with%20PBC%20WA%20On%20Exchange%20(6adac2f74f).pdf"
   },
   "49831WA1940009": {
@@ -260,6 +1401,36 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-607-0546",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "equipment",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Assisted fertility treatment",
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Artificial Insemination",
+      "Chiropractic care or other spinal manipulations (10 visits/year)",
+      "Hearing aids",
+      "Routine Foot care"
+    ],
     "source": "https://apim.ag.prod.premera.net/api/v1.0/Document/Visitor/PBC%20WA/2027/MCA%20PBC%20WA%20Individual%20FINR%20SBC%20with%20PBC%20WA%20On%20Exchange%20(6adac2f409).pdf"
   },
   "49831WA1940001": {
@@ -267,6 +1438,38 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-607-0546",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "rehabilitation",
+      "equipment",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Assisted fertility treatment",
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Artificial Insemination",
+      "Chiropractic care or other spinal manipulations (10 visits/year)",
+      "Hearing aids",
+      "Routine Foot care"
+    ],
     "source": "https://apim.ag.prod.premera.net/api/v1.0/Document/Visitor/PBC%20WA/2027/MCA%20PBC%20WA%20Individual%20FINR%20SBC%20with%20PBC%20WA%20On%20Exchange%20(6adac2f2f1).pdf"
   },
   "87718WA2150029": {
@@ -274,6 +1477,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-344-6347",
+    "urgentCareAway": {
+      "coverage": "covered"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://www.regence.com/go/2027/SBC/WW/Bronze8000IndividualConnect.pdf"
   },
   "87718WA2150030": {
@@ -281,6 +1506,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-344-6347",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://www.regence.com/go/2027/SBC/WW/BronzeBasic10200IndividualConnect.pdf"
   },
   "87718WA2170028": {
@@ -288,6 +1535,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9959",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://regence.com/go/2027/SBC/WW/BronzeBasic10KIndividualConnectEx.pdf"
   },
   "87718WA2170004": {
@@ -295,6 +1564,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9959",
+    "urgentCareAway": {
+      "coverage": "covered"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://regence.com/go/2027/SBC/WW/BronzeEssential9000IndividualConnectEx.pdf"
   },
   "87718WA2150001": {
@@ -302,6 +1593,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-344-6347",
+    "urgentCareAway": {
+      "coverage": "covered"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://www.regence.com/go/2027/SBC/WW/BronzeEssential9500IndividualConnect.pdf"
   },
   "87718WA2170015": {
@@ -309,6 +1622,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9959",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://regence.com/go/2027/SBC/WW/CascadeBronzeIndividualConnectEx.pdf"
   },
   "87718WA2150026": {
@@ -316,6 +1651,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-344-6347",
+    "urgentCareAway": {
+      "coverage": "covered"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://www.regence.com/go/2027/SBC/WW/Gold2400IndividualConnect.pdf"
   },
   "87718WA2170013": {
@@ -323,6 +1680,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9959",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://regence.com/go/2027/SBC/WW/CascadeCompleteGoldIndividualConnectEx.pdf"
   },
   "87718WA2170027": {
@@ -330,6 +1709,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9959",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://regence.com/go/2027/SBC/WW/CascadeVitalGoldIndividualConnectEx.pdf"
   },
   "87718WA2150003": {
@@ -337,6 +1738,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-344-6347",
+    "urgentCareAway": {
+      "coverage": "covered"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://www.regence.com/go/2027/SBC/WW/Silver5000IndividualConnect.pdf"
   },
   "87718WA2150004": {
@@ -344,6 +1767,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-344-6347",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://www.regence.com/go/2027/SBC/WW/SilverHSA4500IndividualConnect.pdf"
   },
   "87718WA2170014": {
@@ -351,6 +1796,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-855-857-9959",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery, except congenital anomalies",
+      "Dental care (Adult)",
+      "Infertility treatment (except for Artificial Insemination)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic care, 10 spinal manipulation visits / year",
+      "Hearing aids, 1 per ear / 36 months",
+      "Routine foot care"
+    ],
     "source": "https://regence.com/go/2027/SBC/WW/CascadeSilverIndividualConnectEx.pdf"
   },
   "62650WA0020022": {
@@ -358,6 +1825,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020022-00.en.2027"
   },
   "62650WA0030001": {
@@ -365,6 +1854,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Dental care (Adult) - 2 visits/12 months",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine eye care (Adult) - 1 exam/12 months",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0030001-00.en.2027"
   },
   "62650WA0020005": {
@@ -372,6 +1883,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020005-01.en.2027"
   },
   "62650WA0020006": {
@@ -379,6 +1912,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020006-01.en.2027"
   },
   "62650WA0020023": {
@@ -386,6 +1941,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020023-00.en.2027"
   },
   "62650WA0020002": {
@@ -393,6 +1970,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020002-00.en.2027"
   },
   "62650WA0020020": {
@@ -400,6 +1999,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020020-01.en.2027"
   },
   "62650WA0030003": {
@@ -407,6 +2028,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Dental care (Adult) - 2 visits/12 months",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine eye care (Adult) - 1 exam/12 months",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0030003-00.en.2027"
   },
   "62650WA0020029": {
@@ -414,6 +2057,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020029-00.en.2027"
   },
   "62650WA0020028": {
@@ -421,6 +2086,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020028-00.en.2027"
   },
   "62650WA0020001": {
@@ -428,6 +2115,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "covered"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020001-00.en.2027"
   },
   "62650WA0020008": {
@@ -435,6 +2144,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "covered"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020008-00.en.2027"
   },
   "62650WA0020025": {
@@ -442,6 +2173,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020025-00.en.2027"
   },
   "62650WA0020017": {
@@ -449,6 +2202,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020017-01.en.2027"
   },
   "62650WA0020027": {
@@ -456,6 +2231,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020027-00.en.2027"
   },
   "62650WA0030002": {
@@ -463,6 +2260,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Dental care (Adult) - 2 visits/12 months",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine eye care (Adult) - 1 exam/12 months",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0030002-00.en.2027"
   },
   "62650WA0020024": {
@@ -470,6 +2289,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020024-00.en.2027"
   },
   "62650WA0020003": {
@@ -477,6 +2318,28 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-888-832-0969",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Chiropractic (manipulative) care - 10 visits/year",
+      "Hearing aids - 1 per hearing impaired ear /3 years",
+      "Infertility treatment - artificial insemination",
+      "Routine foot care"
+    ],
     "source": "https://www.uhc.com/ifp/sbc.62650WA0020003-00.en.2027"
   },
   "12435WA0010001": {
@@ -484,6 +2347,29 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "(833) 421-4609",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Dental care (Adult)",
+      "Private-duty nursing",
+      "Children’s dental check-up",
+      "Long-term care",
+      "Routine eye care (Adult)",
+      "Cosmetic surgery",
+      "Non-emergency care when traveling outside the U.S.",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing aids 1 item(s) every 3 years",
+      "Acupuncture",
+      "Infertility treatment",
+      "Chiropractic care 10 visits/benefit period",
+      "Routine foot care"
+    ],
     "source": "https://sbc.wellpoint.com/dpsdeeplink/deepLink/WellpointCascadeCompleteGold/0UFW/English/DG166712048516.pdf"
   },
   "12435WA0010002": {
@@ -491,6 +2377,29 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "(833) 421-4609",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Dental care (Adult)",
+      "Private-duty nursing",
+      "Children’s dental check-up",
+      "Long-term care",
+      "Routine eye care (Adult)",
+      "Cosmetic surgery",
+      "Non-emergency care when traveling outside the U.S.",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing aids 1 item(s) every 3 years",
+      "Acupuncture",
+      "Infertility treatment",
+      "Chiropractic care 10 visits/benefit period",
+      "Routine foot care"
+    ],
     "source": "https://sbc.wellpoint.com/dpsdeeplink/deepLink/WellpointCascadeVitalGold/0UFV/English/DG166712048513.pdf"
   },
   "49831WA1940006": {
@@ -498,6 +2407,38 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "1-800-607-0546",
+    "urgentCareAway": {
+      "coverage": "notCovered"
+    },
+    "priorApproval": [
+      "hospitalStay",
+      "outpatientSurgery",
+      "imaging",
+      "mentalHealthInpatient",
+      "skilledNursing",
+      "rehabilitation",
+      "equipment",
+      "specialtyDrugs"
+    ],
+    "notCovered": [
+      "Assisted fertility treatment",
+      "Bariatric surgery",
+      "Cosmetic surgery",
+      "Dental care (Adult)",
+      "Long-term care",
+      "Non-emergency care when traveling outside the U.S.",
+      "Private-duty nursing",
+      "Routine eye care (Adult)",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Acupuncture",
+      "Artificial Insemination",
+      "Chiropractic care or other spinal manipulations (10 visits/year)",
+      "Hearing aids",
+      "Routine Foot care"
+    ],
     "source": "https://apim.ag.prod.premera.net/api/v1.0/Document/Visitor/PBC%20WA/2027/MCA%20PBC%20WA%20Individual%20FINR%20SBC%20with%20PBC%20WA%20On%20Exchange%20(6adac2f4cf).pdf",
     "inferredFrom": "Premera Blue Cross Cascade Bronze"
   },
@@ -506,6 +2447,29 @@ export const NETWORK_RULES: Record<string, NetworkRules> = {
     "referral": "no",
     "outOfNetwork": "emergencyOnly",
     "directoryPhone": "(833) 421-4609",
+    "urgentCareAway": {
+      "coverage": "sameAsNetwork"
+    },
+    "priorApproval": [],
+    "notCovered": [
+      "Bariatric surgery",
+      "Dental care (Adult)",
+      "Private-duty nursing",
+      "Children’s dental check-up",
+      "Long-term care",
+      "Routine eye care (Adult)",
+      "Cosmetic surgery",
+      "Non-emergency care when traveling outside the U.S.",
+      "Weight loss programs"
+    ],
+    "otherCovered": [
+      "Abortion",
+      "Hearing aids 1 item(s) every 3 years",
+      "Acupuncture",
+      "Infertility treatment",
+      "Chiropractic care 10 visits/benefit period",
+      "Routine foot care"
+    ],
     "source": "https://sbc.wellpoint.com/dpsdeeplink/deepLink/WellpointCascadeVitalGold/0UFV/English/DG166712048513.pdf",
     "inferredFrom": "Wellpoint Cascade Vital Gold"
   }

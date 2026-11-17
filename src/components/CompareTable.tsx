@@ -8,7 +8,16 @@ import { disagreements } from '../domain/hospitalAccess';
 import { TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { SURVEY_LABELS, qualityFor, starsText, surveyFor, surveyScoreText } from '../domain/quality';
-import { OUT_OF_NETWORK_TEXT, REFERRAL_TEXT, networkRulesFor, networkTypeOf } from '../domain/networkRules';
+import {
+  OUT_OF_NETWORK_TEXT,
+  PRIOR_APPROVAL_LABELS,
+  REFERRAL_TEXT,
+  URGENT_AWAY_TEXT,
+  adultEyeExamsCovered,
+  childrensDentalExcluded,
+  networkRulesFor,
+  networkTypeOf,
+} from '../domain/networkRules';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
 
@@ -65,6 +74,23 @@ const ROWS: Row[] = [
     text: (p) => {
       const net = networkTypeOf(p.plan);
       return net.type ? `${net.type}${net.fromOlderDocs ? ' (from 2026 documents; confirm)' : ''}` : 'See plan details';
+    },
+  },
+  {
+    label: 'Urgent care away from network',
+    text: (p) => { const r = networkRulesFor(p.plan)?.urgentCareAway; return r ? URGENT_AWAY_TEXT[r.coverage].replace(/^Urgent care[^:]*: /, '').replace(/^./, (c) => c.toUpperCase()) : 'See plan details'; },
+  },
+  {
+    label: 'Prior approval (per summary)',
+    text: (p) => { const a = networkRulesFor(p.plan)?.priorApproval; return !a ? 'See plan details' : a.length ? a.map((x) => PRIOR_APPROVAL_LABELS[x]).join(', ') : 'Not listed (still required for some care)'; },
+  },
+  {
+    label: 'Adult eye exams · children’s dental',
+    text: (p) => {
+      const r = networkRulesFor(p.plan);
+      if (!r) return 'See plan details';
+      const eye = adultEyeExamsCovered(r);
+      return `${eye === null ? 'Eye: not stated' : eye ? 'Eye exams covered' : 'No eye exams'} · ${childrensDentalExcluded(r) ? 'No children’s dental' : 'Children’s dental included'}`;
     },
   },
   { label: 'Specialist referral', text: (p) => { const r = networkRulesFor(p.plan); return r ? REFERRAL_TEXT[r.referral] : 'See plan details'; } },

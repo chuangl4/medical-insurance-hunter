@@ -58,7 +58,7 @@ for (const plan of KING_COUNTY_PLANS) {
     const buf = await pdf(url);
     if (!buf) continue;
     const { text } = await extractText(await getDocumentProxy(buf), { mergePages: false });
-    const parsed = parseSbc(text.slice(0, 4).join(' '));
+    const parsed = parseSbc(text.join(' '));
     if (!parsed) continue;
     rules[plan.id] = { ...parsed, source: url };
     found = true;
