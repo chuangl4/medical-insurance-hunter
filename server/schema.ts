@@ -109,6 +109,8 @@ export const profileSchema = z.object({
         clinicCheck: clinicCheckSchema.optional(),
         confirmed: z.record(text(80), z.enum(['in', 'out'])).optional(),
         lookup: lookupSchema.optional(),
+        candidateFor: text(80).optional(),
+        note: text(160).optional(),
       }),
     )
     .max(30)

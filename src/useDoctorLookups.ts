@@ -20,7 +20,8 @@ export const requiredHospitalsOf = (profile: Profile | null) => [
   ...new Set([...REQUIRED_HOSPITALS, ...(profile?.providers ?? []).flatMap((p) => (p.hospitalId ? [p.hospitalId] : []))]),
 ];
 
-const isDoctor = (p: Provider) => !p.hospitalId && p.name.trim().length > 0;
+// Candidates belong to one insurer by definition, so they aren't checked against the others.
+const isDoctor = (p: Provider) => !p.hospitalId && !p.candidateFor && p.name.trim().length > 0;
 const message = (e: unknown) => (e instanceof Error ? e.message : 'Something went wrong.');
 
 /**

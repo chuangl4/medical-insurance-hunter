@@ -70,7 +70,17 @@ export interface Provider extends DoctorFields {
   id: string;
   name: string;
   hospitalId: string | null;
+  /**
+   * Set for a candidate doctor: someone you'd see if you chose this insurer (as named in `Plan.carrier`). Candidates
+   * appear on that insurer's plans but never filter plans and aren't checked automatically.
+   */
+  candidateFor?: string;
+  /** A short note for a candidate, such as specialty and clinic. */
+  note?: string;
 }
+
+/** True for a candidate doctor, as opposed to a must-have. */
+export const isCandidate = (p: Provider): boolean => Boolean(p.candidateFor);
 
 /** Questions whose answer can leave a default unchanged, so the answer itself is recorded. */
 export const ANSWER_KEYS = ['roster', 'taxHousehold', 'employerOffer', 'immigration', 'providers'] as const;

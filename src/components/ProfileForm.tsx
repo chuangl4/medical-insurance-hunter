@@ -32,6 +32,8 @@ const blankItem = (): CareItem => ({
   notes: '',
 });
 
+const ALL_CARRIERS = [...new Set(KING_COUNTY_PLANS.map((p) => p.carrier))].sort();
+
 export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProvider, checking, onRecheck }: Props) {
   const update = (patch: Partial<Profile>) => onChange({ ...profile, ...patch });
   /** Records that a question was answered here, so the chat doesn't ask it again. */
@@ -173,7 +175,7 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProv
       </fieldset>
 
       <fieldset className="panel">
-        <legend>Must-have doctors and hospitals</legend>
+        <legend>Doctors and hospitals</legend>
         {providers.length === 0 && <p className="hint">None listed.</p>}
         {providers.map((p) => (
           <div className="provider-row" key={p.id}>
@@ -200,11 +202,39 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProv
                 ))}
               </select>
             </label>
+            {!p.hospitalId && (
+              <label className="field">
+                <span>Role</span>
+                <select
+                  value={p.candidateFor ?? ''}
+                  onChange={(e) =>
+                    setProviders(providers.map((x) => (x.id === p.id ? { ...x, candidateFor: e.target.value || undefined } : x)))
+                  }
+                >
+                  <option value="">Must-have</option>
+                  {ALL_CARRIERS.map((c) => (
+                    <option key={c} value={c}>
+                      Candidate at {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <button type="button" className="link-button" onClick={() => setProviders(providers.filter((x) => x.id !== p.id))}>
               Remove
             </button>
           </div>
-          {!p.hospitalId && p.name.trim() && (
+          {p.candidateFor && (
+            <label className="field">
+              <span>Note (specialty, clinic)</span>
+              <input
+                value={p.note ?? ''}
+                maxLength={160}
+                onChange={(e) => setProviders(providers.map((x) => (x.id === p.id ? { ...x, note: e.target.value || undefined } : x)))}
+              />
+            </label>
+          )}
+          {!p.hospitalId && !p.candidateFor && p.name.trim() && (
             <DoctorPanel
               provider={p}
               carriers={carriers}
@@ -216,7 +246,8 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProv
           </div>
         ))}
         <p className="hint">
-          Hospitals the app tracks filter the plan list. For a doctor or clinic, the app finds them in the national registry
+          Hospitals the app tracks filter the plan list. A candidate is someone you'd see if you chose that insurer: it
+          shows on that insurer's plans and never hides a plan. For a must-have doctor or clinic, the app finds them in the national registry
           and checks their clinic's website on its own; mark each insurer once you've confirmed it.
           {carriers.length < new Set(KING_COUNTY_PLANS.map((p) => p.carrier)).size &&
             ` Only insurers with plans covering your must-have hospitals are shown: ${carriers.join(', ')}.`}

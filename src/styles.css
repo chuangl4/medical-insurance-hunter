@@ -390,3 +390,4 @@ a { color: var(--accent); }
 .survey-list { margin: 4px 0; padding-left: 18px; }
 .survey-above { color: var(--accent); }
 .survey-below { color: var(--warn-text); }
+.candidate-list { margin-top: 2px; }

@@ -123,7 +123,9 @@ export function App() {
     setFilters((f) => ({ ...f, hospitals: [...new Set([...f.hospitals, ...providerHospitals.split(',')])] }));
   }, [providerHospitals]);
   // Doctors and clinics: everything else on the must-have list. Each one joins the filter when added.
-  const doctors = useMemo(() => (profile?.providers ?? []).filter((p) => !p.hospitalId && p.name.trim()), [profile?.providers]);
+  const doctors = useMemo(() => (profile?.providers ?? []).filter((p) => !p.hospitalId && !p.candidateFor && p.name.trim()), [profile?.providers]);
+  // Candidate doctors show on their insurer's plans only and never filter.
+  const candidates = useMemo(() => (profile?.providers ?? []).filter((p) => p.candidateFor && p.name.trim()), [profile?.providers]);
   const doctorIds = doctors.map((d) => d.id).join(',');
   useEffect(() => {
     if (!doctorIds) return;
@@ -320,6 +322,7 @@ export function App() {
             onToggleCompare={toggleCompare}
             onOpenCompare={() => setTab('compare')}
             doctors={doctors}
+            candidates={candidates}
             checkingDoctors={doctorLookups.checking}
             firstName={household.members[0]?.label || 'the first person listed'}
             requiredIds={requiredHospitalsOf(profile)}

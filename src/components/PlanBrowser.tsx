@@ -38,6 +38,8 @@ interface Props {
   onOpenCompare: () => void;
   /** Must-have doctors and clinics (providers that aren't tracked hospitals). */
   doctors: Provider[];
+  /** Candidate doctors, shown on their insurer's plans only. */
+  candidates: Provider[];
   /** Doctors being looked up right now. */
   checkingDoctors: string[];
   /** Who the bad-year hospital stay is for. */
@@ -106,7 +108,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 }
 
 export function PlanBrowser(props: Props) {
-  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName, requiredIds, drugLines, drugLookup, ifApproved } = props;
+  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName, requiredIds, drugLines, drugLookup, ifApproved, candidates } = props;
   const [mathOpen, setMathOpen] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
   const [descending, setDescending] = useState(false);
@@ -421,6 +423,23 @@ export function PlanBrowser(props: Props) {
                         </li>
                       );
                     })}
+                  </ul>
+                )}
+                {candidates.some((c) => c.candidateFor === plan.carrier) && (
+                  <ul className="hospital-list candidate-list">
+                    <li className="muted">Candidate doctors with this insurer:</li>
+                    {candidates
+                      .filter((c) => c.candidateFor === plan.carrier)
+                      .map((c) => {
+                        const mark = c.confirmed?.[plan.carrier];
+                        return (
+                          <li key={c.id} className={`hospital doctor-${mark ?? 'likely'}`}>
+                            <span className="hospital-name">{c.name}</span>
+                            {c.note && <span className="muted"> ({c.note})</span>}:{' '}
+                            {mark === 'in' ? 'You confirmed in network' : mark === 'out' ? 'You marked out of network' : "Listed in the insurer's directory; confirm"}
+                          </li>
+                        );
+                      })}
                   </ul>
                 )}
                 {plan.benefits ? (
