@@ -391,3 +391,8 @@ a { color: var(--accent); }
 .survey-above { color: var(--accent); }
 .survey-below { color: var(--warn-text); }
 .candidate-list { margin-top: 2px; }
+.access-conditional { color: var(--warn-text); font-weight: 700; }
+.access-notListed { color: var(--muted); }
+.access-unclear { color: var(--warn-text); }
+.access-notes { margin-top: 8px; }
+.access-notes > summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }

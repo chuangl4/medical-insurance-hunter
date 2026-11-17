@@ -1,34 +1,50 @@
-import { FACILITY_SOURCE, facilityStatus } from '../data/facilityNetworks';
-import { STATUS_LABELS, hospitalStatus } from '../data/hospitalNetworks';
-import { TIER_LABELS, disagreements, groupedFacilities } from '../domain/hospitalAccess';
-import type { EvaluatedPlan, Plan } from '../domain/types';
+import { FACILITY_SOURCE } from '../data/facilityNetworks';
+import { LIST_STATUS_LABELS } from '../data/hospitalLists';
+import { NETWORK_NAMES, planNetwork } from '../data/planNetworks';
+import { TIER_LABELS, facilityAccess, groupedFacilities, type AccessStatus } from '../domain/hospitalAccess';
+import type { EvaluatedPlan } from '../domain/types';
 
 interface Props {
-  /** Every plan sold in the county, to list each insurer once. */
+  /** Every plan sold in the county, to list each network once. */
   plans: EvaluatedPlan[];
-  /** Plans passing the current filters; other insurers are dimmed. */
+  /** Plans passing the current filters; other networks are dimmed. */
   visible: EvaluatedPlan[];
   requiredIds: string[];
 }
 
-const listLabel = (status: string) => (STATUS_LABELS as Record<string, string>)[status]?.toLowerCase() ?? status;
+const SYMBOL: Record<AccessStatus, string> = { in: '✓', conditional: '◐', out: '✕', notListed: '✕', unclear: '?', unknown: '–' };
+const usable = (s: AccessStatus) => s === 'in' || s === 'conditional';
 
-/** Insurers by hospitals: which Seattle-area hospitals each insurer's individual plans cover. */
+/** Networks by hospitals: which Seattle-area hospitals each individual-plan network covers, per the hospitals' own lists. */
 export function HospitalAccess({ plans, visible, requiredIds }: Props) {
   const groups = groupedFacilities(requiredIds);
   const columns = groups.flatMap((g) => g.facilities);
-  const visibleCarriers = new Set(visible.map((p) => p.plan.carrier));
-  const carriers = [...new Map(plans.map((p) => [p.plan.carrier, p.plan])).values()]
-    .map((plan) => ({ plan, inCount: columns.filter((f) => facilityStatus(plan, f.id) === 'in').length, count: plans.filter((p) => p.plan.carrier === plan.carrier).length }))
-    .sort((a, b) => b.inCount - a.inCount || a.plan.carrier.localeCompare(b.plan.carrier));
-  const flagged = (plan: Plan) => disagreements(plan, requiredIds, hospitalStatus);
-  const allFlags = carriers.flatMap(({ plan }) => flagged(plan).map((d) => ({ carrier: plan.carrier, ...d })));
+  const visibleIds = new Set(visible.map((p) => p.plan.id));
+  const rows = [...new Map(plans.map((p) => [planNetwork(p.plan) ?? p.plan.carrier, p.plan])).entries()]
+    .map(([key, plan]) => {
+      const members = plans.filter((p) => (planNetwork(p.plan) ?? p.plan.carrier) === key);
+      return {
+        key,
+        plan,
+        label: NETWORK_NAMES[key as keyof typeof NETWORK_NAMES] ?? plan.carrier,
+        count: members.length,
+        shown: members.some((p) => visibleIds.has(p.plan.id)),
+        usableCount: columns.filter((f) => usable(facilityAccess(plan, f.id).status)).length,
+      };
+    })
+    .sort((a, b) => b.usableCount - a.usableCount || a.label.localeCompare(b.label));
+  const notes = rows.flatMap((r) =>
+    columns.flatMap((f) => {
+      const a = facilityAccess(r.plan, f.id);
+      return a.note || a.disagrees ? [{ row: r, facility: f, access: a }] : [];
+    }),
+  );
 
   return (
     <details className="panel hospital-access" open>
       <summary>
         <span>
-          <strong>Hospital access</strong> by insurer: {columns.length} Seattle-area hospitals
+          <strong>Hospital access</strong> by network: {columns.length} Seattle-area hospitals
         </span>
         <span className="cash-toggle">Show or hide</span>
       </summary>
@@ -50,7 +66,7 @@ export function HospitalAccess({ plans, visible, requiredIds }: Props) {
               ))}
             </tr>
             <tr>
-              <th scope="col">Insurer</th>
+              <th scope="col">Network</th>
               {columns.map((f) => (
                 <th key={f.id} scope="col" className="facility-col" title={`${f.name}, ${f.address}${f.why ? ` · ${f.why}` : ''}`}>
                   {f.short}
@@ -60,64 +76,68 @@ export function HospitalAccess({ plans, visible, requiredIds }: Props) {
             </tr>
           </thead>
           <tbody>
-            {carriers.map(({ plan, inCount, count }) => {
-              const flags = flagged(plan);
-              return (
-                <tr key={plan.carrier} className={visibleCarriers.has(plan.carrier) ? undefined : 'dimmed'}>
-                  <th scope="row">
-                    {plan.carrier}
-                    <small>
-                      {inCount} of {columns.length} · {count} {count === 1 ? 'plan' : 'plans'}
-                      {!visibleCarriers.has(plan.carrier) && ' · filtered out'}
-                    </small>
-                  </th>
-                  {columns.map((f) => {
-                    const s = facilityStatus(plan, f.id);
-                    const flag = flags.find((d) => d.facility.id === f.id);
-                    const text = s === 'in' ? 'In network' : s === 'out' ? 'Not covered' : 'Not checked';
-                    return (
-                      <td
-                        key={f.id}
-                        className={`access access-${s}${flag ? ' access-flag' : ''}`}
-                        title={flag ? `Healthplanfinder: ${text}. ${f.name}'s own list: ${listLabel(flag.listSays)}.` : `${f.name}: ${text}`}
-                      >
-                        <span aria-hidden="true">{s === 'in' ? '✓' : s === 'out' ? '✕' : '–'}</span>
-                        {flag && (
-                          <span className="flag-mark" aria-hidden="true">
-                            !
-                          </span>
-                        )}
-                        <span className="visually-hidden">
-                          {f.name}: {text}
-                          {flag ? `. The hospital's own list says ${listLabel(flag.listSays)}.` : ''}
+            {rows.map((r) => (
+              <tr key={r.key} className={r.shown ? undefined : 'dimmed'}>
+                <th scope="row">
+                  {r.label}
+                  <small>
+                    {r.usableCount} of {columns.length} · {r.count} {r.count === 1 ? 'plan' : 'plans'}
+                    {!r.shown && ' · filtered out'}
+                  </small>
+                </th>
+                {columns.map((f) => {
+                  const a = facilityAccess(r.plan, f.id);
+                  const label = a.status === 'unknown' ? 'Not checked' : LIST_STATUS_LABELS[a.status];
+                  const where = a.from === 'hospital' ? `${f.short}'s own ${a.year} list` : a.from === 'healthplanfinder' ? FACILITY_SOURCE.name : 'no source';
+                  const title = `${f.name}: ${label}${a.note ? ` (${a.note})` : ''}, per ${where}.${
+                    a.disagrees ? ` Healthplanfinder says ${a.directorySays === 'in' ? 'in network' : 'not covered'}.` : ''
+                  }`;
+                  return (
+                    <td key={f.id} className={`access access-${a.status}${a.disagrees ? ' access-flag' : ''}`} title={title}>
+                      <span aria-hidden="true">{SYMBOL[a.status]}</span>
+                      {a.disagrees && (
+                        <span className="flag-mark" aria-hidden="true">
+                          !
                         </span>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+                      )}
+                      <span className="visually-hidden">{title}</span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
-      {allFlags.length > 0 && (
+      {notes.length > 0 && (
+        <details className="access-notes">
+          <summary>
+            Conditions and disagreements ({notes.filter((n) => n.access.status === 'conditional').length} with conditions,{' '}
+            {notes.filter((n) => n.access.disagrees).length} where Healthplanfinder disagrees)
+          </summary>
         <ul className="flag-list">
-          {allFlags.map((d) => (
-            <li key={d.carrier + d.facility.id}>
-              <span className="flag-mark" aria-hidden="true">
-                !
-              </span>{' '}
-              <strong>{d.carrier}</strong> at {d.facility.short}: Healthplanfinder says{' '}
-              {d.directorySays === 'in' ? 'in network' : 'not covered'}; the hospital's own list says {listLabel(d.listSays)}.
+          {notes.map(({ row, facility, access }) => (
+            <li key={row.key + facility.id}>
+              {access.disagrees ? (
+                <span className="flag-mark" aria-hidden="true">
+                  !
+                </span>
+              ) : (
+                <span aria-hidden="true">{SYMBOL[access.status]}</span>
+              )}{' '}
+              <strong>{row.label}</strong> at {facility.short}: {access.status === 'unknown' ? 'not checked' : LIST_STATUS_LABELS[access.status].toLowerCase()}
+              {access.note && <> ({access.note})</>}
+              {access.disagrees && <>; Healthplanfinder says {access.directorySays === 'in' ? 'in network' : 'not covered'}</>}.
             </li>
           ))}
         </ul>
+        </details>
       )}
       <p className="hint">
-        ✓ in network · ✕ not covered, per {FACILITY_SOURCE.name} on {FACILITY_SOURCE.checked} (main campus; the same for
-        every plan of an insurer; silver plans assumed to match). <strong>!</strong> means the hospital's own insurance
-        list disagrees; the plan filter follows the hospital list, so confirm with the hospital before relying on either.
-        "Authorized specialty care only" often means a referral is needed. Hover a hospital for its address.
+        ✓ in network · ◐ with conditions · ✕ out of network or not on the hospital's list · ? unclear · – not checked. Each
+        cell uses the hospital's own published list where it has one (hover for the year and source), else{' '}
+        {FACILITY_SOURCE.name} ({FACILITY_SOURCE.checked}). <strong>!</strong> means the two disagree. Hospitals list
+        networks, so plans sharing a network share a row. Confirm with the hospital before relying on any cell.
       </p>
     </details>
   );

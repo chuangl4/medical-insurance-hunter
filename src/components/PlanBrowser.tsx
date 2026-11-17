@@ -11,7 +11,7 @@ import { networkTypeOf } from '../domain/networkRules';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { SeverityMark } from './ScenarioGuide';
 import { HospitalAccess } from './HospitalAccess';
-import { disagreements, otherAccess } from '../domain/hospitalAccess';
+import { facilityAccess, otherAccess } from '../domain/hospitalAccess';
 import { RESTRICTION_LABELS, TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { ScenarioMath } from './ScenarioMath';
 import {
@@ -372,14 +372,15 @@ export function PlanBrowser(props: Props) {
                 <ul className="hospital-list">
                   {HOSPITAL_IDS.map((id) => {
                     const status = hospitalStatus(plan, id);
-                    const flag = disagreements(plan, [id], hospitalStatus)[0];
+                    const access = facilityAccess(plan, id);
                     return (
                       <li key={id} className={`hospital status-${status}`}>
                         <span className="hospital-name">{HOSPITALS[id].name}:</span> {STATUS_LABELS[status]}
-                        {flag && (
+                        {access.note && status !== 'in' && <span className="muted"> ({access.note})</span>}
+                        {access.disagrees && (
                           <span className="flag-inline">
                             {' '}
-                            · Healthplanfinder says {flag.directorySays === 'in' ? 'in network' : 'not covered'}; confirm
+                            · Healthplanfinder says {access.directorySays === 'in' ? 'in network' : 'not covered'}; confirm
                           </span>
                         )}
                       </li>
@@ -393,6 +394,7 @@ export function PlanBrowser(props: Props) {
                   return (
                     <p className={`access-line${access.missing.length ? '' : ' access-full'}`}>
                       <span className="hospital-name">Other hospitals:</span> {access.inCount} of {access.total} in network
+                      {access.conditionalCount > 0 && <>, {access.conditionalCount} with conditions</>}
                       {access.missing.length > 0 && <> · not {access.missing.map((f) => f.short).join(', ')}</>}
                     </p>
                   );

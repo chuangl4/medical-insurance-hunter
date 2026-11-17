@@ -3,8 +3,9 @@ import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import type { Provider } from '../domain/profile';
 import type { ReactNode } from 'react';
 import { DoctorHelp } from './DoctorHelp';
-import { FACILITIES, facilityStatus } from '../data/facilityNetworks';
-import { disagreements } from '../domain/hospitalAccess';
+import { FACILITIES } from '../data/facilityNetworks';
+import { facilityAccess } from '../domain/hospitalAccess';
+import { LIST_STATUS_LABELS } from '../data/hospitalLists';
 import { TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { SURVEY_LABELS, qualityFor, starsText, surveyFor, surveyScoreText } from '../domain/quality';
@@ -135,13 +136,17 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
   const hospitalRows: Row[] = HOSPITAL_IDS.map((id) => ({
     label: HOSPITALS[id].name,
     text: (p) => {
-      const flag = disagreements(p.plan, [id], hospitalStatus)[0];
-      return `${STATUS_LABELS[hospitalStatus(p.plan, id)]}${flag ? ` (Healthplanfinder: ${flag.directorySays === 'in' ? 'in network' : 'not covered'})` : ''}`;
+      const a = facilityAccess(p.plan, id);
+      const status = hospitalStatus(p.plan, id);
+      return `${STATUS_LABELS[status]}${a.note && status !== 'in' ? ` (${a.note})` : ''}${a.disagrees ? ` (Healthplanfinder: ${a.directorySays === 'in' ? 'in network' : 'not covered'})` : ''}`;
     },
   }));
   const facilityRows: Row[] = FACILITIES.filter((f) => !requiredIds.includes(f.id) && !HOSPITAL_IDS.includes(f.id)).map((f) => ({
     label: `${f.name}${f.why ? ` (${f.why.split(' (')[0].toLowerCase()})` : ''}`,
-    text: (p) => ({ in: 'In network', out: 'Not covered', unknown: 'Not checked' })[facilityStatus(p.plan, f.id)],
+    text: (p) => {
+      const a = facilityAccess(p.plan, f.id);
+      return a.status === 'unknown' ? 'Not checked' : `${LIST_STATUS_LABELS[a.status]}${a.note ? ` (${a.note})` : ''}`;
+    },
   }));
   const doctorRows: Row[] = doctors.map((d) => ({
     label: d.name,

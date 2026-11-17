@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { FACILITIES, facilityStatus } from '../data/facilityNetworks';
-import { disagreements, groupedFacilities, otherAccess } from './hospitalAccess';
+import { planNetwork } from '../data/planNetworks';
+import { disagreements, facilityAccess, groupedFacilities, listNetworkStatus, otherAccess } from './hospitalAccess';
 import type { Plan } from './types';
 
-const plan = (carrier: string) => ({ id: carrier, carrier }) as Plan;
+const plan = (carrier: string, name = carrier) => ({ id: carrier, carrier, name }) as Plan;
 
 describe('hospital access', () => {
   it('reads directory results by insurer', () => {
@@ -19,15 +20,31 @@ describe('hospital access', () => {
     expect(groups.flatMap((g) => g.facilities)).toHaveLength(FACILITIES.length);
   });
 
-  it('counts the other hospitals and names the missing ones', () => {
+  it('counts the other hospitals, with conditions, and names the missing ones', () => {
     const a = otherAccess(plan('Community Health Plan of Washington'), ['evergreen', 'uw']);
-    expect([a.inCount, a.total, a.known]).toEqual([6, 8, true]);
+    expect([a.inCount, a.conditionalCount, a.total, a.known]).toEqual([3, 3, 8, true]);
     expect(a.missing.map((f) => f.id)).toEqual(['virginiaMason', 'overlake']);
   });
 
-  it('flags only real disagreements with the hospital list', () => {
-    const list = (_: Plan, id: string) => (id === 'uw' ? 'limited' : 'in');
-    expect(disagreements(plan('Kaiser Permanente'), ['evergreen', 'uw'], list).map((d) => d.facility.id)).toEqual(['uw']);
-    expect(disagreements(plan('Ambetter (Coordinated Care)'), ['uw'], () => 'not-listed')).toEqual([]);
+  it('tells an insurer’s two networks apart', () => {
+    expect(planNetwork(plan('Ambetter (Coordinated Care)', 'Ambetter Cascade Select Gold'))).toBe('ambetterCascadeSelect');
+    expect(planNetwork(plan('Ambetter (Coordinated Care)', 'Ambetter Cascade Gold'))).toBe('ambetter');
+    expect(facilityAccess(plan('Ambetter (Coordinated Care)', 'Ambetter Cascade Gold'), 'virginiaMason').status).toBe('in');
+    expect(facilityAccess(plan('Ambetter (Coordinated Care)', 'Ambetter Cascade Select Gold'), 'virginiaMason').status).toBe('unclear');
+  });
+
+  it('prefers the hospital’s own list, keeps its conditions, and falls back to Healthplanfinder', () => {
+    const kaiserUw = facilityAccess(plan('Kaiser Permanente'), 'uw');
+    expect(kaiserUw).toMatchObject({ status: 'conditional', from: 'hospital', year: '2027', directorySays: 'in', disagrees: false });
+    expect(kaiserUw.note).toMatch(/specialty care only/);
+    expect(facilityAccess(plan('Kaiser Permanente'), 'swedishFirstHill')).toMatchObject({ status: 'in', from: 'healthplanfinder' });
+    expect(listNetworkStatus('uw')(plan('Kaiser Permanente'))).toBe('limited');
+    expect(listNetworkStatus('evergreen')(plan('Kaiser Permanente'))).toBe('not-listed');
+  });
+
+  it('flags where a hospital’s list and Healthplanfinder disagree', () => {
+    // Healthplanfinder lists Kaiser at Evergreen; Evergreen's exchange list doesn't.
+    expect(disagreements(plan('Kaiser Permanente')).map((d) => d.facility.id)).toContain('evergreen');
+    expect(disagreements(plan('Premera Blue Cross'))).toEqual([]);
   });
 });
