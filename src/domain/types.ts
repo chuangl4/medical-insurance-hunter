@@ -10,6 +10,8 @@ export interface NetworkRules {
   /** Whether care outside the network is paid: only emergencies (HMO/EPO), or partly (PPO). */
   outOfNetwork: 'emergencyOnly' | 'partial' | 'unknown';
   source: string;
+  /** The phone line the summary gives for a list of network providers. */
+  directoryPhone?: string;
   /** Set when this plan's own summary wasn't found: the same-network plan whose rules it shares. */
   inferredFrom?: string;
 }

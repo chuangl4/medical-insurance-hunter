@@ -25,6 +25,13 @@ describe('reading network rules from a benefits summary', () => {
   it('leaves the type empty for a high-deductible plan that names no network type', () => {
     expect(parseSbc(sbc('HDHP', 'Yes.', '40% coinsurance Not covered'))).toEqual({ type: null, referral: 'yes', outOfNetwork: 'emergencyOnly' });
   });
+  it('reads the directory phone line', () => {
+    const text = sbc('EPO', 'No.', '$40 Not covered').replace(
+      'Yes. This plan uses a provider network.',
+      'Yes. See https://example.com/find or call 1-800-555-0100 for a list of network providers. This plan uses a provider network.',
+    );
+    expect(parseSbc(text)?.directoryPhone).toBe('1-800-555-0100');
+  });
   it('ignores summaries for other years', () => {
     expect(parseSbc(sbc('EPO', 'No.', '$40 Not covered').replace('2027 - 12/31/2027', '2026 - 12/31/2026'))).toBeNull();
   });

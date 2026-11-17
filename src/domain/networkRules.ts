@@ -15,9 +15,15 @@ export function parseSbc(text: string): Omit<NetworkRules, 'source'> | null {
   const referral: NetworkRules['referral'] = /^No\b/i.test(ref) ? 'no' : /self-refer/i.test(ref) ? 'yesSomeSelf' : /^Yes\b/i.test(ref) ? 'yes' : 'unknown';
   const row = t.split(/Specialist visit\.?\s*/i).slice(1).map((r) => r.slice(0, 160)).find((r) => /\$|%|no charge/i.test(r.slice(0, 40)));
   const outOfNetwork: NetworkRules['outOfNetwork'] = !row ? 'unknown' : /not covered/i.test(row.split(/Preventive/i)[0]) ? 'emergencyOnly' : 'partial';
-  return { type: type ?? null, referral, outOfNetwork };
+  const directoryPhone = directoryPhoneOf(t);
+  return { type: type ?? null, referral, outOfNetwork, ...(directoryPhone ? { directoryPhone } : {}) };
 }
 
+/** The phone number in the summary's "Will you pay less if you use a network provider?" answer. */
+export function directoryPhoneOf(t: string): string | undefined {
+  const answer = (t.match(/Will you pay less if you use a network provider\?\s*(.{0,400})/i)?.[1] ?? '').split(/This plan uses a provider network/i)[0];
+  return answer.match(/(?:1-)?\(?\d{3}\)?[-. ]\d{3}[-. ]\d{4}/)?.[0];
+}
 export const networkRulesFor = (plan: Plan): NetworkRules | undefined => NETWORK_RULES[plan.id];
 
 /** The plan's network type: from its 2027 summary when stated, else from the plan data. */
