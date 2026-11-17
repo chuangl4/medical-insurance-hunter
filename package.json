@@ -14,7 +14,8 @@
     "formularies": "node --max-old-space-size=6144 --import tsx scripts/build-formularies.mts",
     "formularies:pdf": "tsx scripts/convert-formulary-pdfs.mts",
     "formularies:check": "tsx scripts/check-formularies.mts",
-    "network-rules": "tsx scripts/build-network-rules.mts"
+    "network-rules": "tsx scripts/build-network-rules.mts",
+    "quality-ratings": "tsx scripts/build-quality-ratings.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

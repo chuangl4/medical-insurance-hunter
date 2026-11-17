@@ -5,6 +5,7 @@ import type { Provider } from '../domain/profile';
 import { DoctorHelp } from './DoctorHelp';
 import { ExceptionHelp } from './ExceptionHelp';
 import { NetworkRulesLine } from './NetworkRulesLine';
+import { QualityRatingLine } from './QualityRatingLine';
 import { networkTypeOf } from '../domain/networkRules';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { SeverityMark } from './ScenarioGuide';
@@ -342,6 +343,7 @@ export function PlanBrowser(props: Props) {
                   </div>
                 </dl>
                 <NetworkRulesLine plan={plan} />
+                <QualityRatingLine plan={plan} />
                 {plan.benefits && (
                   <button
                     type="button"

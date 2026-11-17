@@ -2,6 +2,15 @@ import type { DrugLine } from './drugs';
 export type Metal = 'bronze' | 'silver' | 'gold' | 'platinum';
 export type NetworkType = 'HMO' | 'PPO' | 'EPO';
 
+/** CMS Quality Rating System stars (1–5) for an insurer and plan type; null when CMS had too little data. */
+export interface QualityRating {
+  planType?: string;
+  overall: number | null;
+  medicalCare: number | null;
+  memberExperience: number | null;
+  planAdministration: number | null;
+}
+
 /** A plan's network rules, from its Summary of Benefits and Coverage. */
 export interface NetworkRules {
   type: 'HMO' | 'EPO' | 'PPO' | 'POS' | null;

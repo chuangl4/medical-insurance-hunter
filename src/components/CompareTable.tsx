@@ -7,6 +7,7 @@ import { FACILITIES, facilityStatus } from '../data/facilityNetworks';
 import { disagreements } from '../domain/hospitalAccess';
 import { TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
+import { qualityFor, starsText } from '../domain/quality';
 import { OUT_OF_NETWORK_TEXT, REFERRAL_TEXT, networkRulesFor, networkTypeOf } from '../domain/networkRules';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
@@ -68,6 +69,16 @@ const ROWS: Row[] = [
   },
   { label: 'Specialist referral', text: (p) => { const r = networkRulesFor(p.plan); return r ? REFERRAL_TEXT[r.referral] : 'See plan details'; } },
   { label: 'Outside the network', text: (p) => { const r = networkRulesFor(p.plan); return r ? OUT_OF_NETWORK_TEXT[r.outOfNetwork].replace('Outside the network: ', '').replace(/^./, (c) => c.toUpperCase()) : 'See plan details'; } },
+  {
+    label: 'Quality rating (CMS)',
+    text: (p) => { const q = qualityFor(p.plan); return q?.overall ? `${starsText(q.overall)} ${q.overall} of 5` : 'Not rated'; },
+    // Rows mark the lowest value as best, so more stars count as lower.
+    value: (p) => { const o = qualityFor(p.plan)?.overall; return o ? -o : null; },
+  },
+  {
+    label: 'Medical care · experience · admin',
+    text: (p) => { const q = qualityFor(p.plan); return q ? [q.medicalCare, q.memberExperience, q.planAdministration].map((s) => (s ? `${s}` : '–')).join(' · ') : 'Not rated'; },
+  },
   { label: 'HSA plan', text: (p) => (p.plan.hsaEligible ? 'Yes' : 'No') },
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];
