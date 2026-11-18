@@ -1,5 +1,4 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { HOSPITALS, HOSPITAL_IDS } from '../data/hospitalNetworks';
 import {
   EMPTY_FILTERS,
   SORT_LABELS,
@@ -138,7 +137,6 @@ export function PlanBrowser(props: Props) {
   const grouped = groupByFit && canGroup;
   const chips = activeChips(filters);
   const mustHaveCount = filters.hospitals.length + filters.doctors.length;
-  const hasMustHaves = HOSPITAL_IDS.length + doctors.length > 0;
   const more = moreFilterCount(filters);
 
   const renderList = (items: EvaluatedPlan[]) => (
@@ -162,30 +160,6 @@ export function PlanBrowser(props: Props) {
         {filtersOpen ? 'Hide filters' : `Filters${chips.length ? ` (${chips.length})` : ''}`}
       </button>
       <aside className={filtersOpen ? 'filters open' : 'filters'} aria-label="Filters">
-        {hasMustHaves && (
-          <section className="filter-section must-haves">
-            <h2>Your must-haves</h2>
-            <fieldset className="filter-group">
-              <legend className="visually-hidden">Must be in network</legend>
-              {HOSPITAL_IDS.map((id) => (
-                <label className="check" key={id}>
-                  <input type="checkbox" checked={filters.hospitals.includes(id)} onChange={() => set({ hospitals: toggled(filters.hospitals, id) })} />
-                  <span>{HOSPITALS[id].name}</span>
-                </label>
-              ))}
-              {doctors.map((d) => (
-                <label className="check" key={d.id}>
-                  <input type="checkbox" checked={filters.doctors.includes(d.id)} onChange={() => set({ doctors: toggled(filters.doctors, d.id) })} />
-                  <span>{d.name}</span>
-                </label>
-              ))}
-              <small className="hint">
-                Ticked ones hide plans that don't cover them.{doctors.length > 0 && ' A doctor hides a plan only after you mark them out of network for its insurer.'}
-              </small>
-            </fieldset>
-          </section>
-        )}
-
         <section className="filter-section">
           <div className="filters-head">
             <h2>Plan filters</h2>

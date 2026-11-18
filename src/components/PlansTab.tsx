@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { FACILITIES } from '../data/facilityNetworks';
-import { HOSPITALS } from '../data/hospitalNetworks';
+import { HOSPITALS, HOSPITAL_IDS } from '../data/hospitalNetworks';
 import { cashLines } from '../domain/cashMeds';
 import { applyFilters, type Filters } from '../domain/filter';
 import type { Profile, Provider } from '../domain/profile';
@@ -32,6 +32,7 @@ interface Props extends PlanCardContext {
   onDrugRecheck: (rxcui: string) => void;
 }
 
+const toggled = <T,>(list: T[], value: T): T[] => (list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
 const joinNames = (names: string[]) => (names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
 const hospitalName = (id: string) => HOSPITALS[id]?.name ?? FACILITIES.find((f) => f.id === id)?.short ?? id;
 
@@ -57,6 +58,24 @@ export function PlansTab(props: Props) {
   const cash = cashLines(profile);
   const cashTotal = cash.reduce((sum, l) => sum + l.yearly, 0);
   const unfinished = unfinishedLookups(doctors, checkingDoctors);
+  const { onFiltersChange } = rest;
+  // Must-haves double as filters: ticked ones hide plans that miss them.
+  const mustHaves = [
+    ...HOSPITAL_IDS.map((id) => ({
+      id,
+      name: HOSPITALS[id].name,
+      on: filters.hospitals.includes(id),
+      toggle: () => onFiltersChange({ ...filters, hospitals: toggled(filters.hospitals, id) }),
+    })),
+    ...doctors.map((d) => ({
+      id: d.id,
+      name: d.name,
+      on: filters.doctors.includes(d.id),
+      toggle: () => onFiltersChange({ ...filters, doctors: toggled(filters.doctors, d.id) }),
+    })),
+  ];
+  // Must-have hospitals the app has no per-plan status for; shown, but they can't filter.
+  const extraHospitals = requiredIds.filter((id) => !HOSPITAL_IDS.includes(id));
   const hasDrugView = drugs.length > 0 || cash.length > 0;
   const views: { id: View; label: string }[] = [
     { id: 'plans', label: `Plans (${visible.length})` },
@@ -74,31 +93,63 @@ export function PlansTab(props: Props) {
     <div className="plans-tab">
       <section className="needs-bar" aria-label="Your needs">
         <span className="needs-title">Your needs</span>
-        <ul className="needs-list">
-          {requiredIds.length > 0 && (
-            <li>
-              <button type="button" className="need" onClick={() => setView('hospitals')}>
-                <span className="need-label">Hospitals</span> {joinNames(requiredIds.map(hospitalName))}
-              </button>
-            </li>
+        <div className="needs-groups">
+          {mustHaves.length > 0 && (
+            <div className="needs-group" role="group" aria-labelledby="must-have-label">
+              <span id="must-have-label" className="need-label">
+                Must-haves
+              </span>
+              <ul className="needs-list">
+                {mustHaves.map((m) => (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      className="need need-toggle"
+                      aria-pressed={m.on}
+                      title={m.on ? `Showing only plans with ${m.name}. Click to show all.` : `Click to show only plans with ${m.name}.`}
+                      onClick={m.toggle}
+                    >
+                      <span className="need-check" aria-hidden="true">
+                        {m.on ? '✓' : ''}
+                      </span>
+                      {m.name}
+                    </button>
+                  </li>
+                ))}
+                {extraHospitals.map((id) => (
+                  <li key={id} className="need need-static">
+                    {hospitalName(id)}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
-          {doctors.length + candidates.length > 0 && (
-            <li>
-              <button type="button" className="need" onClick={onEditHousehold}>
-                <span className="need-label">Doctors</span> {doctors.length} must-have
-                {candidates.length > 0 && `, ${candidates.length} candidate${candidates.length === 1 ? '' : 's'}`}
-              </button>
-            </li>
+          {(hasDrugView || candidates.length > 0) && (
+            <ul className="needs-list">
+              {hasDrugView && (
+                <li>
+                  <button type="button" className="need" onClick={() => setView('drugs')}>
+                    <span className="need-label">Medications</span> {drugs.length} checked against drug lists
+                    {cash.length > 0 && ` · ${money(cashTotal)}/yr paid in cash`}
+                  </button>
+                </li>
+              )}
+              {candidates.length > 0 && (
+                <li>
+                  <button type="button" className="need" onClick={onEditHousehold}>
+                    <span className="need-label">Candidates</span> {candidates.length} doctor{candidates.length === 1 ? '' : 's'}, shown on
+                    their insurer's plans
+                  </button>
+                </li>
+              )}
+            </ul>
           )}
-          {hasDrugView && (
-            <li>
-              <button type="button" className="need" onClick={() => setView('drugs')}>
-                <span className="need-label">Medications</span> {drugs.length} checked against drug lists
-                {cash.length > 0 && ` · ${money(cashTotal)}/yr paid in cash`}
-              </button>
-            </li>
+          {mustHaves.length > 0 && (
+            <p className="needs-hint">
+              Ticked must-haves hide plans that miss them.{doctors.length > 0 && ' A doctor hides a plan only once you mark them out of network for its insurer.'}
+            </p>
           )}
-        </ul>
+        </div>
         <button type="button" className="link-button" onClick={onEditHousehold}>
           Edit needs
         </button>
