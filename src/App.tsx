@@ -1,12 +1,9 @@
 import { DataFreshnessBanner } from './components/DataFreshnessBanner';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, type User } from './api';
-import { CashMedsSummary } from './components/CashMedsSummary';
-import { ScenarioGuide } from './components/ScenarioGuide';
-import { PrescriptionCoverage } from './components/PrescriptionCoverage';
 import { ChatOnboarding, type ChatMessage } from './components/ChatOnboarding';
 import { CompareTable } from './components/CompareTable';
-import { PlanBrowser } from './components/PlanBrowser';
+import { PlansTab } from './components/PlansTab';
 import { ProfileForm } from './components/ProfileForm';
 import { SignIn } from './components/SignIn';
 import { SubsidySummary } from './components/SubsidySummary';
@@ -222,11 +219,6 @@ export function App() {
   }
 
   const hasPeople = profile.members.length > 0;
-  // Doctors the automatic lookup couldn't finish on its own.
-  const uncheckedProviders = doctors
-    .filter((d) => !d.clinicCheck && !doctorLookups.checking.includes(d.id) && !Object.keys(d.confirmed ?? {}).length)
-    .filter((d) => d.lookup?.registry || d.lookup?.websites)
-    .map((d) => d.name.trim());
   return (
     <div className="app">
       {user.isAdmin && <DataFreshnessBanner />}
@@ -253,7 +245,10 @@ export function App() {
         ))}
       </nav>
 
-      <SubsidySummary subsidy={subsidy} hasChildren={household.members.some((m) => m.age < 19)} />
+      {/* The credit only changes prices when there is one; otherwise it belongs with the household's details. */}
+      {(tab === 'household' || subsidy.monthlyCredit > 0) && (
+        <SubsidySummary subsidy={subsidy} hasChildren={household.members.some((m) => m.age < 19)} />
+      )}
 
       <main>
         {tab === 'household' &&
@@ -282,40 +277,9 @@ export function App() {
             />
           ))}
         {tab === 'plans' && (
-          <CashMedsSummary
+          <PlansTab
             profile={profile}
-            coveredBy={(rxcui) => {
-              const cov = profile.drugCoverage?.[rxcui];
-              const status = (id: string) => cov?.plans[id] ?? cov?.fromLists?.[id];
-              return { covered: evaluated.filter((p) => status(p.plan.id)?.covered).length, total: evaluated.length };
-            }}
-            onEdit={() => {
-              setChatOpen(false);
-              setTab('household');
-            }}
-          />
-        )}
-        {tab === 'plans' && (
-          <ScenarioGuide members={household.members} hasCash={household.members.some((m) => Object.values(m.selfPayDrugs).some((c) => c > 0))} />
-        )}
-        {tab === 'plans' && (
-          <PrescriptionCoverage
-            profile={profile}
-            plans={evaluated}
-            onChange={(update) => setProfile((prev) => prev && update(prev))}
-            checking={drugLookups.checking}
-            errors={drugLookups.errors}
-            onRecheck={drugLookups.recheck}
-          />
-        )}
-        {tab === 'plans' && uncheckedProviders.length > 0 && (
-          <p className="sample-banner" role="note">
-            <strong>Needs your help:</strong> the app couldn't finish looking up {uncheckedProviders.join(', ')}. Use the ? next
-            to each name to see what it tried, then pick the right person or mark each insurer in Your household.
-          </p>
-        )}
-        {tab === 'plans' && (
-          <PlanBrowser
+            members={household.members}
             plans={evaluated}
             filters={filters}
             onFiltersChange={setFilters}
@@ -323,6 +287,14 @@ export function App() {
             maxCompare={MAX_COMPARE}
             onToggleCompare={toggleCompare}
             onOpenCompare={() => setTab('compare')}
+            onEditHousehold={() => {
+              setChatOpen(false);
+              setTab('household');
+            }}
+            onProfileChange={(update) => setProfile((prev) => prev && update(prev))}
+            drugChecking={drugLookups.checking}
+            drugErrors={drugLookups.errors}
+            onDrugRecheck={drugLookups.recheck}
             doctors={doctors}
             candidates={candidates}
             checkingDoctors={doctorLookups.checking}

@@ -7,9 +7,10 @@ const STORAGE_KEY = 'mih.scenarioGuide.hidden';
 
 function readHidden(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === '1';
+    // Collapsed to a link unless opened before: the plan cards come first.
+    return localStorage.getItem(STORAGE_KEY) !== '0';
   } catch {
-    return false;
+    return true;
   }
 }
 

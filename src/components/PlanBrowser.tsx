@@ -1,19 +1,5 @@
-import { useMemo, useState } from 'react';
-import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
-import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
-import type { Provider } from '../domain/profile';
-import { DoctorHelp } from './DoctorHelp';
-import { ExceptionHelp } from './ExceptionHelp';
-import { NetworkRulesLine } from './NetworkRulesLine';
-import { QualityRatingLine } from './QualityRatingLine';
-import { PlanRules } from './PlanRules';
-import { networkTypeOf } from '../domain/networkRules';
-import { EXCEPTION_TERM } from '../data/exceptionPolicies';
-import { SeverityMark } from './ScenarioGuide';
-import { HospitalAccess } from './HospitalAccess';
-import { facilityAccess, otherAccess } from '../domain/hospitalAccess';
-import { RESTRICTION_LABELS, TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
-import { ScenarioMath } from './ScenarioMath';
+import { useMemo, useState, type ReactNode } from 'react';
+import { HOSPITALS, HOSPITAL_IDS } from '../data/hospitalNetworks';
 import {
   EMPTY_FILTERS,
   SORT_LABELS,
@@ -27,9 +13,10 @@ import {
   type SortKey,
 } from '../domain/filter';
 import type { EvaluatedPlan, Metal } from '../domain/types';
-import { costShareText, money, moneyOrUnknown, parseOptionalNumber, primaryCareText } from '../format';
+import { money, parseOptionalNumber } from '../format';
+import { PlanCard, type PlanCardContext } from './PlanCard';
 
-interface Props {
+interface Props extends PlanCardContext {
   plans: EvaluatedPlan[];
   filters: Filters;
   onFiltersChange: (next: Filters) => void;
@@ -37,30 +24,42 @@ interface Props {
   maxCompare: number;
   onToggleCompare: (id: string) => void;
   onOpenCompare: () => void;
-  /** Must-have doctors and clinics (providers that aren't tracked hospitals). */
-  doctors: Provider[];
-  /** Candidate doctors, shown on their insurer's plans only. */
-  candidates: Provider[];
-  /** Doctors being looked up right now. */
-  checkingDoctors: string[];
-  /** Who the bad-year hospital stay is for. */
-  firstName: string;
-  /** Hospitals that must be in network (ids shared with the hospital-access data). */
-  requiredIds: string[];
-  /** Medications linked to drugs, priced per plan. */
-  drugLines: DrugLine[];
-  drugLookup: CoverageLookup;
-  /** Each plan's expected year if every drug it doesn't list were approved by exception. */
-  ifApproved: Record<string, number | null>;
+  /** Shown above the plan list, such as how to read the yearly costs. */
+  intro?: ReactNode;
 }
 
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
 const NETWORKS: NetworkChoice[] = ['EPO', 'HMO', 'PPO', 'unconfirmed'];
 const NETWORK_LABELS: Record<string, string> = { unconfirmed: 'Not confirmed' };
-const CHANNEL_LABEL = { on: 'Exchange only', off: 'Direct only', both: 'Exchange or direct' };
+const ROUTE_LABELS: Record<BuyingRoute, string> = {
+  any: 'Anywhere',
+  exchange: 'Through Healthplanfinder',
+  direct: 'Directly from the insurer (no credit)',
+};
 
 function toggled<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((x) => x !== value) : [...list, value];
+}
+
+/** Filters about the plans themselves, as opposed to the household's must-haves. */
+const planFiltersOnly = (f: Filters): Filters => ({ ...EMPTY_FILTERS, hospitals: f.hospitals, doctors: f.doctors });
+const moreFilterCount = (f: Filters) =>
+  [f.route !== 'any', f.hsaOnly, f.cascadeOnly, f.maxMonthly !== null, f.maxDeductible !== null, f.maxOopMax !== null].filter(Boolean).length;
+
+/** Each active plan filter as a removable chip. */
+function activeChips(f: Filters): { key: string; label: string; clear: Partial<Filters> }[] {
+  return [
+    ...(f.search.trim() ? [{ key: 'search', label: `“${f.search.trim()}”`, clear: { search: '' } }] : []),
+    ...f.metals.map((m) => ({ key: `metal-${m}`, label: m.charAt(0).toUpperCase() + m.slice(1), clear: { metals: f.metals.filter((x) => x !== m) } })),
+    ...f.networks.map((n) => ({ key: `net-${n}`, label: NETWORK_LABELS[n] ?? n, clear: { networks: f.networks.filter((x) => x !== n) } })),
+    ...f.carriers.map((c) => ({ key: `car-${c}`, label: c, clear: { carriers: f.carriers.filter((x) => x !== c) } })),
+    ...(f.route !== 'any' ? [{ key: 'route', label: f.route === 'exchange' ? 'Healthplanfinder' : 'Direct from insurer', clear: { route: 'any' as const } }] : []),
+    ...(f.hsaOnly ? [{ key: 'hsa', label: 'HSA', clear: { hsaOnly: false } }] : []),
+    ...(f.cascadeOnly ? [{ key: 'cascade', label: 'Cascade Care', clear: { cascadeOnly: false } }] : []),
+    ...(f.maxMonthly !== null ? [{ key: 'maxM', label: `Premium ≤ ${money(f.maxMonthly)}`, clear: { maxMonthly: null } }] : []),
+    ...(f.maxDeductible !== null ? [{ key: 'maxD', label: `Deductible ≤ ${money(f.maxDeductible)}`, clear: { maxDeductible: null } }] : []),
+    ...(f.maxOopMax !== null ? [{ key: 'maxO', label: `Out-of-pocket ≤ ${money(f.maxOopMax)}`, clear: { maxOopMax: null } }] : []),
+  ];
 }
 
 function CheckGroup<T extends string>(props: {
@@ -72,7 +71,7 @@ function CheckGroup<T extends string>(props: {
   /** Plans each option would show given the other filters. Options with none are disabled unless already ticked. */
   counts?: Record<string, number>;
   labels?: Record<string, string>;
-  note?: string;
+  help?: { summary: string; text: string };
 }) {
   return (
     <fieldset className="filter-group">
@@ -89,7 +88,12 @@ function CheckGroup<T extends string>(props: {
           </label>
         );
       })}
-      {props.note && <small className="hint">{props.note}</small>}
+      {props.help && (
+        <details className="filter-help">
+          <summary>{props.help.summary}</summary>
+          <small className="hint">{props.help.text}</small>
+        </details>
+      )}
     </fieldset>
   );
 }
@@ -98,23 +102,18 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
   return (
     <label className="field">
       <span>{props.label}</span>
-      <input
-        inputMode="numeric"
-        placeholder="Any"
-        value={props.value ?? ''}
-        onChange={(e) => props.onChange(parseOptionalNumber(e.target.value))}
-      />
+      <input inputMode="numeric" placeholder="Any" value={props.value ?? ''} onChange={(e) => props.onChange(parseOptionalNumber(e.target.value))} />
     </label>
   );
 }
 
 export function PlanBrowser(props: Props) {
-  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, doctors, checkingDoctors, firstName, requiredIds, drugLines, drugLookup, ifApproved, candidates } = props;
-  const [mathOpen, setMathOpen] = useState<string[]>([]);
-  const [rulesOpen, setRulesOpen] = useState<string[]>([]);
+  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, intro, ...context } = props;
+  const { doctors } = context;
   const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
   const [descending, setDescending] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(() => moreFilterCount(filters) > 0);
   const set = (patch: Partial<Filters>) => onFiltersChange({ ...filters, ...patch });
 
   const carriers = useMemo(() => [...new Set(plans.map((p) => p.plan.carrier))].sort(), [plans]);
@@ -126,120 +125,111 @@ export function PlanBrowser(props: Props) {
     }),
     [plans, filters, doctors],
   );
-  const visible = useMemo(
-    () => sortPlans(applyFilters(plans, filters, doctors), sortKey, descending),
-    [plans, filters, doctors, sortKey, descending],
-  );
+  const visible = useMemo(() => sortPlans(applyFilters(plans, filters, doctors), sortKey, descending), [plans, filters, doctors, sortKey, descending]);
+  const chips = activeChips(filters);
+  const mustHaveCount = filters.hospitals.length + filters.doctors.length;
+  const hasMustHaves = HOSPITAL_IDS.length + doctors.length > 0;
+  const more = moreFilterCount(filters);
 
   return (
     <div className="browser">
-      <button
-        type="button"
-        className="secondary filters-toggle"
-        aria-expanded={filtersOpen}
-        onClick={() => setFiltersOpen((open) => !open)}
-      >
-        {filtersOpen ? 'Hide filters' : 'Show filters'}
+      <button type="button" className="secondary filters-toggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
+        {filtersOpen ? 'Hide filters' : `Filters${chips.length ? ` (${chips.length})` : ''}`}
       </button>
       <aside className={filtersOpen ? 'filters open' : 'filters'} aria-label="Filters">
-        <div className="filters-head">
-          <h2>Filters</h2>
-          <button type="button" className="link-button" onClick={() => onFiltersChange(EMPTY_FILTERS)}>
-            Clear all
-          </button>
-        </div>
-        <label className="field">
-          <span>Search</span>
-          <input
-            type="search"
-            placeholder="Plan or carrier"
-            value={filters.search}
-            onChange={(e) => set({ search: e.target.value })}
-          />
-        </label>
-        <label className="field">
-          <span>Where you buy</span>
-          <select value={filters.route} onChange={(e) => set({ route: e.target.value as BuyingRoute })}>
-            <option value="any">Anywhere</option>
-            <option value="exchange">Through Healthplanfinder</option>
-            <option value="direct">Directly from the insurer (no credit)</option>
-          </select>
-        </label>
-        {HOSPITAL_IDS.length + doctors.length > 0 && (
-        <fieldset className="filter-group">
-          <legend>Must be in network</legend>
-          {HOSPITAL_IDS.map((id) => (
-            <label className="check" key={id}>
-              <input
-                type="checkbox"
-                checked={filters.hospitals.includes(id)}
-                onChange={() => set({ hospitals: toggled(filters.hospitals, id) })}
-              />
-              <span>{HOSPITALS[id].name}</span>
-            </label>
-          ))}
-          {doctors.map((d) => (
-            <label className="check" key={d.id}>
-              <input
-                type="checkbox"
-                checked={filters.doctors.includes(d.id)}
-                onChange={() => set({ doctors: toggled(filters.doctors, d.id) })}
-              />
-              <span>{d.name}</span>
-            </label>
-          ))}
-          {doctors.length > 0 && (
-            <small className="hint">A doctor hides a plan only after you mark them out of network for its insurer.</small>
-          )}
-        </fieldset>
+        {hasMustHaves && (
+          <section className="filter-section must-haves">
+            <h2>Your must-haves</h2>
+            <fieldset className="filter-group">
+              <legend className="visually-hidden">Must be in network</legend>
+              {HOSPITAL_IDS.map((id) => (
+                <label className="check" key={id}>
+                  <input type="checkbox" checked={filters.hospitals.includes(id)} onChange={() => set({ hospitals: toggled(filters.hospitals, id) })} />
+                  <span>{HOSPITALS[id].name}</span>
+                </label>
+              ))}
+              {doctors.map((d) => (
+                <label className="check" key={d.id}>
+                  <input type="checkbox" checked={filters.doctors.includes(d.id)} onChange={() => set({ doctors: toggled(filters.doctors, d.id) })} />
+                  <span>{d.name}</span>
+                </label>
+              ))}
+              <small className="hint">
+                Ticked ones hide plans that don't cover them.{doctors.length > 0 && ' A doctor hides a plan only after you mark them out of network for its insurer.'}
+              </small>
+            </fieldset>
+          </section>
         )}
-        <CheckGroup
-          legend="Metal level"
-          capitalize
-          options={METALS}
-          selected={filters.metals}
-          counts={counts.metals}
-          onChange={(metals) => set({ metals })}
-        />
-        <CheckGroup
-          legend="Network type"
-          options={NETWORKS}
-          selected={filters.networks}
-          counts={counts.networks}
-          labels={NETWORK_LABELS}
-          note="No PPO plans are listed for King County. An EPO lets you see specialists without a referral, like a PPO, but doesn't pay for out-of-network care except emergencies. 'Not confirmed' means the plan's documents didn't say."
-          onChange={(networks) => set({ networks })}
-        />
-        <CheckGroup
-          legend="Carrier"
-          options={carriers}
-          selected={filters.carriers}
-          counts={counts.carriers}
-          onChange={(next) => set({ carriers: next })}
-        />
-        <fieldset className="filter-group">
-          <legend>Features</legend>
-          <label className="check">
-            <input type="checkbox" checked={filters.hsaOnly} onChange={(e) => set({ hsaOnly: e.target.checked })} />
-            <span>HSA plan</span>
+
+        <section className="filter-section">
+          <div className="filters-head">
+            <h2>Plan filters</h2>
+            {chips.length > 0 && (
+              <button type="button" className="link-button" onClick={() => onFiltersChange(planFiltersOnly(filters))}>
+                Clear
+              </button>
+            )}
+          </div>
+          <label className="field">
+            <span>Search</span>
+            <input type="search" placeholder="Plan or carrier" value={filters.search} onChange={(e) => set({ search: e.target.value })} />
           </label>
-          <label className="check">
-            <input type="checkbox" checked={filters.cascadeOnly} onChange={(e) => set({ cascadeOnly: e.target.checked })} />
-            <span>Cascade Care</span>
-          </label>
-        </fieldset>
-        <fieldset className="filter-group">
-          <legend>Maximums</legend>
-          <NumberFilter label="Monthly premium" value={filters.maxMonthly} onChange={(maxMonthly) => set({ maxMonthly })} />
-          <NumberFilter label="Deductible" value={filters.maxDeductible} onChange={(maxDeductible) => set({ maxDeductible })} />
-          <NumberFilter label="Out-of-pocket limit" value={filters.maxOopMax} onChange={(maxOopMax) => set({ maxOopMax })} />
-        </fieldset>
+          <CheckGroup legend="Metal level" capitalize options={METALS} selected={filters.metals} counts={counts.metals} onChange={(metals) => set({ metals })} />
+          <CheckGroup
+            legend="Network type"
+            options={NETWORKS}
+            selected={filters.networks}
+            counts={counts.networks}
+            labels={NETWORK_LABELS}
+            help={{
+              summary: 'EPO, HMO, PPO?',
+              text: "No PPO plans are listed for King County. An EPO lets you see specialists without a referral, like a PPO, but doesn't pay for out-of-network care except emergencies. 'Not confirmed' means the plan's documents didn't say.",
+            }}
+            onChange={(networks) => set({ networks })}
+          />
+          <CheckGroup legend="Carrier" options={carriers} selected={filters.carriers} counts={counts.carriers} onChange={(next) => set({ carriers: next })} />
+          <button type="button" className="link-button more-toggle" aria-expanded={moreOpen} onClick={() => setMoreOpen((o) => !o)}>
+            {moreOpen ? 'Fewer filters' : `More filters${more ? ` (${more} on)` : ''}`}
+          </button>
+          {moreOpen && (
+            <>
+              <label className="field">
+                <span>Where you buy</span>
+                <select value={filters.route} onChange={(e) => set({ route: e.target.value as BuyingRoute })}>
+                  {(Object.keys(ROUTE_LABELS) as BuyingRoute[]).map((r) => (
+                    <option key={r} value={r}>
+                      {ROUTE_LABELS[r]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <fieldset className="filter-group">
+                <legend>Features</legend>
+                <label className="check">
+                  <input type="checkbox" checked={filters.hsaOnly} onChange={(e) => set({ hsaOnly: e.target.checked })} />
+                  <span>HSA plan</span>
+                </label>
+                <label className="check">
+                  <input type="checkbox" checked={filters.cascadeOnly} onChange={(e) => set({ cascadeOnly: e.target.checked })} />
+                  <span>Cascade Care</span>
+                </label>
+              </fieldset>
+              <fieldset className="filter-group">
+                <legend>Maximums</legend>
+                <NumberFilter label="Monthly premium" value={filters.maxMonthly} onChange={(maxMonthly) => set({ maxMonthly })} />
+                <NumberFilter label="Deductible" value={filters.maxDeductible} onChange={(maxDeductible) => set({ maxDeductible })} />
+                <NumberFilter label="Out-of-pocket limit" value={filters.maxOopMax} onChange={(maxOopMax) => set({ maxOopMax })} />
+              </fieldset>
+            </>
+          )}
+        </section>
       </aside>
 
       <section className="results" aria-label="Plans">
         <div className="results-bar">
           <p aria-live="polite">
             <strong>{visible.length}</strong> of {plans.length} plans
+            {mustHaveCount > 0 && <span className="muted"> · covering your {mustHaveCount} must-haves</span>}
           </p>
           <div className="sort">
             <label className="inline-field">
@@ -262,241 +252,52 @@ export function PlanBrowser(props: Props) {
             )}
           </div>
         </div>
+        {chips.length > 0 && (
+          <ul className="filter-chips" aria-label="Active filters">
+            {chips.map((c) => (
+              <li key={c.key}>
+                <button type="button" className="filter-chip" aria-label={`Remove filter ${c.label}`} onClick={() => set(c.clear)}>
+                  {c.label} <span aria-hidden="true">✕</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {intro}
 
         {visible.length === 0 && (
           <div className="empty">
             <p>No plans match these filters.</p>
-            <button type="button" className="secondary" onClick={() => onFiltersChange(EMPTY_FILTERS)}>
-              Clear filters
-            </button>
+            {chips.length > 0 ? (
+              <button type="button" className="secondary" onClick={() => onFiltersChange(planFiltersOnly(filters))}>
+                Clear plan filters
+              </button>
+            ) : (
+              mustHaveCount > 0 && (
+                <button type="button" className="secondary" onClick={() => set({ hospitals: [], doctors: [] })}>
+                  Show plans that miss a must-have
+                </button>
+              )
+            )}
           </div>
         )}
 
-        <HospitalAccess plans={plans} visible={visible} requiredIds={requiredIds} />
-
         <ul className="plan-list">
-          {visible.map((item) => {
-            const { plan } = item;
-            const selected = compareIds.includes(plan.id);
-            return (
-              <li className="plan-card" key={plan.id}>
-                <div className="plan-head">
-                  <div>
-                    <h3>{plan.name}</h3>
-                    <p className="muted">{plan.carrier}</p>
-                  </div>
-                  <label className="check compare-check">
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      disabled={!selected && compareIds.length >= maxCompare}
-                      onChange={() => onToggleCompare(plan.id)}
-                    />
-                    <span>Compare</span>
-                  </label>
-                </div>
-                <div className="badges">
-                  <span className={`badge metal-${plan.metal}`}>{plan.metal}</span>
-                  {(() => {
-                    const net = networkTypeOf(plan);
-                    return (
-                      net.type && (
-                        <span className="badge" title={net.fromOlderDocs ? plan.networkNote : undefined}>
-                          {net.type}
-                          {net.fromOlderDocs && ' (2026)'}
-                        </span>
-                      )
-                    );
-                  })()}
-                  <span className="badge">{CHANNEL_LABEL[plan.channel]}</span>
-                  {plan.hsaEligible && <span className="badge">HSA</span>}
-                  {plan.cascadeCare && <span className="badge">Cascade Care</span>}
-                </div>
-                <dl className="metrics">
-                  <div className="metric-lead">
-                    <dt>Monthly premium</dt>
-                    <dd>{money(item.netMonthly)}</dd>
-                    {item.creditMonthly > 0 && <small>{money(item.fullMonthly)} before credit</small>}
-                  </div>
-                  <div className="metric-lead">
-                    <dt>
-                      <SeverityMark level={1} /> Expected year
-                    </dt>
-                    <dd>{moneyOrUnknown(item.expectedYear)}</dd>
-                    {item.selfPayYear > 0 && plan.benefits && <small>incl. {money(item.selfPayYear)} cash meds</small>}
-                  </div>
-                  <div>
-                    <dt>
-                      <SeverityMark level={2} /> Bad year
-                    </dt>
-                    <dd>{moneyOrUnknown(item.badYear)}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <SeverityMark level={3} /> Worst case
-                    </dt>
-                    <dd>{moneyOrUnknown(item.worstCase)}</dd>
-                  </div>
-                  <div>
-                    <dt>Deductible</dt>
-                    <dd>{moneyOrUnknown(item.deductible)}</dd>
-                  </div>
-                  <div>
-                    <dt>Out-of-pocket limit</dt>
-                    <dd>{moneyOrUnknown(item.oopMax)}</dd>
-                  </div>
-                </dl>
-                <NetworkRulesLine plan={plan} />
-                <QualityRatingLine plan={plan} />
-                {plan.benefits && (
-                  <button
-                    type="button"
-                    className="link-button math-toggle"
-                    aria-expanded={mathOpen.includes(plan.id)}
-                    onClick={() => setMathOpen((open) => toggled(open, plan.id))}
-                  >
-                    {mathOpen.includes(plan.id) ? 'Hide the math' : 'See the math'}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="link-button math-toggle"
-                  aria-expanded={rulesOpen.includes(plan.id)}
-                  onClick={() => setRulesOpen((open) => toggled(open, plan.id))}
-                >
-                  {rulesOpen.includes(plan.id) ? 'Hide plan rules' : 'Plan rules'}
-                </button>
-                {mathOpen.includes(plan.id) && <ScenarioMath item={item} firstName={firstName} />}
-                {rulesOpen.includes(plan.id) && <PlanRules plan={plan} />}
-                {HOSPITAL_IDS.length > 0 && (
-                <ul className="hospital-list">
-                  {HOSPITAL_IDS.map((id) => {
-                    const status = hospitalStatus(plan, id);
-                    const access = facilityAccess(plan, id);
-                    return (
-                      <li key={id} className={`hospital status-${status}`}>
-                        <span className="hospital-name">{HOSPITALS[id].name}:</span> {STATUS_LABELS[status]}
-                        {access.note && status !== 'in' && <span className="muted"> ({access.note})</span>}
-                        {access.disagrees && (
-                          <span className="flag-inline">
-                            {' '}
-                            · Healthplanfinder says {access.directorySays === 'in' ? 'in network' : 'not covered'}; confirm
-                          </span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-                )}
-                {(() => {
-                  const access = otherAccess(plan, requiredIds);
-                  if (!access.known) return null;
-                  return (
-                    <p className={`access-line${access.missing.length ? '' : ' access-full'}`}>
-                      <span className="hospital-name">Other hospitals:</span> {access.inCount} of {access.total} in network
-                      {access.conditionalCount > 0 && <>, {access.conditionalCount} with conditions</>}
-                      {access.missing.length > 0 && <> · not {access.missing.map((f) => f.short).join(', ')}</>}
-                    </p>
-                  );
-                })()}
-                {plan.benefits && drugLines.length > 0 && (
-                  <ul className="hospital-list rx-list">
-                    {drugLines.map((line) => {
-                      const how = resolveDrug(line, plan, plan.benefits!, drugLookup);
-                      const note = line.rxcui ? listNote(drugLookup(line.rxcui, plan)) : '';
-                      const exception = how.kind === 'cash' && how.source === 'checked';
-                      const text =
-                        how.kind === 'cash'
-                          ? `${exception ? EXCEPTION_TERM : 'Not checked, assumed not covered'} → ${money(line.price * line.fillsPerYear)}/yr cash`
-                          : how.source === 'checked'
-                            ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}${how.estimated ? ' (tier cost estimated)' : ''}${how.restrictions.length ? ` · ${how.restrictions.map((r) => RESTRICTION_LABELS[r]).join(', ')}` : ''}`
-                            : `Not checked, assumed ${line.assume === 'generic' ? 'a generic' : 'a brand-name'} fill`;
-                      return (
-                        <li key={line.itemId} className={`hospital rx-${how.kind === 'cash' ? 'out' : how.source === 'checked' ? 'in' : 'unknown'}`}>
-                          <span className="hospital-name">{line.name}:</span> {text}
-                          {note && <small className="muted"> ({note})</small>}{' '}
-                          {exception && (
-                            <ExceptionHelp carrier={plan.carrier} drugName={line.name} expectedYear={item.expectedYear} ifApproved={ifApproved[plan.id] ?? null} />
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                {doctors.length > 0 && (
-                  <ul className="hospital-list">
-                    {doctors.map((d) => {
-                      const { status } = doctorStatusFor(d, plan);
-                      const checking = checkingDoctors.includes(d.id);
-                      return (
-                        <li key={d.id} className={`hospital doctor-${status}`}>
-                          <span className="hospital-name">{d.name}:</span>{' '}
-                          {checking && status === 'unknown' ? 'Checking…' : DOCTOR_STATUS_LABELS[status]}{' '}
-                          <DoctorHelp provider={d} plan={plan} checking={checking} />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                {candidates.some((c) => c.candidateFor === plan.carrier) && (
-                  <ul className="hospital-list candidate-list">
-                    <li className="muted">Candidate doctors with this insurer:</li>
-                    {candidates
-                      .filter((c) => c.candidateFor === plan.carrier)
-                      .map((c) => {
-                        const mark = c.confirmed?.[plan.carrier];
-                        return (
-                          <li key={c.id} className={`hospital doctor-${mark ?? 'likely'}`}>
-                            <span className="hospital-name">{c.name}</span>
-                            {c.note && <span className="muted"> ({c.note})</span>}:{' '}
-                            {mark === 'in' ? 'You confirmed in network' : mark === 'out' ? 'You marked out of network' : "Listed in the insurer's directory; confirm"}
-                          </li>
-                        );
-                      })}
-                  </ul>
-                )}
-                {plan.benefits ? (
-                  <p className="muted plan-copays">
-                    Primary: {primaryCareText(plan.benefits)} · Specialist: {costShareText(plan.benefits.specialist)} ·
-                    Generic: {costShareText(plan.benefits.genericRx)} · Brand: {costShareText(plan.benefits.brandRx)} · Lab:{' '}
-                    {costShareText(plan.benefits.lab)} · Tests: {costShareText(plan.benefits.diagnostic)} · ER:{' '}
-                    {costShareText(plan.benefits.er)} · Hospital: {costShareText(plan.benefits.hospital)}
-                  </p>
-                ) : (
-                  <p className="warn">We couldn't find this plan's 2027 benefit summary, so its yearly costs aren't estimated.</p>
-                )}
-                <p className="plan-links">
-                  {plan.benefits && (
-                    <a href={plan.benefits.source} target="_blank" rel="noreferrer">
-                      Benefit details
-                    </a>
-                  )}
-                  <a href={plan.ratesSource} target="_blank" rel="noreferrer">
-                    Premium source
-                  </a>
-                </p>
-              </li>
-            );
-          })}
+          {visible.map((item) => (
+            <PlanCard
+              key={item.plan.id}
+              item={item}
+              selected={compareIds.includes(item.plan.id)}
+              compareFull={compareIds.length >= maxCompare}
+              onToggleCompare={onToggleCompare}
+              {...context}
+            />
+          ))}
         </ul>
         <p className="hint">
-          {HOSPITAL_IDS.length > 0 && (
-            <>
-          Hospital statuses come from hospital and insurer lists, which are often by insurer rather than by plan. "Not
-          listed" means the plan wasn't on the hospital's list or the hospital said it isn't contracted. Check{' '}
-          {HOSPITAL_IDS.map((id, index) => (
-            <span key={id}>
-              {index > 0 && ' and '}
-              <a href={HOSPITALS[id].source} target="_blank" rel="noreferrer">
-                {HOSPITALS[id].name}'s list
-              </a>
-            </span>
-          ))}
-              .{' '}
-            </>
-          )}
-          Yearly costs include premiums and in-network care, using rough price assumptions. See the guide above the list, or
-          "See the math" on any plan, for how each number is worked out.
+          Yearly costs include premiums and in-network care, using rough price assumptions. Open "Plan details" on any plan for how each
+          number is worked out, and its "Your fit" line for where each hospital, doctor and medication stands.
         </p>
       </section>
     </div>

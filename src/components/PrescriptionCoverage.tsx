@@ -94,13 +94,10 @@ export function PrescriptionCoverage({ profile, plans, onChange, checking, error
     });
 
   return (
-    <details className="panel hospital-access rx-coverage" open>
-      <summary>
-        <span>
-          <strong>Prescription coverage</strong> by insurer: {drugs.length} linked {drugs.length === 1 ? 'medication' : 'medications'}
-        </span>
-        <span className="cash-toggle">Show or hide</span>
-      </summary>
+    <section className="panel hospital-access rx-coverage" aria-labelledby="rx-coverage-title">
+      <h2 id="rx-coverage-title" className="panel-title">
+        Prescription coverage by insurer <span className="muted">· {drugs.length} linked {drugs.length === 1 ? 'medication' : 'medications'}</span>
+      </h2>
       <div className="table-scroll">
         <table className="access-grid rx-grid">
           <thead>
@@ -220,6 +217,6 @@ export function PrescriptionCoverage({ profile, plans, onChange, checking, error
         with the plan's cost share for its tier and counts toward the deductible and out-of-pocket limit; a drug that isn't
         covered is paid at your cash price. Drug lists change, so confirm before enrolling.
       </p>
-    </details>
+    </section>
   );
 }

@@ -41,13 +41,10 @@ export function HospitalAccess({ plans, visible, requiredIds }: Props) {
   );
 
   return (
-    <details className="panel hospital-access" open>
-      <summary>
-        <span>
-          <strong>Hospital access</strong> by network: {columns.length} Seattle-area hospitals
-        </span>
-        <span className="cash-toggle">Show or hide</span>
-      </summary>
+    <section className="panel hospital-access" aria-labelledby="hospital-access-title">
+      <h2 id="hospital-access-title" className="panel-title">
+        Hospital access by network <span className="muted">· {columns.length} Seattle-area hospitals; networks your filters hide are dimmed</span>
+      </h2>
       <div className="table-scroll">
         <table className="access-grid">
           <colgroup>
@@ -139,6 +136,6 @@ export function HospitalAccess({ plans, visible, requiredIds }: Props) {
         {FACILITY_SOURCE.name} ({FACILITY_SOURCE.checked}). <strong>!</strong> means the two disagree. Hospitals list
         networks, so plans sharing a network share a row. Confirm with the hospital before relying on any cell.
       </p>
-    </details>
+    </section>
   );
 }
