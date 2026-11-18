@@ -174,6 +174,8 @@ export interface EvaluatedPlan {
   netMonthly: number;
   /** Yearly medication costs outside the plan, included in the yearly totals. */
   selfPayYear: number;
+  /** The part of selfPayYear for linked medications this plan doesn't cover; the rest is always paid in cash. */
+  uncoveredDrugsYear: number;
   expectedYear: number | null;
   badYear: number | null;
   worstCase: number | null;
@@ -181,6 +183,9 @@ export interface EvaluatedPlan {
   premiumYear: number;
   careExpected: number | null;
   careBadYear: number | null;
+  /** What covered, linked medications add to careExpected and careBadYear. */
+  coveredDrugsExpected: number | null;
+  coveredDrugsBad: number | null;
   deductible: number | null;
   oopMax: number | null;
 }

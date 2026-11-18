@@ -201,6 +201,16 @@ describe('ongoing care', () => {
     expect(withDrug.worstCase! - without.worstCase!).toBe(3600);
     expect(withDrug.oopMax).toBe(without.oopMax);
   });
+  it('splits medications into covered (in care) and not covered (cash)', () => {
+    const covered = { itemId: 'a', name: 'Testdrug A', rxcui: '1', price: 200, fillsPerYear: 12, assume: 'brand' as const };
+    const unlisted = { itemId: 'b', name: 'Testdrug B', rxcui: '2', price: 100, fillsPerYear: 12, assume: 'brand' as const };
+    const lookup = (rxcui: string) => (rxcui === '1' ? { covered: true, tier: 'preferredBrand' as const } : { covered: false });
+    const result = evaluatePlan(plan(), household({ members: [member(40, { drugs: [covered, unlisted], selfPayDrugs: { cream: 50 } })] }), 0, false, lookup);
+    // Testdrug A: 12 fills at the $70 brand copay; Testdrug B: 12 × $100 in cash; the cream: 12 × $50 in cash.
+    expect(result.coveredDrugsExpected).toBe(840);
+    expect(result.uncoveredDrugsYear).toBe(1200);
+    expect(result.selfPayYear).toBe(1800);
+  });
   it('costs labs, tests, scans, and brand drugs by their own benefits', () => {
     const m = member(40, { labTests: 2, diagnosticTests: 1, brandFills: 1 });
     expect(outOfPocket(benefits(), [m])).toBe(50 + 40 + 70);

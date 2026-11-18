@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
-import { RESTRICTION_LABELS, TIER_LABELS, listNote, resolveDrug, type Approvals, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { RESTRICTION_LABELS, TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, type Approvals, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { doctorFit, drugFit, hospitalFit, overallFit, type DrugFitKind, type FitPart } from '../domain/fit';
 import { facilityAccess, otherAccess } from '../domain/hospitalAccess';
 import { networkTypeOf } from '../domain/networkRules';
@@ -247,11 +247,19 @@ export function PlanCard(props: Props) {
                     : how.source === 'checked'
                       ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}${how.estimated ? ' (tier cost estimated)' : ''}${how.restrictions.length ? ` · ${how.restrictions.map((r) => RESTRICTION_LABELS[r]).join(', ')}` : ''}`
                       : `Not checked, assumed ${line.assume === 'generic' ? 'a generic' : 'a brand-name'} fill`;
+                const deductible = plan.benefits!.deductible.individual;
+                const fillCost =
+                  how.kind === 'plan'
+                    ? `Per fill: ${fillCostText(how.share, line.price, deductible)}.`
+                    : exception
+                      ? `If approved (highest brand tier): ${fillCostText(tierShare(plan.benefits!, 'nonPreferredBrand').share, line.price, deductible)}.`
+                      : '';
                 return (
                   <li key={line.itemId} className={`hospital rx-${how.kind === 'cash' ? 'out' : how.source === 'checked' ? 'in' : 'unknown'}`}>
                     <span className="hospital-name">{line.name}:</span> {text}
                     {note && <small className="muted"> ({note})</small>}{' '}
                     {exception && <ExceptionHelp item={item} line={line} approved={line.rxcui ? approvals[plan.id]?.[line.rxcui] : undefined} />}
+                    {fillCost && <small className="fill-cost">{fillCost}</small>}
                   </li>
                 );
               })}

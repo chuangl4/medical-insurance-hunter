@@ -1,3 +1,4 @@
+import { money } from '../format';
 import type { Benefits, CostShare, Plan } from './types';
 
 /** A drug identified in RxNorm (National Library of Medicine). */
@@ -133,6 +134,23 @@ export const ifExceptionApproved =
     const status = lookup(rxcui, plan);
     return status && !status.covered ? { covered: true, tier: 'nonPreferredBrand' } : status;
   };
+
+/**
+ * What one fill costs under a plan's cost share, in words: whether the deductible comes first, and what's paid after.
+ * Copays are capped at the drug's price, as in the cost calculation.
+ */
+export function fillCostText(share: CostShare, price: number, deductible: number): string {
+  const full = `full price (${money(price)})`;
+  const untilDeductible = `${full} until the ${money(deductible)} deductible is met`;
+  if (share.kind === 'copay') {
+    const copayHigher = share.amount >= price;
+    if (!share.afterDeductible) {
+      return copayHigher ? `${full} per fill, since the ${money(share.amount)} copay is more` : `${money(share.amount)} per fill from the first fill`;
+    }
+    return copayHigher ? `${full} per fill (the ${money(share.amount)} copay after the deductible is more)` : `${untilDeductible}, then ${money(share.amount)} per fill`;
+  }
+  return `${untilDeductible}, then ${share.rate === 0 ? '$0' : `${Math.round(share.rate * 100)}% (${money(price * share.rate)}) per fill`}`;
+}
 
 /** Yearly costs of a plan if one drug it doesn't list were approved by exception: plan id → RxNorm id → costs. */
 export type Approvals = Record<string, Record<string, { expectedYear: number | null; badYear: number | null; worstCase: number | null }>>;

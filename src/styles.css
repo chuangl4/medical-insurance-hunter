@@ -491,3 +491,14 @@ a { color: var(--accent); }
 .exception-table th, .exception-table td { padding: 3px 12px 3px 0; text-align: right; border-bottom: 1px solid var(--border); }
 .exception-table th:first-child { text-align: left; font-weight: 600; }
 .exception-table thead th { color: var(--muted); font-weight: 600; }
+.fill-cost { display: block; color: var(--muted); font-size: 0.8rem; margin: 1px 0 3px; }
+.cost-parts { list-style: none; margin: 4px 0 0; padding: 0; font-size: 0.82rem; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; gap: 1px; }
+.cost-parts span { color: var(--muted); }
+.approval-lines { list-style: none; margin: 6px 0 0; padding: 4px 0 0; border-top: 1px dashed var(--border); font-size: 0.8rem; color: var(--muted); }
+.compare-total { font-weight: 700; }
+.guide-subhead { margin: 4px 0 6px; font-size: 0.95rem; }
+.med-rules { margin: 0 0 8px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.compare-wrap > .scenario-guide { margin-bottom: 4px; }
+.compare-wrap > .scenario-reopen { margin: 0 0 4px; }
+.best .cost-parts, .best .approval-lines { font-weight: 400; }
+.cost-parts li { line-height: 1.35; }

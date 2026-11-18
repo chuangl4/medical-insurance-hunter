@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { approveOnly, coverageLookup, describeEvidence, ifExceptionApproved, listDisagrees, listNote, type DrugCoverage } from './drugs';
+import { approveOnly, coverageLookup, fillCostText, describeEvidence, ifExceptionApproved, listDisagrees, listNote, type DrugCoverage } from './drugs';
 import type { Plan } from './types';
 
 const plan = (id: string) => ({ id, carrier: 'Test Insurer' }) as Plan;
@@ -61,5 +61,22 @@ describe('exceptions and restrictions', () => {
       },
     });
     expect(look('9', plan('P1'))).toEqual({ covered: true, tier: 'nonPreferredBrand', restrictions: ['priorAuth'] });
+  });
+});
+
+describe('what one fill costs', () => {
+  it('charges a plain copay from the first fill', () => {
+    expect(fillCostText({ kind: 'copay', amount: 100, afterDeductible: false }, 300, 1700)).toBe('$100 per fill from the first fill');
+  });
+  it('puts the deductible first for an after-deductible copay', () => {
+    expect(fillCostText({ kind: 'copay', amount: 250, afterDeductible: true }, 300, 2800)).toBe(
+      'full price ($300) until the $2,800 deductible is met, then $250 per fill',
+    );
+  });
+  it('shows coinsurance as a share and an amount', () => {
+    expect(fillCostText({ kind: 'coinsurance', rate: 0.4 }, 300, 7000)).toBe('full price ($300) until the $7,000 deductible is met, then 40% ($120) per fill');
+  });
+  it('caps a copay at the price', () => {
+    expect(fillCostText({ kind: 'copay', amount: 75, afterDeductible: false }, 40, 2800)).toBe('full price ($40) per fill, since the $75 copay is more');
   });
 });

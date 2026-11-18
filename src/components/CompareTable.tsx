@@ -6,7 +6,7 @@ import { DoctorHelp } from './DoctorHelp';
 import { FACILITIES } from '../data/facilityNetworks';
 import { facilityAccess } from '../domain/hospitalAccess';
 import { LIST_STATUS_LABELS } from '../data/hospitalLists';
-import { TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, type Approvals, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { SURVEY_LABELS, qualityFor, starsText, surveyFor, surveyScoreText } from '../domain/quality';
 import {
@@ -19,7 +19,10 @@ import {
   networkRulesFor,
   networkTypeOf,
 } from '../domain/networkRules';
-import type { EvaluatedPlan } from '../domain/types';
+import type { EvaluatedPlan, Member } from '../domain/types';
+import { ScenarioGuide } from './ScenarioGuide';
+import { SCENARIOS, scenarioParts, type ScenarioId } from '../domain/scenarios';
+import { CostParts } from './ScenarioMath';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
 
 interface Props {
@@ -31,7 +34,10 @@ interface Props {
   requiredIds: string[];
   drugLines: DrugLine[];
   drugLookup: CoverageLookup;
-  ifApproved: Record<string, number | null>;
+  /** Costs if one drug the plan doesn't list were approved by exception. */
+  approvals: Approvals;
+  /** The household, to explain how the yearly costs are worked out. */
+  members: Member[];
 }
 
 interface Row {
@@ -116,21 +122,40 @@ const ROWS: Row[] = [
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];
 
-export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors, requiredIds, drugLines, drugLookup, ifApproved }: Props) {
+const SCENARIO_KEYS = { expected: 'expectedYear', bad: 'badYear', worst: 'worstCase' } as const satisfies Record<ScenarioId, keyof EvaluatedPlan>;
+
+export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors, requiredIds, drugLines, drugLookup, approvals, members }: Props) {
   const drugRows: Row[] = drugLines.map((line) => ({
     label: line.name,
     text: (p) => {
-      if (!p.plan.benefits) return 'See plan details';
-      const how = resolveDrug(line, p.plan, p.plan.benefits, drugLookup);
+      const benefits = p.plan.benefits;
+      if (!benefits) return 'See plan details';
+      const how = resolveDrug(line, p.plan, benefits, drugLookup);
       const note = line.rxcui ? listNote(drugLookup(line.rxcui, p.plan)) : '';
       const suffix = note ? ` (${note})` : '';
+      const deductible = benefits.deductible.individual;
+      const cashYear = money(line.price * line.fillsPerYear);
       if (how.kind === 'cash') {
-        if (how.source !== 'checked') return `Not checked: ${money(line.price * line.fillsPerYear)}/yr cash${suffix}`;
-        const approved = ifApproved[p.plan.id];
-        const ifOk = approved !== null && approved !== undefined && p.expectedYear !== null ? `; if approved, expected year ≈ ${money(approved)}` : '';
-        return `${EXCEPTION_TERM}: ${money(line.price * line.fillsPerYear)}/yr cash${ifOk}${suffix}`;
+        if (how.source !== 'checked') return `Not checked: ${cashYear}/yr cash${suffix}`;
+        const share = tierShare(benefits, 'nonPreferredBrand').share;
+        return (
+          <>
+            {EXCEPTION_TERM}: {cashYear}/yr cash{suffix}
+            <small className="fill-cost">Counted as cash in every scenario, on top of the out-of-pocket limit.</small>
+            <small className="fill-cost">If approved (highest brand tier): {fillCostText(share, line.price, deductible)}.</small>
+          </>
+        );
       }
-      return how.source === 'checked' ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}: ${costShareText(how.share)}${suffix}` : 'Not checked';
+      const label =
+        how.source === 'checked' ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}` : `Not checked, assumed ${line.assume === 'generic' ? 'generic' : 'brand-name'}`;
+      return (
+        <>
+          {label}: {costShareText(how.share)}
+          {suffix}
+          <small className="fill-cost">Per fill: {fillCostText(how.share, line.price, deductible)}.</small>
+          <small className="fill-cost">Counted in your share of care, so it goes toward the deductible and out-of-pocket limit.</small>
+        </>
+      );
     },
   }));
   const hospitalRows: Row[] = HOSPITAL_IDS.map((id) => ({
@@ -157,9 +182,45 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
       </>
     ),
   }));
-  const base = ROWS.slice(HOSPITAL_IDS.length);
-  const cashIndex = base.findIndex((r) => r.label.startsWith('Cash medications'));
-  const rows = [...hospitalRows, ...doctorRows, ...base.slice(0, cashIndex + 1), ...drugRows, ...base.slice(cashIndex + 1), ...facilityRows];
+  // Each scenario's total, the sum behind it, and what approving each unlisted medication would make it.
+  const scenarioRow = (id: ScenarioId): Row => {
+    const meta = SCENARIOS.find((x) => x.id === id)!;
+    const key = SCENARIO_KEYS[id];
+    return {
+      label: meta.name,
+      value: (p) => p[key],
+      text: (p) => {
+        const parts = scenarioParts(p)?.find((x) => x.id === id);
+        if (!parts) return moneyOrUnknown(p[key]);
+        const approvalLines = drugLines.flatMap((line) => {
+          const then = line.rxcui ? approvals[p.plan.id]?.[line.rxcui]?.[key] : null;
+          return then !== null && then !== undefined ? [{ id: line.itemId, name: line.name, then }] : [];
+        });
+        return (
+          <>
+            <span className="compare-total">{money(parts.total)}</span>
+            <CostParts parts={parts} />
+            {approvalLines.length > 0 && (
+              <ul className="approval-lines">
+                {approvalLines.map((a) => (
+                  <li key={a.id}>
+                    If {a.name} were approved: ≈ {money(a.then)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        );
+      },
+    };
+  };
+  const base = ROWS.slice(HOSPITAL_IDS.length).flatMap((r): Row[] => {
+    if (r.label === 'Expected year') return [scenarioRow('expected')];
+    if (r.label === 'Bad year') return [scenarioRow('bad')];
+    if (r.label === 'Worst case') return [scenarioRow('worst'), ...drugRows];
+    return r.label.startsWith('Cash medications') ? [] : [r];
+  });
+  const rows = [...hospitalRows, ...doctorRows, ...base, ...facilityRows];
   if (plans.length === 0) {
     return (
       <div className="empty">
@@ -173,6 +234,7 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
 
   return (
     <div className="panel compare-wrap">
+      <ScenarioGuide members={members} hasCash={members.some((m) => Object.values(m.selfPayDrugs).some((c) => c > 0))} />
       <table className="compare">
         <thead>
           <tr>

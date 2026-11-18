@@ -11,6 +11,40 @@ interface Props {
 type Part = 'premiums' | 'care' | 'cash';
 const PART_LABELS: Record<Part, string> = { premiums: 'Premiums', care: 'Your share of care', cash: 'Cash medications' };
 
+const CARE_LABELS: Record<ScenarioParts['id'], string> = {
+  expected: 'care',
+  bad: 'care, incl. the hospital stay',
+  worst: 'out-of-pocket limit (all covered care)',
+};
+
+/** One scenario's total as a short sum: premiums, care (and what covered medications add), and cash medications. */
+export function CostParts({ parts }: { parts: ScenarioParts }) {
+  return (
+    <ul className="cost-parts">
+      <li>
+        {money(parts.premiums)} <span>premiums</span>
+      </li>
+      <li>
+        + {money(parts.care)}{' '}
+        <span>
+          {CARE_LABELS[parts.id]}
+          {parts.coveredDrugs ? ` (${money(parts.coveredDrugs)} of it covered meds)` : ''}
+        </span>
+      </li>
+      {parts.uncoveredDrugs > 0 && (
+        <li>
+          + {money(parts.uncoveredDrugs)} <span>meds this plan doesn't cover (cash)</span>
+        </li>
+      )}
+      {parts.alwaysCash > 0 && (
+        <li>
+          + {money(parts.alwaysCash)} <span>meds you pay cash for on any plan</span>
+        </li>
+      )}
+    </ul>
+  );
+}
+
 /** One plan's three scenarios as stacked bars on a shared scale, with the arithmetic written out. */
 export function ScenarioMath({ item, firstName }: Props) {
   const rows = scenarioParts(item);
@@ -21,11 +55,9 @@ export function ScenarioMath({ item, firstName }: Props) {
   const stayCost = bad.care - expected.care;
 
   const explain = (r: ScenarioParts) => {
-    const sum = `${money(r.premiums)} premiums + ${money(r.care)} care${r.cash ? ` + ${money(r.cash)} cash medications` : ''}`;
-    if (r.id === 'expected') return `${sum}. The care amount is what this plan's copays, deductible and coinsurance leave you to pay for your listed care.`;
-    if (r.id === 'bad')
-      return `${sum}. The ${HOSPITAL_STAY.days}-day stay for ${firstName} adds ${money(stayCost)} of the ${money(HOSPITAL_STAY.price)} bill; the plan pays the rest.`;
-    return `${sum}. The care amount is this plan's out-of-pocket limit, the most it lets you pay for covered, in-network care in a year.`;
+    if (r.id === 'expected') return "Care is what this plan's copays, deductible and coinsurance leave you to pay for your listed care.";
+    if (r.id === 'bad') return `The ${HOSPITAL_STAY.days}-day stay for ${firstName} adds ${money(stayCost)} of the ${money(HOSPITAL_STAY.price)} bill; the plan pays the rest.`;
+    return 'Care is capped at the out-of-pocket limit. Cash medications come on top, since the limit doesn’t cover them.';
   };
 
   return (
@@ -53,7 +85,7 @@ export function ScenarioMath({ item, firstName }: Props) {
                 </span>
                 <strong className="num">{money(r.total)}</strong>
               </div>
-              <div className="stack-track" role="img" aria-label={`${meta.name}: ${explain(r)}`}>
+              <div className="stack-track" role="img" aria-label={`${meta.name}: ${money(r.total)}`}>
                 {parts.map((p) =>
                   r[p] > 0 ? (
                     <span
@@ -65,6 +97,7 @@ export function ScenarioMath({ item, firstName }: Props) {
                   ) : null,
                 )}
               </div>
+              <CostParts parts={r} />
               <p className="scenario-explain">{explain(r)}</p>
             </li>
           );

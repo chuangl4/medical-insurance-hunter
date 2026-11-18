@@ -243,18 +243,24 @@ export function evaluatePlan(
     ) *
       12 +
     cashDrugsYear;
-  const base = { plan, fullMonthly, creditMonthly, netMonthly, selfPayYear, premiumYear: annualPremium };
+  const base = { plan, fullMonthly, creditMonthly, netMonthly, selfPayYear, uncoveredDrugsYear: cashDrugsYear, premiumYear: annualPremium };
   if (!benefits) {
-    return { ...base, expectedYear: null, badYear: null, worstCase: null, deductible: null, oopMax: null, careExpected: null, careBadYear: null };
+    return { ...base, expectedYear: null, badYear: null, worstCase: null, deductible: null, oopMax: null, careExpected: null, careBadYear: null, coveredDrugsExpected: null, coveredDrugsBad: null };
   }
   const oopMax = isFamily ? benefits.oopMax.family : benefits.oopMax.individual;
   const careExpected = outOfPocket(benefits, household.members, 0, resolve);
   const careBadYear = outOfPocket(benefits, household.members, 1, resolve);
+  // What covered medications add to your share of care: the same care with them left out, subtracted.
+  const withoutDrugs = (): ResolvedDrug => ({ kind: 'cash', source: 'assumed' });
+  const coveredDrugsExpected = careExpected - outOfPocket(benefits, household.members, 0, withoutDrugs);
+  const coveredDrugsBad = careBadYear - outOfPocket(benefits, household.members, 1, withoutDrugs);
 
   return {
     ...base,
     careExpected,
     careBadYear,
+    coveredDrugsExpected,
+    coveredDrugsBad,
     expectedYear: annualPremium + selfPayYear + careExpected,
     badYear: annualPremium + selfPayYear + careBadYear,
     worstCase: annualPremium + selfPayYear + oopMax,

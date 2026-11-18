@@ -25,4 +25,11 @@ describe('scenario explanations', () => {
     ]);
     expect(scenarioParts({ ...item, careExpected: null })).toBeNull();
   });
+
+  it('splits cash medications into ones the plan does not cover and ones always paid in cash', () => {
+    const item = { premiumYear: 6000, selfPayYear: 1200, uncoveredDrugsYear: 900, careExpected: 500, careBadYear: 3500, coveredDrugsExpected: 120, coveredDrugsBad: 80, oopMax: 9000 } as EvaluatedPlan;
+    const [expected, , worst] = scenarioParts(item)!;
+    expect([expected.uncoveredDrugs, expected.alwaysCash, expected.coveredDrugs]).toEqual([900, 300, 120]);
+    expect(worst.coveredDrugs).toBeNull();
+  });
 });

@@ -48,13 +48,30 @@ export interface ScenarioParts {
   premiums: number;
   /** What you pay toward covered care: copays, deductible, coinsurance, or the out-of-pocket limit. */
   care: number;
+  /** The part of care that covered medications add; null in the worst case, where the limit covers everything. */
+  coveredDrugs: number | null;
+  /** Medications paid in cash, outside the deductible and out-of-pocket limit: the sum of the two below. */
   cash: number;
+  /** Linked medications this plan doesn't cover. */
+  uncoveredDrugs: number;
+  /** Medications you pay in cash on every plan. */
+  alwaysCash: number;
   total: number;
 }
 
-/** The three totals split into the same three parts, or null when the plan's benefits are unknown. */
+/** The three totals split into the same parts, or null when the plan's benefits are unknown. */
 export function scenarioParts(p: EvaluatedPlan): ScenarioParts[] | null {
   if (p.careExpected === null || p.careBadYear === null || p.oopMax === null) return null;
-  const row = (id: ScenarioId, care: number) => ({ id, premiums: p.premiumYear, care, cash: p.selfPayYear, total: p.premiumYear + care + p.selfPayYear });
-  return [row('expected', p.careExpected), row('bad', p.careBadYear), row('worst', p.oopMax)];
+  const uncoveredDrugs = p.uncoveredDrugsYear ?? 0;
+  const row = (id: ScenarioId, care: number, coveredDrugs: number | null) => ({
+    id,
+    premiums: p.premiumYear,
+    care,
+    coveredDrugs,
+    cash: p.selfPayYear,
+    uncoveredDrugs,
+    alwaysCash: p.selfPayYear - uncoveredDrugs,
+    total: p.premiumYear + care + p.selfPayYear,
+  });
+  return [row('expected', p.careExpected, p.coveredDrugsExpected ?? null), row('bad', p.careBadYear, p.coveredDrugsBad ?? null), row('worst', p.oopMax, null)];
 }

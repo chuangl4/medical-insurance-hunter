@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { EXCEPTION_RULE, EXCEPTION_TERM, exceptionPolicy } from '../data/exceptionPolicies';
-import { tierShare, type Approvals, type DrugLine } from '../domain/drugs';
+import { fillCostText, tierShare, type Approvals, type DrugLine } from '../domain/drugs';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money } from '../format';
 
@@ -64,7 +64,7 @@ export function ExceptionHelp({ item, line, approved }: Props) {
           <p>
             <strong>{line.name} on this plan.</strong> The costs shown count it as paid in cash: {money(line.price)} × {line.fillsPerYear}{' '}
             fills = {money(cashYear)} a year, which doesn't count toward the plan's deductible or out-of-pocket limit.
-            {share && <> If approved, it would be covered at the highest brand tier ({costShareText(share)}), and each fill would count toward both.</>}
+            {share && plan.benefits && <> If approved, it would usually be covered at the highest brand tier ({costShareText(share)}): {fillCostText(share, line.price, plan.benefits.deductible.individual)}. Each fill would then count toward the deductible and out-of-pocket limit.</>}
           </p>
           {rows.length > 0 && (
             <table className="exception-table">
