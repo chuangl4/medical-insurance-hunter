@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ChangeScenarioButton } from './ChangeScenarioButton';
 import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
@@ -114,13 +115,11 @@ export function PlanCard(props: Props) {
           {item.creditMonthly > 0 && <small>{money(item.fullMonthly)} before credit</small>}
         </div>
         <div className="metric-lead">
-          <dt>
-            Your scenario{' '}
-            <button type="button" className="link-button change-scenario" onClick={(e) => onEditScenario(e.currentTarget)} aria-label="Change your scenario">
-              Change
-            </button>
-          </dt>
-          <dd>{moneyOrUnknown(item.scenarioYear)}</dd>
+          <dt>Your scenario</dt>
+          <dd>
+            {moneyOrUnknown(item.scenarioYear)}
+            <ChangeScenarioButton onOpen={onEditScenario} />
+          </dd>
           {item.selfPayYear > 0 && plan.benefits && <small>incl. {money(item.selfPayYear)} cash meds</small>}
         </div>
         <div>

@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { ChangeScenarioButton } from './ChangeScenarioButton';
 import {
   EMPTY_FILTERS,
   SORT_LABELS,
@@ -232,9 +233,7 @@ export function PlanBrowser(props: Props) {
           </p>
           <p className="scenario-caption">
             <span className="muted">Your scenario:</span> {context.scenarioText}{' '}
-            <button type="button" className="link-button" onClick={(e) => context.onEditScenario(e.currentTarget)}>
-              Change
-            </button>
+            <ChangeScenarioButton onOpen={context.onEditScenario} />
           </p>
           <div className="sort">
             <label className="inline-field">

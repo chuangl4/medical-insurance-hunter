@@ -1,4 +1,5 @@
 import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
+import { ChangeScenarioButton } from './ChangeScenarioButton';
 import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import type { Provider } from '../domain/profile';
 import type { ReactNode } from 'react';
@@ -306,10 +307,9 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
                   {row.label}
                   {row.label === SCENARIO_LABELS.scenario && (
                     <>
+                      {' '}
+                      <ChangeScenarioButton onOpen={onEditScenario} />
                       <small className="row-caption">{scenarioText}</small>
-                      <button type="button" className="link-button change-scenario" onClick={(e) => onEditScenario(e.currentTarget)}>
-                        Change
-                      </button>
                     </>
                   )}
                 </th>
