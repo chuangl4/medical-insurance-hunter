@@ -16,7 +16,9 @@ import { EMPTY_PROFILE, householdFromProfile, profileFromLegacy, type LegacyHous
 import { ENROLLMENT, PLAN_YEAR } from './domain/rules2027';
 import { requiredHospitalsOf, useDoctorLookups } from './useDoctorLookups';
 import { useDrugLookups } from './useDrugLookups';
-import { approveOnly, coverageLookup, type Approvals } from './domain/drugs';
+import { coverageLookup } from './domain/drugs';
+import { DEFAULT_SCENARIO, applyScenario, scenarioLookup, scenarioSummary, type CareScenario } from './domain/scenarios';
+import { ScenarioPanel, medicationNames, takeLegacyScenario } from './components/ScenarioPanel';
 
 /** Where earlier versions kept the household. It's moved into the account on first sign-in. */
 const LEGACY_STORAGE_KEY = 'mih.household.v1';
@@ -131,28 +133,36 @@ export function App() {
   }, [doctorIds]);
 
   const household = useMemo(() => householdFromProfile(profile ?? EMPTY_PROFILE), [profile]);
+  // Your scenario is saved with the profile, so it follows you to other browsers.
+  const scenario = profile?.scenario ?? DEFAULT_SCENARIO;
+  const setScenario = useCallback((next: CareScenario) => setProfile((prev) => prev && { ...prev, scenario: next }), []);
+  const [scenarioOpen, setScenarioOpen] = useState(false);
+  const scenarioOpener = useRef<HTMLElement | null>(null);
+  const openScenario = useCallback((from: HTMLElement) => {
+    scenarioOpener.current = from;
+    setScenarioOpen(true);
+  }, []);
+  const closeScenario = useCallback(() => setScenarioOpen(false), []);
+  // A scenario an earlier version kept in this browser moves into the profile once.
+  const needsScenario = profile !== null && !profile.scenario;
+  useEffect(() => {
+    if (!needsScenario) return;
+    const legacy = takeLegacyScenario();
+    if (legacy) setProfile((prev) => (prev && !prev.scenario ? { ...prev, scenario: legacy } : prev));
+  }, [needsScenario, profile]);
   const drugLookup = useMemo(() => coverageLookup(profile?.drugCoverage), [profile?.drugCoverage]);
   const subsidy = useMemo(() => estimateSubsidy(KING_COUNTY_PLANS, household), [household]);
+  // Your scenario prices every plan; drug coverage facts (drugLookup) stay as the lists say, for the fit checks.
+  const scenarioHousehold = useMemo(() => applyScenario(household, scenario), [household, scenario]);
+  const costLookup = useMemo(() => scenarioLookup(drugLookup, scenario), [drugLookup, scenario]);
   const evaluated = useMemo(
     () =>
       KING_COUNTY_PLANS.filter((p) => isSoldIn(p, household.county)).map((p) =>
-        evaluatePlan(p, household, subsidy.monthlyCredit, filters.route === 'direct', drugLookup),
+        evaluatePlan(p, scenarioHousehold, subsidy.monthlyCredit, filters.route === 'direct', costLookup),
       ),
-    [household, subsidy.monthlyCredit, filters.route, drugLookup],
+    [household.county, scenarioHousehold, subsidy.monthlyCredit, filters.route, costLookup],
   );
-  // Each drug a plan doesn't list, priced as if just that drug were approved by exception, for its "?" on the plan card.
-  const approvals = useMemo(() => {
-    const out: Approvals = {};
-    const rxcuis = [...new Set(household.members.flatMap((m) => m.drugs ?? []).flatMap((d) => (d.rxcui ? [d.rxcui] : [])))];
-    for (const p of KING_COUNTY_PLANS.filter((p) => isSoldIn(p, household.county))) {
-      for (const rxcui of rxcuis) {
-        if (drugLookup(rxcui, p)?.covered !== false) continue;
-        const e = evaluatePlan(p, household, subsidy.monthlyCredit, filters.route === 'direct', approveOnly(drugLookup, rxcui));
-        (out[p.id] ??= {})[rxcui] = { expectedYear: e.expectedYear, badYear: e.badYear, worstCase: e.worstCase };
-      }
-    }
-    return out;
-  }, [household, subsidy.monthlyCredit, filters.route, drugLookup]);
+  const scenarioText = profile ? scenarioSummary(scenario, household.members, medicationNames(profile)) : '';
   // Plans not sold in the current county drop out of the comparison and don't use up a slot.
   const compared = evaluated.filter((p) => compareIds.includes(p.plan.id));
   const activeCompareIds = compared.map((p) => p.plan.id);
@@ -224,7 +234,7 @@ export function App() {
 
   const hasPeople = profile.members.length > 0;
   return (
-    <div className="app">
+    <div className={scenarioOpen && tab !== 'household' ? 'app with-panel' : 'app'}>
       {user.isAdmin && <DataFreshnessBanner />}
       {header}
 
@@ -301,24 +311,37 @@ export function App() {
             doctors={doctors}
             candidates={candidates}
             checkingDoctors={doctorLookups.checking}
-            firstName={household.members[0]?.label || 'the first person listed'}
             requiredIds={requiredHospitalsOf(profile)}
-            drugLines={household.members.flatMap((m) => m.drugs ?? [])}
+            drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}
             drugLookup={drugLookup}
-            approvals={approvals}
+            scenario={scenario}
+            onEditScenario={openScenario}
+            scenarioText={scenarioText}
           />
         )}
         {tab === 'compare' && (
           <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => setTab('plans')} doctors={doctors}
             checkingDoctors={doctorLookups.checking}
             requiredIds={requiredHospitalsOf(profile)}
-            drugLines={household.members.flatMap((m) => m.drugs ?? [])}
+            drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}
             drugLookup={drugLookup}
-            approvals={approvals}
+            scenario={scenario}
+            onEditScenario={openScenario}
+            scenarioText={scenarioText}
             members={household.members}
           />
         )}
       </main>
+      <ScenarioPanel
+        open={scenarioOpen && tab !== 'household'}
+        onClose={closeScenario}
+        returnFocus={scenarioOpener}
+        profile={profile}
+        scenario={scenario}
+        onChange={setScenario}
+        drugLookup={drugLookup}
+        plans={evaluated}
+      />
     </div>
   );
 }

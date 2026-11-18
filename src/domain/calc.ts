@@ -11,7 +11,7 @@ import {
   MAX_SUBSIDY_FPL,
   ageFactor,
 } from './rules2027';
-import type { Benefits, CostShare, EvaluatedPlan, Household, Member, Plan, SubsidyEstimate } from './types';
+import type { Benefits, CostShare, DrugCost, EvaluatedPlan, FillPhase, FillRun, Household, Member, Plan, SubsidyEstimate } from './types';
 
 export function povertyLine(householdSize: number): number {
   return FPL_FIRST_PERSON + FPL_EACH_ADDITIONAL * (Math.max(1, householdSize) - 1);
@@ -144,20 +144,21 @@ function costAmount(share: Extract<CostShare, { kind: 'copay' }>): number {
 
 /**
  * Household out-of-pocket cost for in-network care. Each person has their own deductible and
- * out-of-pocket limit inside the family totals.
+ * out-of-pocket limit inside the family totals. Within a person, visits and tests are charged before medications,
+ * so medication fills use whatever deductible is left. onFill hears what each covered medication fill cost.
  */
 export function outOfPocket(
   benefits: Benefits,
   members: Member[],
-  extraStaysForFirstMember = 0,
   resolve?: (line: DrugLine) => ResolvedDrug,
+  onFill?: (itemId: string, paid: number, phase: FillPhase) => void,
 ): number {
   const isFamily = members.length > 1;
   let familyDeductibleLeft = isFamily ? benefits.deductible.family : benefits.deductible.individual;
   let familyOopLeft = isFamily ? benefits.oopMax.family : benefits.oopMax.individual;
   let total = 0;
 
-  members.forEach((member, index) => {
+  members.forEach((member) => {
     let deductibleLeft = benefits.deductible.individual;
     let oopLeft = benefits.oopMax.individual;
     let introLeft = benefits.introVisits?.count ?? 0;
@@ -167,11 +168,13 @@ export function outOfPocket(
       oopLeft -= paid;
       familyOopLeft -= paid;
       total += paid;
+      return paid;
     };
-    const charge = (price: number, share: CostShare) => {
+    const charge = (price: number, share: CostShare): { paid: number; phase: FillPhase } => {
       if (share.kind === 'copay' && !share.afterDeductible) {
-        pay(Math.min(costAmount(share), price));
-        return;
+        const owed = Math.min(costAmount(share), price);
+        const paid = pay(owed);
+        return { paid, phase: paid < owed ? 'limitReached' : 'copay' };
       }
       const toDeductible = Math.min(price, deductibleLeft, familyDeductibleLeft);
       deductibleLeft -= toDeductible;
@@ -179,7 +182,11 @@ export function outOfPocket(
       const rest = price - toDeductible;
       const afterDeductible =
         share.kind === 'copay' ? (rest > 0 ? Math.min(costAmount(share), rest) : 0) : rest * share.rate;
-      pay(toDeductible + afterDeductible);
+      const owed = toDeductible + afterDeductible;
+      const paid = pay(owed);
+      const phase: FillPhase =
+        paid < owed ? 'limitReached' : toDeductible === price ? 'deductible' : toDeductible > 0 ? 'meetsDeductible' : 'afterDeductible';
+      return { paid, phase };
     };
     const visit = (price: number, share: CostShare, introApplies: boolean) => {
       if (introApplies && introLeft > 0 && benefits.introVisits) {
@@ -203,17 +210,32 @@ export function outOfPocket(
     repeat(member.diagnosticTests, () => charge(CARE_PRICES.diagnosticTest, benefits.diagnostic));
     repeat(member.scans, () => charge(CARE_PRICES.scan, benefits.scan));
     repeat(member.erVisits, () => charge(CARE_PRICES.erVisit, benefits.er));
-    repeat(member.hospitalStays + (index === 0 ? extraStaysForFirstMember : 0), () =>
-      charge(CARE_PRICES.hospitalStay, benefits.hospital),
-    );
+    repeat(member.hospitalStays, () => charge(CARE_PRICES.hospitalStay, benefits.hospital));
+    if (member.majorBill) charge(member.majorBill, benefits.hospital);
     for (const line of member.drugs ?? []) {
       const how = resolve ? resolve(line) : null;
-      if (how?.kind === 'plan') repeat(line.fillsPerYear, () => charge(line.price, how.share));
+      if (how?.kind !== 'plan') continue;
+      repeat(line.fillsPerYear, () => {
+        const { paid, phase } = charge(line.price, how.share);
+        onFill?.(line.itemId, paid, phase);
+      });
     }
   });
   return total;
 }
 
+/** Fills grouped into runs that were paid the same way: 9 at full price, then 3 at the copay. */
+function addFill(runs: FillRun[], paid: number, phase: FillPhase): void {
+  const last = runs[runs.length - 1];
+  if (last && last.paid === paid && last.phase === phase) last.count += 1;
+  else runs.push({ count: 1, paid, phase });
+}
+
+/**
+ * One plan's costs for a household. Pass the household and drug coverage as your scenario describes them
+ * (see applyScenario and scenarioLookup): the scenario total prices that care, and the worst case adds the
+ * out-of-pocket limit to premiums and cash medications.
+ */
 export function evaluatePlan(
   plan: Plan,
   household: Household,
@@ -233,9 +255,13 @@ export function evaluatePlan(
   const { benefits } = plan;
   const resolve = (line: DrugLine) => (benefits ? resolveDrug(line, plan, benefits, coverage) : ({ kind: line.assume === 'cash' ? 'cash' : 'plan', source: 'assumed' } as ResolvedDrug));
   // Medications a plan doesn't cover are paid in cash, outside its deductible and out-of-pocket limit.
-  const cashDrugsYear = household.members
-    .flatMap((m) => m.drugs ?? [])
-    .reduce((sum, line) => sum + (resolve(line).kind === 'cash' ? line.price * line.fillsPerYear : 0), 0);
+  const drugCosts: Record<string, DrugCost> = {};
+  for (const line of household.members.flatMap((m) => m.drugs ?? [])) {
+    if (resolve(line).kind === 'cash') {
+      drugCosts[line.itemId] = { kind: 'cash', yearly: line.price * line.fillsPerYear, runs: [{ count: line.fillsPerYear, paid: line.price, phase: 'cash' }] };
+    }
+  }
+  const cashDrugsYear = Object.values(drugCosts).reduce((sum, d) => sum + d.yearly, 0);
   const selfPayYear =
     household.members.reduce(
       (sum, m) => sum + Object.values(m.selfPayDrugs).reduce((total, cost) => total + (cost ?? 0), 0),
@@ -245,24 +271,20 @@ export function evaluatePlan(
     cashDrugsYear;
   const base = { plan, fullMonthly, creditMonthly, netMonthly, selfPayYear, uncoveredDrugsYear: cashDrugsYear, premiumYear: annualPremium };
   if (!benefits) {
-    return { ...base, expectedYear: null, badYear: null, worstCase: null, deductible: null, oopMax: null, careExpected: null, careBadYear: null, coveredDrugsExpected: null, coveredDrugsBad: null };
+    return { ...base, scenarioYear: null, worstCase: null, careScenario: null, drugCosts, deductible: null, oopMax: null };
   }
   const oopMax = isFamily ? benefits.oopMax.family : benefits.oopMax.individual;
-  const careExpected = outOfPocket(benefits, household.members, 0, resolve);
-  const careBadYear = outOfPocket(benefits, household.members, 1, resolve);
-  // What covered medications add to your share of care: the same care with them left out, subtracted.
-  const withoutDrugs = (): ResolvedDrug => ({ kind: 'cash', source: 'assumed' });
-  const coveredDrugsExpected = careExpected - outOfPocket(benefits, household.members, 0, withoutDrugs);
-  const coveredDrugsBad = careBadYear - outOfPocket(benefits, household.members, 1, withoutDrugs);
+  const careScenario = outOfPocket(benefits, household.members, resolve, (itemId, paid, phase) => {
+    const cost = (drugCosts[itemId] ??= { kind: 'plan', yearly: 0, runs: [] });
+    cost.yearly += paid;
+    addFill(cost.runs, paid, phase);
+  });
 
   return {
     ...base,
-    careExpected,
-    careBadYear,
-    coveredDrugsExpected,
-    coveredDrugsBad,
-    expectedYear: annualPremium + selfPayYear + careExpected,
-    badYear: annualPremium + selfPayYear + careBadYear,
+    careScenario,
+    drugCosts,
+    scenarioYear: annualPremium + selfPayYear + careScenario,
     worstCase: annualPremium + selfPayYear + oopMax,
     deductible: isFamily ? benefits.deductible.family : benefits.deductible.individual,
     oopMax,

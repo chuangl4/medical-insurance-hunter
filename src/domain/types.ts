@@ -127,6 +127,8 @@ export interface Member {
   scans: number;
   erVisits: number;
   hospitalStays: number;
+  /** Other major covered care in your scenario, as billed before insurance; charged like a hospital stay. */
+  majorBill?: number;
   /** Monthly cost of each medication paid for without insurance. */
   selfPayDrugs: Record<string, number>;
   /** Medications linked to a drug, priced per plan from its coverage. */
@@ -176,16 +178,31 @@ export interface EvaluatedPlan {
   selfPayYear: number;
   /** The part of selfPayYear for linked medications this plan doesn't cover; the rest is always paid in cash. */
   uncoveredDrugsYear: number;
-  expectedYear: number | null;
-  badYear: number | null;
+  /** Your scenario's yearly total: premiums, your share of care, and cash medications. */
+  scenarioYear: number | null;
+  /** Premiums plus the out-of-pocket limit plus cash medications. */
   worstCase: number | null;
-  /** The parts of the yearly totals, for explaining them. Care amounts are null without a benefit summary. */
+  /** The parts of the yearly totals, for explaining them. Care is null without a benefit summary. */
   premiumYear: number;
-  careExpected: number | null;
-  careBadYear: number | null;
-  /** What covered, linked medications add to careExpected and careBadYear. */
-  coveredDrugsExpected: number | null;
-  coveredDrugsBad: number | null;
+  careScenario: number | null;
+  /** Each linked medication's yearly cost in your scenario, by care item id, with the fills that make it up. */
+  drugCosts: Record<string, DrugCost>;
   deductible: number | null;
   oopMax: number | null;
+}
+
+/** How a run of fills was paid: a copay, full price toward the deductible, the share after it, or nothing past the limit. */
+export type FillPhase = 'copay' | 'deductible' | 'meetsDeductible' | 'afterDeductible' | 'limitReached' | 'cash';
+
+export interface FillRun {
+  count: number;
+  /** What you paid for each fill in the run. */
+  paid: number;
+  phase: FillPhase;
+}
+
+export interface DrugCost {
+  kind: 'plan' | 'cash';
+  yearly: number;
+  runs: FillRun[];
 }

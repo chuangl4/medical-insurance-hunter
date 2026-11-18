@@ -115,7 +115,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 export function PlanBrowser(props: Props) {
   const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, intro, ...context } = props;
   const { doctors } = context;
-  const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
+  const [sortKey, setSortKey] = useState<SortKey>('scenarioYear');
   const [descending, setDescending] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [groupByFit, setGroupByFit] = useState(true);
@@ -229,6 +229,12 @@ export function PlanBrowser(props: Props) {
           <p aria-live="polite">
             <strong>{visible.length}</strong> of {plans.length} plans
             {mustHaveCount > 0 && <span className="muted"> · covering your {mustHaveCount} must-haves</span>}
+          </p>
+          <p className="scenario-caption">
+            <span className="muted">Your scenario:</span> {context.scenarioText}{' '}
+            <button type="button" className="link-button" onClick={(e) => context.onEditScenario(e.currentTarget)}>
+              Change
+            </button>
           </p>
           <div className="sort">
             <label className="inline-field">

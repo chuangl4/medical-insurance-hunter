@@ -196,8 +196,7 @@ describe('ongoing care', () => {
     const without = evaluatePlan(plan(), household({ members: [member(21)] }), 0);
     const withDrug = evaluatePlan(plan(), household({ members: [member(21, { selfPayDrugs: { testDrug: 300 } })] }), 0);
     expect(withDrug.selfPayYear).toBe(3600);
-    expect(withDrug.expectedYear! - without.expectedYear!).toBe(3600);
-    expect(withDrug.badYear! - without.badYear!).toBe(3600);
+    expect(withDrug.scenarioYear! - without.scenarioYear!).toBe(3600);
     expect(withDrug.worstCase! - without.worstCase!).toBe(3600);
     expect(withDrug.oopMax).toBe(without.oopMax);
   });
@@ -207,9 +206,25 @@ describe('ongoing care', () => {
     const lookup = (rxcui: string) => (rxcui === '1' ? { covered: true, tier: 'preferredBrand' as const } : { covered: false });
     const result = evaluatePlan(plan(), household({ members: [member(40, { drugs: [covered, unlisted], selfPayDrugs: { cream: 50 } })] }), 0, false, lookup);
     // Testdrug A: 12 fills at the $70 brand copay; Testdrug B: 12 × $100 in cash; the cream: 12 × $50 in cash.
-    expect(result.coveredDrugsExpected).toBe(840);
+    expect(result.drugCosts.a).toEqual({ kind: 'plan', yearly: 840, runs: [{ count: 12, paid: 70, phase: 'copay' }] });
+    expect(result.drugCosts.b).toEqual({ kind: 'cash', yearly: 1200, runs: [{ count: 12, paid: 100, phase: 'cash' }] });
     expect(result.uncoveredDrugsYear).toBe(1200);
     expect(result.selfPayYear).toBe(1800);
+  });
+  it('records fills paid toward the deductible, then the share after it', () => {
+    const drug = { itemId: 'd', name: 'Testdrug', rxcui: '1', price: 300, fillsPerYear: 12, assume: 'brand' as const };
+    const b = benefits({ deductible: { individual: 2800, family: 5600 }, brandRx: { kind: 'copay', amount: 250, afterDeductible: true } });
+    const result = evaluatePlan(plan({ benefits: b }), household({ members: [member(40, { drugs: [drug] })] }), 0, false, () => ({ covered: true, tier: 'preferredBrand' }));
+    // 9 fills fill $2,700 of the deductible; the 10th pays the last $100 and $200 of the $250 copay (capped at the price).
+    expect(result.drugCosts.d.runs).toEqual([
+      { count: 9, paid: 300, phase: 'deductible' },
+      { count: 1, paid: 300, phase: 'meetsDeductible' },
+      { count: 2, paid: 250, phase: 'afterDeductible' },
+    ]);
+    expect(result.drugCosts.d.yearly).toBe(3500);
+  });
+  it('charges a major bill like a hospital stay', () => {
+    expect(outOfPocket(benefits(), [member(40, { majorBill: 20000 })])).toBe(1000 + 19000 * 0.2);
   });
   it('costs labs, tests, scans, and brand drugs by their own benefits', () => {
     const m = member(40, { labTests: 2, diagnosticTests: 1, brandFills: 1 });
@@ -291,7 +306,7 @@ describe('evaluatePlan', () => {
   });
   it('leaves yearly costs empty when benefits are unknown', () => {
     const result = evaluatePlan(plan({ benefits: null }), household(), 0);
-    expect(result.expectedYear).toBeNull();
+    expect(result.scenarioYear).toBeNull();
     expect(result.netMonthly).toBeGreaterThan(0);
   });
   it('builds worst case from premium plus the out-of-pocket limit', () => {
@@ -356,21 +371,21 @@ describe('medications priced per plan', () => {
 
   it('uses the plan cost share when the plan covers the drug', () => {
     const covered = evaluatePlan(copayPlan, withDrug, 0, false, () => ({ covered: true, tier: 'preferredBrand' }));
-    expect(covered.careExpected).toBe(900);
+    expect(covered.careScenario).toBe(900);
     expect(covered.selfPayYear).toBe(0);
   });
 
   it('charges cash when the plan does not cover it, or when coverage is unknown and cash is assumed', () => {
     const notCovered = evaluatePlan(copayPlan, withDrug, 0, false, () => ({ covered: false }));
     expect(notCovered.selfPayYear).toBe(4800);
-    expect(notCovered.careExpected).toBe(0);
+    expect(notCovered.careScenario).toBe(0);
     expect(evaluatePlan(copayPlan, withDrug, 0, false).selfPayYear).toBe(4800);
   });
 
   it('falls back to the brand share for a tier the summary does not list', () => {
     const tiered = evaluatePlan(copayPlan, withDrug, 0, false, () => ({ covered: true, tier: 'specialty' }));
-    expect(tiered.careExpected).toBe(900);
+    expect(tiered.careScenario).toBe(900);
     const specialty = plan({ id: 'p2', benefits: benefits({ brandRx: { kind: 'copay', amount: 75, afterDeductible: false }, specialtyRx: { kind: 'copay', amount: 150, afterDeductible: false } }) });
-    expect(evaluatePlan(specialty, withDrug, 0, false, () => ({ covered: true, tier: 'specialty' })).careExpected).toBe(1800);
+    expect(evaluatePlan(specialty, withDrug, 0, false, () => ({ covered: true, tier: 'specialty' })).careScenario).toBe(1800);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { careSummary, scenarioParts } from './scenarios';
-import type { EvaluatedPlan, Member } from './types';
+import { DEFAULT_SCENARIO, PRESETS, applyScenario, careSummary, presetOf, scenarioParts, scenarioSummary, type CareScenario } from './scenarios';
+import type { EvaluatedPlan, Household, Member } from './types';
 
 const member = (patch: Partial<Member>): Member => ({
   id: 'm', label: 'Pat', age: 40, primaryVisits: 0, specialistVisits: 0, genericFills: 0, brandFills: 0, labTests: 0,
@@ -15,21 +15,51 @@ describe('scenario explanations', () => {
     expect(careSummary([member({})])).toBe('no care listed yet');
   });
 
-  it('splits each total into premiums, care, and cash that add up', () => {
-    const item = { premiumYear: 6000, selfPayYear: 1200, careExpected: 500, careBadYear: 3500, oopMax: 9000 } as EvaluatedPlan;
-    const rows = scenarioParts(item)!;
-    expect(rows.map((r) => [r.id, r.care, r.total])).toEqual([
-      ['expected', 500, 7700],
-      ['bad', 3500, 10700],
-      ['worst', 9000, 16200],
-    ]);
-    expect(scenarioParts({ ...item, careExpected: null })).toBeNull();
+  it('splits your scenario and the worst case into premiums, care, and cash that add up', () => {
+    const item = {
+      premiumYear: 6000,
+      selfPayYear: 1200,
+      uncoveredDrugsYear: 900,
+      careScenario: 500,
+      oopMax: 9000,
+      drugCosts: { a: { kind: 'plan', yearly: 120, runs: [] }, b: { kind: 'cash', yearly: 900, runs: [] } },
+    } as unknown as EvaluatedPlan;
+    const [scenario, worst] = scenarioParts(item)!;
+    expect([scenario.total, scenario.coveredDrugs, scenario.uncoveredDrugs, scenario.alwaysCash]).toEqual([7700, 120, 900, 300]);
+    expect([worst.total, worst.coveredDrugs]).toEqual([16200, null]);
+    expect(scenarioParts({ ...item, careScenario: null })).toBeNull();
+  });
+});
+
+describe('your scenario', () => {
+  const household: Household = {
+    county: 'King', taxHouseholdSize: 2, annualIncome: null, overSubsidyLimit: true, filingStatus: 'joint', immigration: 'citizen', affordableEmployerOffer: false,
+    members: [
+      member({ id: 'a', specialistVisits: 4, labTests: 2, selfPayDrugs: { cream: 40 }, drugs: [{ itemId: 'd', name: 'Testdrug', rxcui: '1', price: 100, fillsPerYear: 12, assume: 'brand' }] }),
+      member({ id: 'b', primaryVisits: 2 }),
+    ],
+  };
+
+  it('starts as listed care only', () => {
+    expect(presetOf(DEFAULT_SCENARIO)).toBe('listed');
+    expect(applyScenario(household, DEFAULT_SCENARIO)).toEqual(household);
   });
 
-  it('splits cash medications into ones the plan does not cover and ones always paid in cash', () => {
-    const item = { premiumYear: 6000, selfPayYear: 1200, uncoveredDrugsYear: 900, careExpected: 500, careBadYear: 3500, coveredDrugsExpected: 120, coveredDrugsBad: 80, oopMax: 9000 } as EvaluatedPlan;
-    const [expected, , worst] = scenarioParts(item)!;
-    expect([expected.uncoveredDrugs, expected.alwaysCash, expected.coveredDrugs]).toEqual([900, 300, 120]);
-    expect(worst.coveredDrugs).toBeNull();
+  it('scales listed visits, adds unplanned care for the chosen person, and leaves out stopped medications', () => {
+    const s: CareScenario = { ...DEFAULT_SCENARIO, listedCare: 0.5, hospitalStays: 1, forMember: 'b', stopped: ['cream', 'd'] };
+    const [a, b] = applyScenario(household, s).members;
+    expect([a.specialistVisits, a.labTests, a.hospitalStays, a.selfPayDrugs, a.drugs]).toEqual([2, 1, 0, {}, []]);
+    expect([b.primaryVisits, b.hospitalStays]).toEqual([1, 1]);
+    expect(presetOf(s)).toBeNull();
+  });
+
+  it('recognizes presets whatever the medication choices', () => {
+    const stay = PRESETS.find((p) => p.id === 'stay')!;
+    expect(presetOf({ ...DEFAULT_SCENARIO, ...stay.care, approved: ['1'] })).toBe('stay');
+  });
+
+  it('describes itself in one line', () => {
+    const s = { ...DEFAULT_SCENARIO, hospitalStays: 1, approved: ['1'] };
+    expect(scenarioSummary(s, [{ id: 'a', label: 'Pat' }], { '1': 'Testdrug' })).toBe('your listed care + 1 hospital stay for Pat · Testdrug approved where not listed');
   });
 });

@@ -29,3 +29,15 @@ describe('candidate doctors', () => {
     ).toThrow();
   });
 });
+
+describe('your scenario', () => {
+  const scenario = { listedCare: 1, hospitalStays: 1, erVisits: 0, majorBill: 0, forMember: 'm1', approved: ['123'], stopped: [] };
+  it('saves a scenario with the profile', () => {
+    expect(profileSchema.parse({ ...base, scenario }).scenario).toEqual(scenario);
+  });
+  it('rejects values the controls never produce', () => {
+    expect(() => profileSchema.parse({ ...base, scenario: { ...scenario, listedCare: 3 } })).toThrow();
+    expect(() => profileSchema.parse({ ...base, scenario: { ...scenario, hospitalStays: -1 } })).toThrow();
+    expect(() => profileSchema.parse({ ...base, scenario: { ...scenario, approved: ['not-an-id'] } })).toThrow();
+  });
+});

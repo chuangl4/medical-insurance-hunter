@@ -6,7 +6,7 @@ import { DoctorHelp } from './DoctorHelp';
 import { FACILITIES } from '../data/facilityNetworks';
 import { facilityAccess } from '../domain/hospitalAccess';
 import { LIST_STATUS_LABELS } from '../data/hospitalLists';
-import { TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, type Approvals, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, drugCostText, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { SURVEY_LABELS, qualityFor, starsText, surveyFor, surveyScoreText } from '../domain/quality';
 import {
@@ -21,7 +21,7 @@ import {
 } from '../domain/networkRules';
 import type { EvaluatedPlan, Member } from '../domain/types';
 import { ScenarioGuide } from './ScenarioGuide';
-import { SCENARIOS, scenarioParts, type ScenarioId } from '../domain/scenarios';
+import { scenarioParts, type CareScenario, type ScenarioId } from '../domain/scenarios';
 import { CostParts } from './ScenarioMath';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
 
@@ -34,8 +34,11 @@ interface Props {
   requiredIds: string[];
   drugLines: DrugLine[];
   drugLookup: CoverageLookup;
-  /** Costs if one drug the plan doesn't list were approved by exception. */
-  approvals: Approvals;
+  /** Your scenario, for the medication choices it makes. */
+  scenario: CareScenario;
+  /** Your scenario in one line, and a way to change it. */
+  scenarioText: string;
+  onEditScenario: (from: HTMLElement) => void;
   /** The household, to explain how the yearly costs are worked out. */
   members: Member[];
 }
@@ -49,6 +52,9 @@ interface Row {
   hideIf?: (p: EvaluatedPlan) => boolean;
 }
 
+const SCENARIO_KEYS = { scenario: 'scenarioYear', worst: 'worstCase' } as const satisfies Record<ScenarioId, keyof EvaluatedPlan>;
+const SCENARIO_LABELS: Record<ScenarioId, string> = { scenario: 'Your scenario', worst: 'Worst case' };
+
 const ROWS: Row[] = [
   ...HOSPITAL_IDS.map((id) => ({
     label: HOSPITALS[id].name,
@@ -56,14 +62,8 @@ const ROWS: Row[] = [
   })),
   { label: 'Monthly premium', text: (p) => money(p.netMonthly), value: (p) => p.netMonthly },
   { label: 'Tax credit', text: (p) => (p.creditMonthly > 0 ? `${money(p.creditMonthly)}/mo` : 'None') },
-  { label: 'Expected year', text: (p) => moneyOrUnknown(p.expectedYear), value: (p) => p.expectedYear },
-  { label: 'Bad year', text: (p) => moneyOrUnknown(p.badYear), value: (p) => p.badYear },
-  { label: 'Worst case', text: (p) => moneyOrUnknown(p.worstCase), value: (p) => p.worstCase },
-  {
-    label: 'Cash medications (in each total above)',
-    text: (p) => `${money(p.selfPayYear)} a year`,
-    hideIf: (p) => p.selfPayYear === 0,
-  },
+  { label: SCENARIO_LABELS.scenario, text: (p) => moneyOrUnknown(p.scenarioYear), value: (p) => p.scenarioYear },
+  { label: SCENARIO_LABELS.worst, text: (p) => moneyOrUnknown(p.worstCase), value: (p) => p.worstCase },
   { label: 'Deductible', text: (p) => moneyOrUnknown(p.deductible), value: (p) => p.deductible },
   { label: 'Out-of-pocket limit', text: (p) => moneyOrUnknown(p.oopMax), value: (p) => p.oopMax },
   { label: 'Primary care', text: (p) => primaryCareText(p.plan.benefits) },
@@ -122,9 +122,8 @@ const ROWS: Row[] = [
   { label: 'Cascade Care', text: (p) => (p.plan.cascadeCare ? 'Yes' : 'No') },
 ];
 
-const SCENARIO_KEYS = { expected: 'expectedYear', bad: 'badYear', worst: 'worstCase' } as const satisfies Record<ScenarioId, keyof EvaluatedPlan>;
 
-export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors, requiredIds, drugLines, drugLookup, approvals, members }: Props) {
+export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDoctors, requiredIds, drugLines, drugLookup, scenario, scenarioText, onEditScenario, members }: Props) {
   const drugRows: Row[] = drugLines.map((line) => ({
     label: line.name,
     text: (p) => {
@@ -135,14 +134,22 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
       const suffix = note ? ` (${note})` : '';
       const deductible = benefits.deductible.individual;
       const cashYear = money(line.price * line.fillsPerYear);
+      const cost = p.drugCosts[line.itemId];
+      const inScenario = cost && <small className="fill-cost scenario-cost">In your scenario: {drugCostText(cost)}</small>;
       if (how.kind === 'cash') {
-        if (how.source !== 'checked') return `Not checked: ${cashYear}/yr cash${suffix}`;
+        if (how.source !== 'checked') return <>Not checked: {cashYear}/yr cash{suffix}{inScenario}</>;
         const share = tierShare(benefits, 'nonPreferredBrand').share;
+        const approved = line.rxcui !== null && scenario.approved.includes(line.rxcui);
         return (
           <>
-            {EXCEPTION_TERM}: {cashYear}/yr cash{suffix}
-            <small className="fill-cost">Counted as cash in every scenario, on top of the out-of-pocket limit.</small>
-            <small className="fill-cost">If approved (highest brand tier): {fillCostText(share, line.price, deductible)}.</small>
+            {EXCEPTION_TERM}
+            {suffix}
+            {approved ? (
+              <small className="fill-cost">Your scenario assumes the exception is approved (highest brand tier): {fillCostText(share, line.price, deductible)}.</small>
+            ) : (
+              <small className="fill-cost">Paid in cash, on top of the out-of-pocket limit. If approved: {fillCostText(share, line.price, deductible)}.</small>
+            )}
+            {inScenario}
           </>
         );
       }
@@ -152,8 +159,8 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
         <>
           {label}: {costShareText(how.share)}
           {suffix}
-          <small className="fill-cost">Per fill: {fillCostText(how.share, line.price, deductible)}.</small>
-          <small className="fill-cost">Counted in your share of care, so it goes toward the deductible and out-of-pocket limit.</small>
+          <small className="fill-cost">Per fill: {fillCostText(how.share, line.price, deductible)}. Part of care: counts toward the deductible and out-of-pocket limit.</small>
+          {inScenario}
         </>
       );
     },
@@ -182,43 +189,28 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
       </>
     ),
   }));
-  // Each scenario's total, the sum behind it, and what approving each unlisted medication would make it.
+  // Each total with the sum behind it; medications sit right under them.
   const scenarioRow = (id: ScenarioId): Row => {
-    const meta = SCENARIOS.find((x) => x.id === id)!;
     const key = SCENARIO_KEYS[id];
     return {
-      label: meta.name,
+      label: SCENARIO_LABELS[id],
       value: (p) => p[key],
       text: (p) => {
         const parts = scenarioParts(p)?.find((x) => x.id === id);
         if (!parts) return moneyOrUnknown(p[key]);
-        const approvalLines = drugLines.flatMap((line) => {
-          const then = line.rxcui ? approvals[p.plan.id]?.[line.rxcui]?.[key] : null;
-          return then !== null && then !== undefined ? [{ id: line.itemId, name: line.name, then }] : [];
-        });
         return (
           <>
             <span className="compare-total">{money(parts.total)}</span>
             <CostParts parts={parts} />
-            {approvalLines.length > 0 && (
-              <ul className="approval-lines">
-                {approvalLines.map((a) => (
-                  <li key={a.id}>
-                    If {a.name} were approved: ≈ {money(a.then)}
-                  </li>
-                ))}
-              </ul>
-            )}
           </>
         );
       },
     };
   };
   const base = ROWS.slice(HOSPITAL_IDS.length).flatMap((r): Row[] => {
-    if (r.label === 'Expected year') return [scenarioRow('expected')];
-    if (r.label === 'Bad year') return [scenarioRow('bad')];
-    if (r.label === 'Worst case') return [scenarioRow('worst'), ...drugRows];
-    return r.label.startsWith('Cash medications') ? [] : [r];
+    if (r.label === SCENARIO_LABELS.scenario) return [scenarioRow('scenario')];
+    if (r.label === SCENARIO_LABELS.worst) return [scenarioRow('worst'), ...drugRows];
+    return [r];
   });
   const rows = [...hospitalRows, ...doctorRows, ...base, ...facilityRows];
   if (plans.length === 0) {
@@ -233,6 +225,7 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
   }
 
   return (
+    <div className="compare-page">
     <div className="panel compare-wrap">
       <ScenarioGuide members={members} hasCash={members.some((m) => Object.values(m.selfPayDrugs).some((c) => c > 0))} />
       <table className="compare">
@@ -259,7 +252,17 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
             const showBest = plans.length > 1 && lowest !== null && values.some((v) => v !== lowest);
             return (
               <tr key={row.label}>
-                <th scope="row">{row.label}</th>
+                <th scope="row">
+                  {row.label}
+                  {row.label === SCENARIO_LABELS.scenario && (
+                    <>
+                      <small className="row-caption">{scenarioText}</small>
+                      <button type="button" className="link-button change-scenario" onClick={(e) => onEditScenario(e.currentTarget)}>
+                        Change
+                      </button>
+                    </>
+                  )}
+                </th>
                 {plans.map((p) => {
                   const isBest = showBest && row.value?.(p) === lowest;
                   return (
@@ -275,6 +278,7 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
         </tbody>
       </table>
       <p className="hint">Highlighted values are the lowest in each row.</p>
+    </div>
     </div>
   );
 }

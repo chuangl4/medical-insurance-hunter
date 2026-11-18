@@ -1,23 +1,20 @@
-import { HOSPITAL_STAY, SCENARIOS, scenarioParts, type ScenarioParts } from '../domain/scenarios';
+import { scenarioParts, type ScenarioParts } from '../domain/scenarios';
 import type { EvaluatedPlan } from '../domain/types';
 import { money } from '../format';
-import { SeverityMark } from './ScenarioGuide';
 
 interface Props {
   item: EvaluatedPlan;
-  firstName: string;
 }
 
 type Part = 'premiums' | 'care' | 'cash';
 const PART_LABELS: Record<Part, string> = { premiums: 'Premiums', care: 'Your share of care', cash: 'Cash medications' };
-
+const ROW_NAMES: Record<ScenarioParts['id'], string> = { scenario: 'Your scenario', worst: 'Worst case' };
 const CARE_LABELS: Record<ScenarioParts['id'], string> = {
-  expected: 'care',
-  bad: 'care, incl. the hospital stay',
+  scenario: 'care',
   worst: 'out-of-pocket limit (all covered care)',
 };
 
-/** One scenario's total as a short sum: premiums, care (and what covered medications add), and cash medications. */
+/** One total as a short sum: premiums, care (and what covered medications cost within it), and cash medications. */
 export function CostParts({ parts }: { parts: ScenarioParts }) {
   return (
     <ul className="cost-parts">
@@ -45,26 +42,18 @@ export function CostParts({ parts }: { parts: ScenarioParts }) {
   );
 }
 
-/** One plan's three scenarios as stacked bars on a shared scale, with the arithmetic written out. */
-export function ScenarioMath({ item, firstName }: Props) {
+/** One plan's scenario and worst case as stacked bars on a shared scale, with the sums written out. */
+export function ScenarioMath({ item }: Props) {
   const rows = scenarioParts(item);
   if (!rows) return <p className="hint">This plan's benefits aren't known, so its yearly costs can't be broken down.</p>;
   const max = Math.max(...rows.map((r) => r.total));
   const parts: Part[] = item.selfPayYear > 0 ? ['premiums', 'care', 'cash'] : ['premiums', 'care'];
-  const [expected, bad, worst] = rows;
-  const stayCost = bad.care - expected.care;
-
-  const explain = (r: ScenarioParts) => {
-    if (r.id === 'expected') return "Care is what this plan's copays, deductible and coinsurance leave you to pay for your listed care.";
-    if (r.id === 'bad') return `The ${HOSPITAL_STAY.days}-day stay for ${firstName} adds ${money(stayCost)} of the ${money(HOSPITAL_STAY.price)} bill; the plan pays the rest.`;
-    return 'Care is capped at the out-of-pocket limit. Cash medications come on top, since the limit doesn’t cover them.';
-  };
+  const [scenario, worst] = rows;
 
   return (
     <div className="scenario-math">
       <p className="scenario-takeaway">
-        A bad year costs <strong>{money(bad.total - expected.total)} more</strong> than expected; the worst case costs{' '}
-        <strong>{money(worst.total - expected.total)} more</strong>.
+        The worst case costs <strong>{money(worst.total - scenario.total)} more</strong> than your scenario.
       </p>
       <ul className="chart-legend" aria-label="Legend">
         {parts.map((p) => (
@@ -75,37 +64,26 @@ export function ScenarioMath({ item, firstName }: Props) {
         ))}
       </ul>
       <ol className="scenario-rows">
-        {rows.map((r) => {
-          const meta = SCENARIOS.find((s) => s.id === r.id)!;
-          return (
-            <li key={r.id} className="scenario-row">
-              <div className="scenario-row-head">
-                <span className="scenario-row-name">
-                  <SeverityMark level={meta.severity} /> {meta.name}
-                </span>
-                <strong className="num">{money(r.total)}</strong>
-              </div>
-              <div className="stack-track" role="img" aria-label={`${meta.name}: ${money(r.total)}`}>
-                {parts.map((p) =>
-                  r[p] > 0 ? (
-                    <span
-                      key={p}
-                      className={`stack-seg part-${p}`}
-                      style={{ width: `${(r[p] / max) * 100}%` }}
-                      title={`${PART_LABELS[p]}: ${money(r[p])}`}
-                    />
-                  ) : null,
-                )}
-              </div>
-              <CostParts parts={r} />
-              <p className="scenario-explain">{explain(r)}</p>
-            </li>
-          );
-        })}
+        {rows.map((r) => (
+          <li key={r.id} className="scenario-row">
+            <div className="scenario-row-head">
+              <span className="scenario-row-name">{ROW_NAMES[r.id]}</span>
+              <strong className="num">{money(r.total)}</strong>
+            </div>
+            <div className="stack-track" role="img" aria-label={`${ROW_NAMES[r.id]}: ${money(r.total)}`}>
+              {parts.map((p) =>
+                r[p] > 0 ? (
+                  <span key={p} className={`stack-seg part-${p}`} style={{ width: `${(r[p] / max) * 100}%` }} title={`${PART_LABELS[p]}: ${money(r[p])}`} />
+                ) : null,
+              )}
+            </div>
+            <CostParts parts={r} />
+          </li>
+        ))}
       </ol>
       <p className="hint">
-        Premiums are the same in every scenario; only your share of care changes. The bars share one scale, so their lengths
-        compare directly.
+        Care is what this plan's copays, deductible and coinsurance leave you to pay for your scenario's care. In the worst case it's the
+        out-of-pocket limit; cash medications come on top, since the limit doesn't cover them.
       </p>
     </div>
   );

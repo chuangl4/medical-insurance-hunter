@@ -1,4 +1,5 @@
 import type { DoctorFields } from './doctors';
+import type { CareScenario } from './scenarios';
 import type { CashReason } from './cashMeds';
 import type { DrugCoverage, DrugLine, DrugRef } from './drugs';
 import { CARE_PRICES } from './rules2027';
@@ -101,6 +102,8 @@ export interface Profile {
   answered?: AnswerKey[];
   /** Drug coverage by RxNorm id, then plan id. */
   drugCoverage?: Record<string, DrugCoverage>;
+  /** The care every plan's "Your scenario" cost is priced against; the default when unset. */
+  scenario?: CareScenario;
 }
 
 export const EMPTY_PROFILE: Profile = {

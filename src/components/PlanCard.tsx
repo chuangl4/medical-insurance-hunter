@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
-import { RESTRICTION_LABELS, TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, type Approvals, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { RESTRICTION_LABELS, TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, drugCostText, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { doctorFit, drugFit, hospitalFit, overallFit, type DrugFitKind, type FitPart } from '../domain/fit';
 import { facilityAccess, otherAccess } from '../domain/hospitalAccess';
 import { networkTypeOf } from '../domain/networkRules';
@@ -15,7 +15,7 @@ import { NetworkRulesLine } from './NetworkRulesLine';
 import { PlanRules } from './PlanRules';
 import { QualityRatingLine } from './QualityRatingLine';
 import { ScenarioMath } from './ScenarioMath';
-import { SeverityMark } from './ScenarioGuide';
+import type { CareScenario } from '../domain/scenarios';
 
 const CHANNEL_LABEL = { on: 'Exchange only', off: 'Direct only', both: 'Exchange or direct' };
 const FIT_MARK = { good: '✓', check: '?', bad: '✕', info: '·' } as const;
@@ -25,12 +25,14 @@ export interface PlanCardContext {
   doctors: Provider[];
   candidates: Provider[];
   checkingDoctors: string[];
-  firstName: string;
   requiredIds: string[];
   drugLines: DrugLine[];
   drugLookup: CoverageLookup;
-  /** Costs if one drug the plan doesn't list were approved by exception. */
-  approvals: Approvals;
+  /** Your scenario, for the medication choices it makes. */
+  scenario: CareScenario;
+  /** Your scenario in one line, and a way to change it. */
+  scenarioText: string;
+  onEditScenario: (from: HTMLElement) => void;
 }
 
 interface Props extends PlanCardContext {
@@ -72,7 +74,7 @@ export function planFit(item: EvaluatedPlan, ctx: Pick<PlanCardContext, 'doctors
  * per-hospital, per-doctor and per-medication details; "Plan details" opens the general facts about the plan.
  */
 export function PlanCard(props: Props) {
-  const { item, selected, compareFull, onToggleCompare, doctors, checkingDoctors, firstName, drugLookup, approvals } = props;
+  const { item, selected, compareFull, onToggleCompare, doctors, checkingDoctors, drugLookup, scenario, onEditScenario } = props;
   const { plan } = item;
   const [fitOpen, setFitOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -113,21 +115,16 @@ export function PlanCard(props: Props) {
         </div>
         <div className="metric-lead">
           <dt>
-            <SeverityMark level={1} /> Expected year
+            Your scenario{' '}
+            <button type="button" className="link-button change-scenario" onClick={(e) => onEditScenario(e.currentTarget)} aria-label="Change your scenario">
+              Change
+            </button>
           </dt>
-          <dd>{moneyOrUnknown(item.expectedYear)}</dd>
+          <dd>{moneyOrUnknown(item.scenarioYear)}</dd>
           {item.selfPayYear > 0 && plan.benefits && <small>incl. {money(item.selfPayYear)} cash meds</small>}
         </div>
         <div>
-          <dt>
-            <SeverityMark level={2} /> Bad year
-          </dt>
-          <dd>{moneyOrUnknown(item.badYear)}</dd>
-        </div>
-        <div>
-          <dt>
-            <SeverityMark level={3} /> Worst case
-          </dt>
+          <dt>Worst case</dt>
           <dd>{moneyOrUnknown(item.worstCase)}</dd>
         </div>
         <div>
@@ -248,18 +245,25 @@ export function PlanCard(props: Props) {
                       ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}${how.estimated ? ' (tier cost estimated)' : ''}${how.restrictions.length ? ` · ${how.restrictions.map((r) => RESTRICTION_LABELS[r]).join(', ')}` : ''}`
                       : `Not checked, assumed ${line.assume === 'generic' ? 'a generic' : 'a brand-name'} fill`;
                 const deductible = plan.benefits!.deductible.individual;
+                const approved = exception && line.rxcui !== null && scenario.approved.includes(line.rxcui);
                 const fillCost =
                   how.kind === 'plan'
                     ? `Per fill: ${fillCostText(how.share, line.price, deductible)}.`
-                    : exception
+                    : exception && !approved
                       ? `If approved (highest brand tier): ${fillCostText(tierShare(plan.benefits!, 'nonPreferredBrand').share, line.price, deductible)}.`
                       : '';
+                const cost = item.drugCosts[line.itemId];
                 return (
                   <li key={line.itemId} className={`hospital rx-${how.kind === 'cash' ? 'out' : how.source === 'checked' ? 'in' : 'unknown'}`}>
                     <span className="hospital-name">{line.name}:</span> {text}
                     {note && <small className="muted"> ({note})</small>}{' '}
-                    {exception && <ExceptionHelp item={item} line={line} approved={line.rxcui ? approvals[plan.id]?.[line.rxcui] : undefined} />}
+                    {exception && <ExceptionHelp plan={plan} line={line} approvedInScenario={approved} />}
                     {fillCost && <small className="fill-cost">{fillCost}</small>}
+                    {cost && (
+                      <small className="fill-cost scenario-cost">
+                        In your scenario{approved ? ', assuming the exception is approved' : ''}: {drugCostText(cost)}
+                      </small>
+                    )}
                   </li>
                 );
               })}
@@ -276,7 +280,7 @@ export function PlanCard(props: Props) {
           {plan.benefits && (
             <section>
               <h4>How the yearly costs add up</h4>
-              <ScenarioMath item={item} firstName={firstName} />
+              <ScenarioMath item={item} />
             </section>
           )}
           {plan.benefits && (

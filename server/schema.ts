@@ -120,6 +120,17 @@ export const profileSchema = z.object({
     .record(z.string().regex(/^\d{1,10}$/), drugCoverageSchema)
     .refine((r) => Object.keys(r).length <= 40, 'Too many drugs.')
     .optional(),
+  scenario: z
+    .object({
+      listedCare: z.union([z.literal(0), z.literal(0.5), z.literal(1), z.literal(2)]),
+      hospitalStays: z.number().int().min(0).max(5),
+      erVisits: z.number().int().min(0).max(10),
+      majorBill: z.number().min(0).max(10_000_000),
+      forMember: text(80).nullable(),
+      approved: z.array(z.string().regex(/^\d{1,10}$/)).max(40),
+      stopped: z.array(text(80)).max(100),
+    })
+    .optional(),
 });
 
 export const drugSearchSchema = z.object({ name: text(100).min(2) });

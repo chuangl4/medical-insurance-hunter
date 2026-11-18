@@ -8,20 +8,12 @@ import type { Channel, EvaluatedPlan, Metal, NetworkType, Plan } from './types';
 export type NetworkChoice = NetworkType | 'unconfirmed';
 export const networkOf = (plan: Plan): NetworkChoice => networkTypeOf(plan).type ?? 'unconfirmed';
 
-export type SortKey =
-  | 'expectedYear'
-  | 'netMonthly'
-  | 'badYear'
-  | 'worstCase'
-  | 'deductible'
-  | 'oopMax'
-  | 'specialist';
+export type SortKey = 'scenarioYear' | 'netMonthly' | 'worstCase' | 'deductible' | 'oopMax' | 'specialist';
 
 export const SORT_LABELS: Record<SortKey, string> = {
-  expectedYear: 'Expected yearly cost',
+  scenarioYear: 'Your scenario',
   netMonthly: 'Monthly premium',
-  badYear: 'Bad-year cost',
-  worstCase: 'Worst-case cost',
+  worstCase: 'Worst case',
   deductible: 'Deductible',
   oopMax: 'Out-of-pocket limit',
   specialist: 'Specialist copay',

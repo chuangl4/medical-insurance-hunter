@@ -1,5 +1,5 @@
 import { money } from '../format';
-import type { Benefits, CostShare, Plan } from './types';
+import type { Benefits, CostShare, DrugCost, FillPhase, Plan } from './types';
 
 /** A drug identified in RxNorm (National Library of Medicine). */
 export interface DrugRef {
@@ -152,13 +152,25 @@ export function fillCostText(share: CostShare, price: number, deductible: number
   return `${untilDeductible}, then ${share.rate === 0 ? '$0' : `${Math.round(share.rate * 100)}% (${money(price * share.rate)}) per fill`}`;
 }
 
-/** Yearly costs of a plan if one drug it doesn't list were approved by exception: plan id → RxNorm id → costs. */
-export type Approvals = Record<string, Record<string, { expectedYear: number | null; badYear: number | null; worstCase: number | null }>>;
+/** The same coverage, with these drugs (by RxNorm id) assumed approved by exception wherever a plan doesn't list them. */
+export const approveAll =
+  (lookup: CoverageLookup, rxcuis: string[]): CoverageLookup =>
+  (id, plan) => (rxcuis.includes(id) ? ifExceptionApproved(lookup)(id, plan) : lookup(id, plan));
 
-/** The same coverage, with only one drug (by RxNorm id) approved by exception, to price that drug on its own. */
-export const approveOnly =
-  (lookup: CoverageLookup, rxcui: string): CoverageLookup =>
-  (id, plan) => (id === rxcui ? ifExceptionApproved(lookup)(id, plan) : lookup(id, plan));
+const PHASE_TEXT: Record<FillPhase, string> = {
+  copay: 'copay',
+  deductible: 'full price, toward the deductible',
+  meetsDeductible: 'meets the deductible',
+  afterDeductible: 'after the deductible',
+  limitReached: 'out-of-pocket limit reached',
+  cash: 'cash',
+};
+
+/** "9 × $300 (full price, toward the deductible) + 3 × $250 (after the deductible) = $3,450". */
+export function drugCostText(cost: DrugCost): string {
+  const runs = cost.runs.map((r) => `${r.count} × ${money(r.paid)} (${PHASE_TEXT[r.phase]})`);
+  return `${runs.join(' + ')} = ${money(cost.yearly)}`;
+}
 
 /** A short note on a list answer for plan cards: "from Kaiser's drug list", "as generic", "2026 list", etc. */
 export function listNote(status: PlanDrugStatus | undefined): string {

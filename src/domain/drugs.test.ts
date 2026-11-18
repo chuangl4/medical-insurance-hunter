@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { approveOnly, coverageLookup, fillCostText, describeEvidence, ifExceptionApproved, listDisagrees, listNote, type DrugCoverage } from './drugs';
+import { approveAll, coverageLookup, drugCostText, fillCostText, describeEvidence, ifExceptionApproved, listDisagrees, listNote, type DrugCoverage } from './drugs';
 import type { Plan } from './types';
 
 const plan = (id: string) => ({ id, carrier: 'Test Insurer' }) as Plan;
@@ -42,14 +42,27 @@ describe('exceptions and restrictions', () => {
     expect(approved('9', plan('P1'))).toEqual({ covered: true, tier: 'nonPreferredBrand' });
     expect(approved('9', plan('P2'))).toEqual({ covered: true, tier: 'generic' });
   });
-  it('approves one drug at a time, leaving the others as they are', () => {
+  it('approves only the drugs you assume approved', () => {
     const base = coverageLookup({
       '9': { checkedAt: '', source: '', plans: { P1: { covered: false } } },
       '8': { checkedAt: '', source: '', plans: { P1: { covered: false } } },
     });
-    const onlyNine = approveOnly(base, '9');
+    const onlyNine = approveAll(base, ['9']);
     expect(onlyNine('9', plan('P1'))).toEqual({ covered: true, tier: 'nonPreferredBrand' });
     expect(onlyNine('8', plan('P1'))).toEqual({ covered: false });
+  });
+  it('writes out the fills behind a yearly drug cost', () => {
+    expect(
+      drugCostText({
+        kind: 'plan',
+        yearly: 3450,
+        runs: [
+          { count: 9, paid: 300, phase: 'deductible' },
+          { count: 1, paid: 300, phase: 'meetsDeductible' },
+          { count: 2, paid: 225, phase: 'afterDeductible' },
+        ],
+      }),
+    ).toBe('9 × $300 (full price, toward the deductible) + 1 × $300 (meets the deductible) + 2 × $225 (after the deductible) = $3,450');
   });
   it("adds the list's prior authorization to your matching answer", () => {
     const look = coverageLookup({
