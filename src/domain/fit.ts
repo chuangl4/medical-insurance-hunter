@@ -69,7 +69,9 @@ export type DrugFitKind = 'covered' | 'unchecked' | 'notListed' | 'cash';
 export function drugFit(kinds: DrugFitKind[]): FitPart | null {
   if (kinds.length === 0) return null;
   const n = (k: DrugFitKind) => kinds.filter((x) => x === k).length;
-  const level: FitLevel = n('notListed') ? 'bad' : n('unchecked') ? 'check' : n('covered') ? 'good' : 'info';
+  // A drug off the list is already priced at cash in the plan's costs, and an exception may be approved, so it's
+  // something to look into rather than a miss like an out-of-network hospital.
+  const level: FitLevel = n('notListed') || n('unchecked') ? 'check' : n('covered') ? 'good' : 'info';
   const detail = [
     n('covered') && `${n('covered')} covered`,
     n('notListed') && `${n('notListed')} not on drug list`,

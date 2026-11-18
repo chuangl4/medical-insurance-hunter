@@ -224,11 +224,10 @@ export function App() {
       {user.isAdmin && <DataFreshnessBanner />}
       {header}
 
-      <div className="sample-banner" role="note">
-        <strong>Use these costs as estimates.</strong> Premiums and benefits come from {PLAN_YEAR} state and insurer
-        documents, but care prices are rough assumptions and hospital networks need confirming. Check with the insurer
-        and hospital before enrolling. Your profile is saved to your account.
-      </div>
+      <p className="estimate-note" role="note">
+        <strong>Estimates.</strong> Premiums and benefits are from {PLAN_YEAR} state and insurer documents; care prices are rough,
+        and networks need confirming with the insurer and hospital before you enroll.
+      </p>
 
       <nav className="tabs" aria-label="Steps">
         {tabs.map((t) => (

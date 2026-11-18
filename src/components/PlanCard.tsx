@@ -19,7 +19,7 @@ import { SeverityMark } from './ScenarioGuide';
 
 const CHANNEL_LABEL = { on: 'Exchange only', off: 'Direct only', both: 'Exchange or direct' };
 const FIT_MARK = { good: '✓', check: '?', bad: '✕', info: '·' } as const;
-const OVERALL_TEXT = { good: 'Fits your needs', check: 'Fits, with things to confirm', bad: 'Misses a need' } as const;
+export const OVERALL_TEXT = { good: 'Fits your needs', check: 'Fits, with things to confirm', bad: 'Misses a need' } as const;
 
 export interface PlanCardContext {
   doctors: Provider[];
@@ -39,43 +39,44 @@ interface Props extends PlanCardContext {
   onToggleCompare: (id: string) => void;
 }
 
-/**
- * One plan. Always shown: what it is, what it costs, and one line on how it fits the household. "Your fit" opens the
- * per-hospital, per-doctor and per-medication details; "Plan details" opens the general facts about the plan.
- */
-export function PlanCard(props: Props) {
-  const { item, selected, compareFull, onToggleCompare, doctors, candidates, checkingDoctors, firstName, requiredIds, drugLines, drugLookup, ifApproved } = props;
+/** How a plan fits the household: the parts of the "Your fit" line, and what the details list. */
+export function planFit(item: EvaluatedPlan, ctx: Pick<PlanCardContext, 'doctors' | 'candidates' | 'checkingDoctors' | 'requiredIds' | 'drugLines' | 'drugLookup'>) {
   const { plan } = item;
-  const [fitOpen, setFitOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-
   const drugs = plan.benefits
-    ? drugLines.map((line) => {
-        const how = resolveDrug(line, plan, plan.benefits!, drugLookup);
+    ? ctx.drugLines.map((line) => {
+        const how = resolveDrug(line, plan, plan.benefits!, ctx.drugLookup);
         const kind: DrugFitKind =
           how.kind === 'cash' ? (how.source === 'checked' ? 'notListed' : line.rxcui ? 'unchecked' : 'cash') : how.source === 'checked' ? 'covered' : 'unchecked';
         return { line, how, kind };
       })
     : [];
-  const myCandidates = candidates.filter((c) => c.candidateFor === plan.carrier);
-  const others = otherAccess(plan, requiredIds);
+  const myCandidates = ctx.candidates.filter((c) => c.candidateFor === plan.carrier);
+  const others = otherAccess(plan, ctx.requiredIds);
   const parts = [
     hospitalFit(HOSPITAL_IDS.map((id) => ({ name: HOSPITALS[id].name, status: hospitalStatus(plan, id) }))),
-    doctorFit(doctors.map((d) => ({ status: doctorStatusFor(d, plan).status, checking: checkingDoctors.includes(d.id) }))),
+    doctorFit(ctx.doctors.map((d) => ({ status: doctorStatusFor(d, plan).status, checking: ctx.checkingDoctors.includes(d.id) }))),
     drugFit(drugs.map((d) => d.kind)),
     others.known
-      ? ({
-          key: 'others',
-          label: 'Other hospitals',
-          level: 'info',
-          detail: `${others.inCount + others.conditionalCount} of ${others.total}`,
-        } satisfies FitPart)
+      ? ({ key: 'others', label: 'Other hospitals', level: 'info', detail: `${others.inCount + others.conditionalCount} of ${others.total}` } satisfies FitPart)
       : null,
     myCandidates.length
       ? ({ key: 'candidates', label: 'Candidates', level: 'info', detail: `${myCandidates.length} with this insurer` } satisfies FitPart)
       : null,
   ].filter((p): p is FitPart => p !== null);
-  const overall = overallFit(parts);
+  return { drugs, myCandidates, others, parts, overall: overallFit(parts) };
+}
+
+/**
+ * One plan. Always shown: what it is, what it costs, and one line on how it fits the household. "Your fit" opens the
+ * per-hospital, per-doctor and per-medication details; "Plan details" opens the general facts about the plan.
+ */
+export function PlanCard(props: Props) {
+  const { item, selected, compareFull, onToggleCompare, doctors, checkingDoctors, firstName, drugLookup, ifApproved } = props;
+  const { plan } = item;
+  const [fitOpen, setFitOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const { drugs, myCandidates, others, parts, overall } = planFit(item, props);
   const net = networkTypeOf(plan);
 
   return (

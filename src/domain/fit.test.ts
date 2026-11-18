@@ -39,8 +39,8 @@ describe('doctorFit', () => {
 });
 
 describe('drugFit', () => {
-  it('flags drugs missing from the drug list', () => {
-    expect(drugFit(['covered', 'covered', 'notListed'])).toMatchObject({ level: 'bad', detail: '2 covered · 1 not on drug list' });
+  it('asks to look into drugs missing from the drug list', () => {
+    expect(drugFit(['covered', 'covered', 'notListed'])).toMatchObject({ level: 'check', detail: '2 covered · 1 not on drug list' });
   });
 
   it('treats cash-only medications as information', () => {

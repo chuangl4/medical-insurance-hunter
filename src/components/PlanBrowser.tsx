@@ -14,7 +14,7 @@ import {
 } from '../domain/filter';
 import type { EvaluatedPlan, Metal } from '../domain/types';
 import { money, parseOptionalNumber } from '../format';
-import { PlanCard, type PlanCardContext } from './PlanCard';
+import { OVERALL_TEXT, PlanCard, planFit, type PlanCardContext } from './PlanCard';
 
 interface Props extends PlanCardContext {
   plans: EvaluatedPlan[];
@@ -31,6 +31,12 @@ interface Props extends PlanCardContext {
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
 const NETWORKS: NetworkChoice[] = ['EPO', 'HMO', 'PPO', 'unconfirmed'];
 const NETWORK_LABELS: Record<string, string> = { unconfirmed: 'Not confirmed' };
+const GROUPS = ['good', 'check', 'bad'] as const;
+const GROUP_HINTS: Record<(typeof GROUPS)[number], string> = {
+  good: 'Every hospital, doctor and medication checks out.',
+  check: "Nothing is known to be out of network, but something is unconfirmed, or a medication isn't on the drug list (its cash price is already in the costs).",
+  bad: 'A must-have hospital or doctor is out of network or not listed. Open "Your fit" to see which.',
+};
 const ROUTE_LABELS: Record<BuyingRoute, string> = {
   any: 'Anywhere',
   exchange: 'Through Healthplanfinder',
@@ -113,6 +119,7 @@ export function PlanBrowser(props: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('expectedYear');
   const [descending, setDescending] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [groupByFit, setGroupByFit] = useState(true);
   const [moreOpen, setMoreOpen] = useState(() => moreFilterCount(filters) > 0);
   const set = (patch: Partial<Filters>) => onFiltersChange({ ...filters, ...patch });
 
@@ -126,10 +133,28 @@ export function PlanBrowser(props: Props) {
     [plans, filters, doctors],
   );
   const visible = useMemo(() => sortPlans(applyFilters(plans, filters, doctors), sortKey, descending), [plans, filters, doctors, sortKey, descending]);
+  const fits = new Map(visible.map((p) => [p.plan.id, planFit(p, context).overall]));
+  const canGroup = [...fits.values()].some((f) => f !== null);
+  const grouped = groupByFit && canGroup;
   const chips = activeChips(filters);
   const mustHaveCount = filters.hospitals.length + filters.doctors.length;
   const hasMustHaves = HOSPITAL_IDS.length + doctors.length > 0;
   const more = moreFilterCount(filters);
+
+  const renderList = (items: EvaluatedPlan[]) => (
+    <ul className="plan-list">
+      {items.map((item) => (
+        <PlanCard
+          key={item.plan.id}
+          item={item}
+          selected={compareIds.includes(item.plan.id)}
+          compareFull={compareIds.length >= maxCompare}
+          onToggleCompare={onToggleCompare}
+          {...context}
+        />
+      ))}
+    </ul>
+  );
 
   return (
     <div className="browser">
@@ -242,6 +267,12 @@ export function PlanBrowser(props: Props) {
                 ))}
               </select>
             </label>
+            {canGroup && (
+              <label className="check inline-check">
+                <input type="checkbox" checked={groupByFit} onChange={(e) => setGroupByFit(e.target.checked)} />
+                <span>Group by fit</span>
+              </label>
+            )}
             <button type="button" className="secondary" onClick={() => setDescending((d) => !d)}>
               {descending ? 'Highest first' : 'Lowest first'}
             </button>
@@ -283,18 +314,24 @@ export function PlanBrowser(props: Props) {
           </div>
         )}
 
-        <ul className="plan-list">
-          {visible.map((item) => (
-            <PlanCard
-              key={item.plan.id}
-              item={item}
-              selected={compareIds.includes(item.plan.id)}
-              compareFull={compareIds.length >= maxCompare}
-              onToggleCompare={onToggleCompare}
-              {...context}
-            />
-          ))}
-        </ul>
+        {grouped
+          ? GROUPS.map((level) => {
+              // A plan with nothing to judge it by joins the ones to confirm rather than dropping out.
+              const members = visible.filter((p) => (fits.get(p.plan.id) ?? 'check') === level);
+              if (members.length === 0) return null;
+              return (
+                <section key={level} className={`fit-group fit-group-${level}`} aria-labelledby={`fit-group-${level}`}>
+                  <div className="fit-group-head">
+                    <h2 id={`fit-group-${level}`}>
+                      {OVERALL_TEXT[level]} <span className="muted">({members.length})</span>
+                    </h2>
+                    <p className="hint">{GROUP_HINTS[level]}</p>
+                  </div>
+                  {renderList(members)}
+                </section>
+              );
+            })
+          : renderList(visible)}
         <p className="hint">
           Yearly costs include premiums and in-network care, using rough price assumptions. Open "Plan details" on any plan for how each
           number is worked out, and its "Your fit" line for where each hospital, doctor and medication stands.
