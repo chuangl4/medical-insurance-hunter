@@ -21,6 +21,14 @@ export interface ExceptionPolicy {
 }
 
 export const EXCEPTION_POLICIES: Record<string, ExceptionPolicy> = {
+  // Added 2026-11-18 from the drug list Kaiser's 2027 individual plan summaries link to (kp.org/wa/if-sg-2027).
+  'Kaiser Permanente': {
+    summary:
+      'Covers a non-listed drug when the prescriber shows medical necessity: contraindications, adverse reactions, reduced effect, other risk of harm, or barriers to following treatment. Kaiser may recommend a listed alternative instead; temporary coverage can be asked for while it decides. Request through Member Services, 1-888-630-4636. When a generic exists, the brand is generally non-formulary.',
+    published: true,
+    url: 'https://wa.kaiserpermanente.org/static/pdf/public/formulary/if-sg-2027.pdf',
+    source: 'Kaiser Permanente Washington 2026–2027 individual and small group drug formulary, effective November 2026',
+  },
   'Premera Blue Cross': {
     summary:
       'Approves a non-listed drug when the prescriber documents failure, intolerance, or a contraindication with at least two listed alternatives (one if only one exists). Approval up to 12 months; renewal needs evidence it is working.',

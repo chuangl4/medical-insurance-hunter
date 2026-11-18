@@ -10,6 +10,7 @@ import type { Plan } from '../domain/types';
  * - Other benefits: each insurer's 2027 Summary of Benefits and Coverage, linked per plan.
  * - Drug tiers beyond generic and preferred brand (nonPreferredBrandRx, specialtyRx): the CHPW 2027 Benefit
  *   Highlights for Cascade Care plans, and Premera's 2027 SBCs for Preferred Gold and Bronze. Added 2026-11-14.
+ *   Kaiser's other 2027 plans: each plan's own SBC (retail coinsurance). Added 2026-11-18.
  * - benefits is null where no 2027 summary could be found.
  * - network is null where the source for that plan didn't confirm it. networkNote marks a type taken
  *   from an earlier year's documents.
@@ -1388,6 +1389,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -1449,6 +1458,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "rate": 0.4
       },
       "brandRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
+      },
+      "specialtyRx": {
         "kind": "coinsurance",
         "rate": 0.5
       }
@@ -1598,6 +1615,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -1828,6 +1853,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.2
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -1897,6 +1930,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 40,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -1966,6 +2007,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
         "kind": "copay",
         "amount": 40,
         "afterDeductible": false
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.4
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -2116,6 +2165,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -2184,6 +2241,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.3
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -2252,6 +2317,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
@@ -2320,6 +2393,14 @@ export const KING_COUNTY_PLANS: Plan[] = [
       "brandRx": {
         "kind": "coinsurance",
         "rate": 0.4
+      },
+      "nonPreferredBrandRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
+      },
+      "specialtyRx": {
+        "kind": "coinsurance",
+        "rate": 0.5
       }
     }
   },
