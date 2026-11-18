@@ -5471,3 +5471,6 @@ export const KING_COUNTY_PLANS: Plan[] = [
     }
   }
 ];
+
+/** When the plan list, premiums and benefits were collected. */
+export const PLANS_COLLECTED = '2026-11-06';

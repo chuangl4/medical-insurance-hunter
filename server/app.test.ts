@@ -105,6 +105,17 @@ describe('sign-in', () => {
     expect((await post('/api/auth/google', { credential: 'unverified' })).status).toBe(403);
     expect((await post('/api/auth/google', { credential: 'stranger' })).status).toBe(403);
   });
+  it('tells admins apart at sign-in and in /api/me', async () => {
+    const before = await post('/api/auth/google', { credential: 'good' });
+    expect((await before.json()).user.isAdmin).toBe(false);
+    server.close();
+    store.close();
+    await start({ adminEmails: ['owner@example.com'] });
+    const response = await post('/api/auth/google', { credential: 'good' });
+    expect((await response.json()).user.isAdmin).toBe(true);
+    const cookie = response.headers.get('set-cookie')!.split(';')[0];
+    expect((await (await fetch(base + '/api/me', { headers: { cookie } })).json()).user.isAdmin).toBe(true);
+  });
   it('has no dev sign-in unless configured', async () => {
     expect((await post('/api/auth/dev', {})).status).toBe(404);
   });

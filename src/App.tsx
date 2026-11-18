@@ -1,3 +1,4 @@
+import { DataFreshnessBanner } from './components/DataFreshnessBanner';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, type User } from './api';
 import { CashMedsSummary } from './components/CashMedsSummary';
@@ -228,6 +229,7 @@ export function App() {
     .map((d) => d.name.trim());
   return (
     <div className="app">
+      {user.isAdmin && <DataFreshnessBanner />}
       {header}
 
       <div className="sample-banner" role="note">

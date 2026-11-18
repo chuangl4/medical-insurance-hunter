@@ -8,6 +8,8 @@ export interface ServerConfig {
   googleClientId: string;
   /** Lowercased emails allowed to sign in. Empty means anyone with a Google account. */
   allowedEmails: string[];
+  /** Lowercased emails of admins, who see maintenance notices such as data due for a refresh. */
+  adminEmails: string[];
   /** 32-byte key that encrypts saved profiles. */
   profileKey: Buffer;
   /** Signs in as this email without Google. Only allowed outside production. */
@@ -29,6 +31,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     problems.push('ALLOWED_EMAILS is required in production, so strangers cannot sign in and use your Claude key.');
   }
 
+  const adminEmails = (env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
   const devLoginEmail = env.DEV_LOGIN_EMAIL?.trim().toLowerCase() || null;
   if (production && devLoginEmail) problems.push('DEV_LOGIN_EMAIL must not be set in production.');
 
@@ -43,6 +50,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     dataDir: path.resolve(env.DATA_DIR ?? 'data'),
     googleClientId,
     allowedEmails,
+    adminEmails,
     profileKey,
     devLoginEmail,
   };

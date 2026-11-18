@@ -24,6 +24,7 @@ A household saved in the browser by earlier versions moves into your account the
 2. Copy `.env.example` to `.env` and fill it in (git ignores `.env`):
    - `GOOGLE_CLIENT_ID`: in Google Cloud Console, create an OAuth client ID of type Web application, and add `http://localhost:5173` (and your deployed URL) as Authorized JavaScript origins.
    - `ALLOWED_EMAILS`: the Google accounts allowed to sign in. Required in production.
+   - `ADMIN_EMAILS` (optional): accounts that see a banner when hand-maintained data is due for a refresh. See "Keeping data current" below.
    - `PROFILE_KEY`: run `openssl rand -base64 32`. Profiles are encrypted with it, so back it up privately; without it, saved profiles can't be read.
    - `ANTHROPIC_API_KEY`: from platform.claude.com. Without it, the setup chat is off and you fill in the form instead.
    - For local testing without Google, set `DEV_LOGIN_EMAIL` (and include it in `ALLOWED_EMAILS`). The server refuses to start with it in production.
@@ -76,6 +77,15 @@ const config: PersonalConfig = {
 
 export default config;
 ```
+
+## Keeping data current
+
+Some data is collected by hand or by scripts and goes stale: plans and premiums, hospitals' own plan lists,
+Healthplanfinder's hospital search, plan rules from benefit summaries, insurers' drug lists, CMS quality ratings,
+provider directory links, and drug exception policies. `src/domain/freshness.ts` lists each with its last-checked
+date, how old it may get, and how to refresh it; it also flags sources for an older plan year (such as a drug list
+still for last year). Accounts in `ADMIN_EMAILS` see a banner at the top of the app when anything is due. After
+refreshing a dataset, update its date (the `..._CHECKED` constant in the data file, or rerun its script).
 
 ## Not modeled yet
 

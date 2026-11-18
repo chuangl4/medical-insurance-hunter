@@ -4,6 +4,8 @@
  * Coverage or, where those point only to a home page or a retired site, from the insurer's own website. Checked
  * 2026-11-16.
  */
+export const PROVIDER_DIRECTORIES_CHECKED = '2026-11-16';
+
 export interface ProviderDirectory {
   url: string;
   /** The network or plan to pick in the directory, when it asks. */

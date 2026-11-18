@@ -3,6 +3,8 @@
  * by plan ID, mostly as linked from Washington Healthplanfinder's plan details (collected 2026-11-16). Used by
  * `npm run network-rules`.
  */
+export const SBC_SOURCES_CHECKED = '2026-11-16';
+
 const MOLINA = 'https://www.molinahealthcare.com/-/media/project/pws/healthcare/pdf/pdf/ifp/wa/materials/sbc/2027/english';
 const CHPW = 'https://individualandfamily.chpw.org/wp-content/uploads/cascade-select/content/plan';
 const PREMERA = 'https://apim.ag.prod.premera.net/api/v1.0/Document/Visitor/PBC%20WA/2027/MCA%20PBC%20WA%20Individual%20FINR%20SBC%20with%20PBC%20WA%20On%20Exchange%20';

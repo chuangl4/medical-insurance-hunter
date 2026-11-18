@@ -396,3 +396,8 @@ a { color: var(--accent); }
 .access-unclear { color: var(--warn-text); }
 .access-notes { margin-top: 8px; }
 .access-notes > summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
+.admin-banner { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; padding: 8px 12px; border: 1px solid var(--warn-border); background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; font-size: 0.9rem; }
+.admin-banner summary { cursor: pointer; }
+.admin-banner ul { margin: 6px 0 0; padding-left: 18px; }
+.admin-banner li { margin-bottom: 4px; }
+.admin-banner .muted { color: inherit; opacity: 0.8; }

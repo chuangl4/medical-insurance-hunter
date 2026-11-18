@@ -3,6 +3,8 @@
  * the "Not on drug list · exception possible" explanation. Public information; checked 2026-11-16.
  */
 
+export const EXCEPTION_POLICIES_CHECKED = '2026-11-16';
+
 export const EXCEPTION_TERM = 'Not on drug list · exception possible';
 
 /** The rule every individual plan follows (45 CFR 156.122(c)). */

@@ -83,6 +83,9 @@ export function createApp({ config, store, verifyGoogleToken, chat, searchDoctor
     });
   };
 
+  // Admins see maintenance notices; the flag goes wherever the client receives its user.
+  const withRole = (user: User) => ({ ...user, isAdmin: config.adminEmails.includes(user.email.toLowerCase()) });
+
   const signIn = (res: Response, identity: GoogleIdentity) => {
     const email = identity.email.toLowerCase();
     if (!identity.emailVerified) {
@@ -95,7 +98,7 @@ export function createApp({ config, store, verifyGoogleToken, chat, searchDoctor
     }
     const user = store.upsertUser(identity.sub, email, identity.name);
     setSession(res, user);
-    res.json({ user });
+    res.json({ user: withRole(user) });
   };
 
   const requireUser = (req: AuthedRequest, res: Response, next: NextFunction) => {
@@ -143,7 +146,7 @@ export function createApp({ config, store, verifyGoogleToken, chat, searchDoctor
   });
 
   app.get('/api/me', requireUser, (req: AuthedRequest, res) => {
-    res.json({ user: req.user });
+    res.json({ user: withRole(req.user!) });
   });
 
   app.get('/api/profile', requireUser, (req: AuthedRequest, res) => {

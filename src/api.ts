@@ -6,6 +6,8 @@ export interface User {
   id: number;
   email: string;
   name: string;
+  /** Admins see maintenance notices, such as data due for a refresh. */
+  isAdmin?: boolean;
 }
 
 export interface AuthConfig {

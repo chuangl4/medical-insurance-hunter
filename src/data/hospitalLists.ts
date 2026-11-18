@@ -11,6 +11,9 @@ import type { NetworkId } from './planNetworks';
  * - notListed: the list doesn't name this network (usually not in network).
  * - unclear: the list names something that may or may not be this network.
  */
+/** When these lists were last read from the hospitals' sites. */
+export const HOSPITAL_LISTS_CHECKED = '2026-11-17';
+
 export type ListStatus = 'in' | 'conditional' | 'out' | 'notListed' | 'unclear';
 
 export interface ListEntry {
