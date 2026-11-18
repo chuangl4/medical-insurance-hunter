@@ -16,7 +16,7 @@ import { EMPTY_PROFILE, householdFromProfile, profileFromLegacy, type LegacyHous
 import { ENROLLMENT, PLAN_YEAR } from './domain/rules2027';
 import { requiredHospitalsOf, useDoctorLookups } from './useDoctorLookups';
 import { useDrugLookups } from './useDrugLookups';
-import { coverageLookup, ifExceptionApproved } from './domain/drugs';
+import { approveOnly, coverageLookup, ifExceptionApproved, type Approvals } from './domain/drugs';
 
 /** Where earlier versions kept the household. It's moved into the account on first sign-in. */
 const LEGACY_STORAGE_KEY = 'mih.household.v1';
@@ -146,6 +146,19 @@ export function App() {
     const lookup = ifExceptionApproved(drugLookup);
     for (const p of KING_COUNTY_PLANS.filter((p) => isSoldIn(p, household.county))) {
       out[p.id] = evaluatePlan(p, household, subsidy.monthlyCredit, filters.route === 'direct', lookup).expectedYear;
+    }
+    return out;
+  }, [household, subsidy.monthlyCredit, filters.route, drugLookup]);
+  // Each drug a plan doesn't list, priced as if just that drug were approved by exception, for its "?" on the plan card.
+  const approvals = useMemo(() => {
+    const out: Approvals = {};
+    const rxcuis = [...new Set(household.members.flatMap((m) => m.drugs ?? []).flatMap((d) => (d.rxcui ? [d.rxcui] : [])))];
+    for (const p of KING_COUNTY_PLANS.filter((p) => isSoldIn(p, household.county))) {
+      for (const rxcui of rxcuis) {
+        if (drugLookup(rxcui, p)?.covered !== false) continue;
+        const e = evaluatePlan(p, household, subsidy.monthlyCredit, filters.route === 'direct', approveOnly(drugLookup, rxcui));
+        (out[p.id] ??= {})[rxcui] = { expectedYear: e.expectedYear, badYear: e.badYear, worstCase: e.worstCase };
+      }
     }
     return out;
   }, [household, subsidy.monthlyCredit, filters.route, drugLookup]);
@@ -301,7 +314,7 @@ export function App() {
             requiredIds={requiredHospitalsOf(profile)}
             drugLines={household.members.flatMap((m) => m.drugs ?? [])}
             drugLookup={drugLookup}
-            ifApproved={ifApproved}
+            approvals={approvals}
           />
         )}
         {tab === 'compare' && (

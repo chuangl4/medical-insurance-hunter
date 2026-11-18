@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
-import { RESTRICTION_LABELS, TIER_LABELS, listNote, resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { RESTRICTION_LABELS, TIER_LABELS, listNote, resolveDrug, type Approvals, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { doctorFit, drugFit, hospitalFit, overallFit, type DrugFitKind, type FitPart } from '../domain/fit';
 import { facilityAccess, otherAccess } from '../domain/hospitalAccess';
 import { networkTypeOf } from '../domain/networkRules';
@@ -29,7 +29,8 @@ export interface PlanCardContext {
   requiredIds: string[];
   drugLines: DrugLine[];
   drugLookup: CoverageLookup;
-  ifApproved: Record<string, number | null>;
+  /** Costs if one drug the plan doesn't list were approved by exception. */
+  approvals: Approvals;
 }
 
 interface Props extends PlanCardContext {
@@ -71,7 +72,7 @@ export function planFit(item: EvaluatedPlan, ctx: Pick<PlanCardContext, 'doctors
  * per-hospital, per-doctor and per-medication details; "Plan details" opens the general facts about the plan.
  */
 export function PlanCard(props: Props) {
-  const { item, selected, compareFull, onToggleCompare, doctors, checkingDoctors, firstName, drugLookup, ifApproved } = props;
+  const { item, selected, compareFull, onToggleCompare, doctors, checkingDoctors, firstName, drugLookup, approvals } = props;
   const { plan } = item;
   const [fitOpen, setFitOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -250,7 +251,7 @@ export function PlanCard(props: Props) {
                   <li key={line.itemId} className={`hospital rx-${how.kind === 'cash' ? 'out' : how.source === 'checked' ? 'in' : 'unknown'}`}>
                     <span className="hospital-name">{line.name}:</span> {text}
                     {note && <small className="muted"> ({note})</small>}{' '}
-                    {exception && <ExceptionHelp carrier={plan.carrier} drugName={line.name} expectedYear={item.expectedYear} ifApproved={ifApproved[plan.id] ?? null} />}
+                    {exception && <ExceptionHelp item={item} line={line} approved={line.rxcui ? approvals[plan.id]?.[line.rxcui] : undefined} />}
                   </li>
                 );
               })}

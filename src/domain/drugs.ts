@@ -134,6 +134,14 @@ export const ifExceptionApproved =
     return status && !status.covered ? { covered: true, tier: 'nonPreferredBrand' } : status;
   };
 
+/** Yearly costs of a plan if one drug it doesn't list were approved by exception: plan id → RxNorm id → costs. */
+export type Approvals = Record<string, Record<string, { expectedYear: number | null; badYear: number | null; worstCase: number | null }>>;
+
+/** The same coverage, with only one drug (by RxNorm id) approved by exception, to price that drug on its own. */
+export const approveOnly =
+  (lookup: CoverageLookup, rxcui: string): CoverageLookup =>
+  (id, plan) => (id === rxcui ? ifExceptionApproved(lookup)(id, plan) : lookup(id, plan));
+
 /** A short note on a list answer for plan cards: "from Kaiser's drug list", "as generic", "2026 list", etc. */
 export function listNote(status: PlanDrugStatus | undefined): string {
   if (!status || !('evidence' in status)) return status ? 'your answer' : '';

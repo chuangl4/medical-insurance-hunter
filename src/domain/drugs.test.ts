@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coverageLookup, describeEvidence, ifExceptionApproved, listDisagrees, listNote, type DrugCoverage } from './drugs';
+import { approveOnly, coverageLookup, describeEvidence, ifExceptionApproved, listDisagrees, listNote, type DrugCoverage } from './drugs';
 import type { Plan } from './types';
 
 const plan = (id: string) => ({ id, carrier: 'Test Insurer' }) as Plan;
@@ -41,6 +41,15 @@ describe('exceptions and restrictions', () => {
     const approved = ifExceptionApproved(base);
     expect(approved('9', plan('P1'))).toEqual({ covered: true, tier: 'nonPreferredBrand' });
     expect(approved('9', plan('P2'))).toEqual({ covered: true, tier: 'generic' });
+  });
+  it('approves one drug at a time, leaving the others as they are', () => {
+    const base = coverageLookup({
+      '9': { checkedAt: '', source: '', plans: { P1: { covered: false } } },
+      '8': { checkedAt: '', source: '', plans: { P1: { covered: false } } },
+    });
+    const onlyNine = approveOnly(base, '9');
+    expect(onlyNine('9', plan('P1'))).toEqual({ covered: true, tier: 'nonPreferredBrand' });
+    expect(onlyNine('8', plan('P1'))).toEqual({ covered: false });
   });
   it("adds the list's prior authorization to your matching answer", () => {
     const look = coverageLookup({
