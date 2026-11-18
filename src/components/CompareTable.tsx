@@ -6,8 +6,8 @@ import { DoctorHelp } from './DoctorHelp';
 import { FACILITIES } from '../data/facilityNetworks';
 import { facilityAccess } from '../domain/hospitalAccess';
 import { LIST_STATUS_LABELS } from '../data/hospitalLists';
-import { TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, drugCostText, type CoverageLookup, type DrugLine } from '../domain/drugs';
-import { EXCEPTION_TERM } from '../data/exceptionPolicies';
+import { TIER_LABELS, fillCostText, type DrugTier, listNote, resolveDrug, tierShare, drugCostText, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { EXCEPTION_TERM, exceptionPolicy } from '../data/exceptionPolicies';
 import { SURVEY_LABELS, qualityFor, starsText, surveyFor, surveyScoreText } from '../domain/quality';
 import {
   OUT_OF_NETWORK_TEXT,
@@ -55,6 +55,58 @@ interface Row {
 const SCENARIO_KEYS = { scenario: 'scenarioYear', worst: 'worstCase' } as const satisfies Record<ScenarioId, keyof EvaluatedPlan>;
 const SCENARIO_LABELS: Record<ScenarioId, string> = { scenario: 'Your scenario', worst: 'Worst case' };
 
+const TIER_ROWS: [DrugTier, string][] = [
+  ['generic', 'Generic'],
+  ['preferredBrand', 'Preferred brand'],
+  ['nonPreferredBrand', 'Non-preferred brand'],
+  ['specialty', 'Specialty'],
+];
+
+/** The plan's price for each drug tier; tiers its summary doesn't list are priced like preferred brand, and marked. */
+const DRUG_TIER_ROW: Row = {
+  label: 'Drug tiers (what a covered fill costs)',
+  text: (p) => {
+    const b = p.plan.benefits;
+    if (!b) return 'See plan details';
+    return (
+      <ul className="tier-list">
+        {TIER_ROWS.map(([tier, label]) => {
+          const { share, estimated } = tierShare(b, tier);
+          return (
+            <li key={tier}>
+              <span>{label}</span> {costShareText(share)}
+              {estimated && <small className="muted"> (not in summary; brand price assumed)</small>}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  },
+};
+
+/** What the insurer requires to cover a drug its list leaves out, and what it would cost if approved. */
+const EXCEPTION_ROW: Row = {
+  label: 'Drugs not on the list',
+  text: (p) => {
+    const policy = exceptionPolicy(p.plan.carrier);
+    const b = p.plan.benefits;
+    return (
+      <>
+        <span className={policy.published ? undefined : 'muted'}>{policy.summary}</span>
+        {policy.url && (
+          <>
+            {' '}
+            <a href={policy.url} target="_blank" rel="noreferrer">
+              Source
+            </a>
+          </>
+        )}
+        {b && <small className="fill-cost">If approved, usually the highest brand tier: {costShareText(tierShare(b, 'nonPreferredBrand').share)}.</small>}
+      </>
+    );
+  },
+};
+
 const ROWS: Row[] = [
   ...HOSPITAL_IDS.map((id) => ({
     label: HOSPITALS[id].name,
@@ -68,8 +120,6 @@ const ROWS: Row[] = [
   { label: 'Out-of-pocket limit', text: (p) => moneyOrUnknown(p.oopMax), value: (p) => p.oopMax },
   { label: 'Primary care', text: (p) => primaryCareText(p.plan.benefits) },
   { label: 'Specialist', text: (p) => costShareText(p.plan.benefits?.specialist) },
-  { label: 'Generic drugs', text: (p) => costShareText(p.plan.benefits?.genericRx) },
-  { label: 'Brand-name drugs', text: (p) => costShareText(p.plan.benefits?.brandRx) },
   { label: 'Lab tests', text: (p) => costShareText(p.plan.benefits?.lab) },
   { label: 'X-rays, ultrasounds, eye tests', text: (p) => costShareText(p.plan.benefits?.diagnostic) },
   { label: 'CT or MRI scans', text: (p) => costShareText(p.plan.benefits?.scan) },
@@ -209,7 +259,7 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
   };
   const base = ROWS.slice(HOSPITAL_IDS.length).flatMap((r): Row[] => {
     if (r.label === SCENARIO_LABELS.scenario) return [scenarioRow('scenario')];
-    if (r.label === SCENARIO_LABELS.worst) return [scenarioRow('worst'), ...drugRows];
+    if (r.label === SCENARIO_LABELS.worst) return [scenarioRow('worst'), ...drugRows, DRUG_TIER_ROW, EXCEPTION_ROW];
     return [r];
   });
   const rows = [...hospitalRows, ...doctorRows, ...base, ...facilityRows];
