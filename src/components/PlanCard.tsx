@@ -90,10 +90,16 @@ export function PlanCard(props: Props) {
           <h3>{plan.name}</h3>
           <p className="muted">{plan.carrier}</p>
         </div>
-        <label className="check compare-check">
-          <input type="checkbox" checked={selected} disabled={!selected && compareFull} onChange={() => onToggleCompare(plan.id)} />
-          <span>Compare</span>
-        </label>
+        <button
+          type="button"
+          className={selected ? 'compare-toggle on' : 'compare-toggle'}
+          aria-pressed={selected}
+          disabled={!selected && compareFull}
+          title={!selected && compareFull ? 'Compare is full. Remove a plan from the tray to add this one.' : undefined}
+          onClick={() => onToggleCompare(plan.id)}
+        >
+          {selected ? '✓ Comparing' : compareFull ? 'Compare full' : '+ Compare'}
+        </button>
       </div>
       <div className="badges">
         <span className={`badge metal-${plan.metal}`}>{plan.metal}</span>

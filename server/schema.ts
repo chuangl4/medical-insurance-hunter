@@ -131,6 +131,9 @@ export const profileSchema = z.object({
       stopped: z.array(text(80)).max(100),
     })
     .optional(),
+  setupDone: z.boolean().optional(),
+  shortlist: z.array(text(80).min(1)).max(4).optional(),
+  lastPage: z.enum(['plans', 'compare']).optional(),
 });
 
 export const drugSearchSchema = z.object({ name: text(100).min(2) });

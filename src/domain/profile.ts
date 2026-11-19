@@ -104,7 +104,19 @@ export interface Profile {
   drugCoverage?: Record<string, DrugCoverage>;
   /** The care every plan's "Your scenario" cost is priced against; the default when unset. */
   scenario?: CareScenario;
+  /** False while a new user is in first-time setup; unset for profiles from before setup was tracked. */
+  setupDone?: boolean;
+  /** Plan ids picked for Compare, kept so a return visit picks up where it left off. */
+  shortlist?: string[];
+  /** The page last open, so a return visit opens there. */
+  lastPage?: AppPage;
 }
+
+export type AppPage = 'plans' | 'compare';
+export const MAX_SHORTLIST = 4;
+
+/** First-time setup: setup started and not finished, or nobody to price plans for yet. */
+export const inSetup = (profile: Profile): boolean => profile.setupDone === false || profile.members.length === 0;
 
 export const EMPTY_PROFILE: Profile = {
   version: 1,

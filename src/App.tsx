@@ -1,19 +1,30 @@
-import { DataFreshnessBanner } from './components/DataFreshnessBanner';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, type User } from './api';
 import { ChatOnboarding, type ChatMessage } from './components/ChatOnboarding';
 import { CompareTable } from './components/CompareTable';
+import { CompareTray } from './components/CompareTray';
 import { PlansTab } from './components/PlansTab';
 import { ProfileForm } from './components/ProfileForm';
-import { SignIn } from './components/SignIn';
+import { AppHeader, type SaveState } from './components/AppHeader';
+import { Landing } from './components/Landing';
+import { Onboarding } from './components/Onboarding';
 import { SubsidySummary } from './components/SubsidySummary';
 import { LEGACY_DRUG_NAMES } from './data/careNeeds';
 import { KING_COUNTY_PLANS } from './data/kingCounty2027';
 import { estimateSubsidy, evaluatePlan, isSoldIn } from './domain/calc';
 import { REQUIRED_HOSPITALS } from './data/hospitalNetworks';
-import { EMPTY_FILTERS, type Filters } from './domain/filter';
-import { EMPTY_PROFILE, householdFromProfile, profileFromLegacy, type LegacyHousehold, type Profile } from './domain/profile';
-import { ENROLLMENT, PLAN_YEAR } from './domain/rules2027';
+import { EMPTY_FILTERS, applyFilters, type Filters } from './domain/filter';
+import {
+  EMPTY_PROFILE,
+  MAX_SHORTLIST,
+  householdFromProfile,
+  inSetup,
+  profileFromLegacy,
+  type AppPage,
+  type LegacyHousehold,
+  type Profile,
+} from './domain/profile';
+import { PLAN_YEAR } from './domain/rules2027';
 import { requiredHospitalsOf, useDoctorLookups } from './useDoctorLookups';
 import { useDrugLookups } from './useDrugLookups';
 import { coverageLookup } from './domain/drugs';
@@ -22,11 +33,9 @@ import { ScenarioPanel, medicationNames, takeLegacyScenario } from './components
 
 /** Where earlier versions kept the household. It's moved into the account on first sign-in. */
 const LEGACY_STORAGE_KEY = 'mih.household.v1';
-const MAX_COMPARE = 4;
 const SAVE_DELAY_MS = 700;
 
-type Tab = 'household' | 'plans' | 'compare';
-type SaveState = 'saved' | 'saving' | 'error';
+type Page = AppPage | 'household';
 
 function takeLegacyHousehold(): Profile | null {
   try {
@@ -57,9 +66,10 @@ export function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('saved');
   const [filters, setFilters] = useState<Filters>({ ...EMPTY_FILTERS, hospitals: REQUIRED_HOSPITALS });
-  const [compareIds, setCompareIds] = useState<string[]>([]);
-  const [tab, setTab] = useState<Tab>('household');
-  const [chatOpen, setChatOpen] = useState(false);
+  const [page, setPage] = useState<Page>('plans');
+  const [chatOpen, setChatOpen] = useState(true);
+  /** Set when first-time setup has just finished, for a one-time welcome on the plans page. */
+  const [justSetUp, setJustSetUp] = useState(false);
   // Kept in memory only, so the conversation survives switching tabs but not a reload.
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const lastSaved = useRef<Profile | null>(null);
@@ -73,10 +83,9 @@ export function App() {
       (loaded) => {
         lastSaved.current = loaded;
         setProfile(loaded);
-        if (loaded.members.length === 0) {
-          setTab('household');
-          setChatOpen(true);
-        }
+        // Returning users open where they left off; a Compare page with nothing on it falls back to plans.
+        setPage(loaded.lastPage === 'compare' && (loaded.shortlist ?? []).length > 0 ? 'compare' : 'plans');
+        setChatOpen(true);
       },
       (e: Error) => setLoadError(e.message),
     );
@@ -105,14 +114,20 @@ export function App() {
     return () => clearTimeout(timer);
   }, [profile]);
 
+  // With nobody left to price plans for, setup starts over, and stays on until it's finished again.
+  const emptyHousehold = profile !== null && profile.members.length === 0 && profile.setupDone !== false;
+  useEffect(() => {
+    if (emptyHousehold) setProfile((prev) => prev && { ...prev, setupDone: false });
+  }, [emptyHousehold]);
+
   const signOut = () => {
     api.signOut().finally(() => {
       setUser(null);
       setProfile(null);
       lastSaved.current = null;
-      setCompareIds([]);
       setChatMessages([]);
-      setChatOpen(false);
+      setChatOpen(true);
+      setJustSetUp(false);
     });
   };
 
@@ -163,185 +178,223 @@ export function App() {
     [household.county, scenarioHousehold, subsidy.monthlyCredit, filters.route, costLookup],
   );
   const scenarioText = profile ? scenarioSummary(scenario, household.members, medicationNames(profile)) : '';
-  // Plans not sold in the current county drop out of the comparison and don't use up a slot.
-  const compared = evaluated.filter((p) => compareIds.includes(p.plan.id));
+  // The Compare list is saved with the profile. Plans not sold in the current county drop out and don't use up a slot.
+  const shortlist = profile?.shortlist ?? [];
+  const compared = evaluated.filter((p) => shortlist.includes(p.plan.id));
   const activeCompareIds = compared.map((p) => p.plan.id);
 
   const toggleCompare = (id: string) =>
-    setCompareIds(
-      activeCompareIds.includes(id)
+    setProfile((prev) => {
+      if (!prev) return prev;
+      const next = activeCompareIds.includes(id)
         ? activeCompareIds.filter((x) => x !== id)
-        : activeCompareIds.length < MAX_COMPARE
+        : activeCompareIds.length < MAX_SHORTLIST
           ? [...activeCompareIds, id]
-          : activeCompareIds,
-    );
+          : activeCompareIds;
+      return { ...prev, shortlist: next };
+    });
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'household', label: '1. Your household' },
-    { id: 'plans', label: `2. Browse plans (${evaluated.length})` },
-    { id: 'compare', label: `3. Compare (${compared.length})` },
-  ];
-
-  const header = (
-    <header className="masthead">
-      <div>
-        <h1>Medical Insurance Hunter</h1>
-        <p className="muted">
-          King County, Washington {PLAN_YEAR} plans. Enroll by {ENROLLMENT.januaryDeadline} for January 1 coverage; open enrollment
-          ends {ENROLLMENT.closes}.
-        </p>
-      </div>
-      {user && (
-        <div className="account">
-          <span className="muted">{user.email}</span>
-          {profile && (
-            <span className={saveState === 'error' ? 'warn save-state' : 'muted save-state'} role="status">
-              {saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Not saved. Check your connection.' : 'Saved'}
-            </span>
-          )}
-          <button type="button" className="link-button" onClick={signOut}>
-            Sign out
-          </button>
-        </div>
-      )}
-    </header>
-  );
+  const goTo = (next: Page) => {
+    setPage(next);
+    if (next !== 'household') setProfile((prev) => (prev && prev.lastPage !== next ? { ...prev, lastPage: next } : prev));
+    window.scrollTo({ top: 0 });
+  };
+  const openHousehold = () => {
+    setChatOpen(false);
+    goTo('household');
+  };
+  const finishSetup = () => {
+    // Plans need at least one person to price; the form and chat both say who's still missing.
+    if (!profile?.members.length) return;
+    setProfile((prev) => prev && { ...prev, setupDone: true, lastPage: 'plans' });
+    setJustSetUp(true);
+    setPage('plans');
+    window.scrollTo({ top: 0 });
+  };
 
   if (user === undefined || (user && !profile && !loadError)) {
     return (
-      <div className="app">
-        {header}
-        <p className="muted">Loading…</p>
+      <div className="shell">
+        <AppHeader user={null} />
+        <main className="app">
+          <p className="muted">Loading…</p>
+        </main>
       </div>
     );
   }
   if (user === null) {
     return (
-      <div className="app">
-        {header}
-        <SignIn onSignedIn={startSession} />
+      <div className="shell">
+        <AppHeader user={null} />
+        <main className="app">
+          <Landing onSignedIn={startSession} />
+        </main>
       </div>
     );
   }
   if (!profile) {
     return (
-      <div className="app">
-        {header}
-        <p className="warn">Your profile could not be loaded: {loadError}</p>
+      <div className="shell">
+        <AppHeader user={user} onSignOut={signOut} />
+        <main className="app">
+          <p className="warn">Your profile could not be loaded: {loadError}</p>
+        </main>
       </div>
     );
   }
 
-  const hasPeople = profile.members.length > 0;
-  return (
-    <div className={scenarioOpen && tab !== 'household' ? 'app with-panel' : 'app'}>
-      {user.isAdmin && <DataFreshnessBanner />}
-      {header}
-
-      <p className="estimate-note" role="note">
-        <strong>Estimates.</strong> Premiums and benefits are from {PLAN_YEAR} state and insurer documents; care prices are rough,
-        and networks need confirming with the insurer and hospital before you enroll.
-      </p>
-
-      <nav className="tabs" aria-label="Steps">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={tab === t.id ? 'tab active' : 'tab'}
-            aria-current={tab === t.id ? 'page' : undefined}
-            disabled={!hasPeople && t.id !== 'household'}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* The credit only changes prices when there is one; otherwise it belongs with the household's details. */}
-      {(tab === 'household' || subsidy.monthlyCredit > 0) && (
-        <SubsidySummary subsidy={subsidy} hasChildren={household.members.some((m) => m.age < 19)} />
-      )}
-
-      <main>
-        {tab === 'household' &&
-          (chatOpen ? (
-            <ChatOnboarding
-              profile={profile}
-              onChange={setProfile}
-              messages={chatMessages}
-              onMessages={setChatMessages}
-              onShowPlans={() => setTab('plans')}
-              onUseForm={() => setChatOpen(false)}
-            />
-          ) : (
-            <ProfileForm
-              profile={profile}
-              onChange={setProfile}
-              onDone={() => setTab('plans')}
-              onOpenChat={() => setChatOpen(true)}
-              onPatchProvider={(id, patch) =>
-                setProfile((prev) =>
-                  prev && { ...prev, providers: (prev.providers ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) },
-                )
-              }
-              checking={doctorLookups.checking}
-              onRecheck={doctorLookups.recheck}
-            />
-          ))}
-        {tab === 'plans' && (
-          <PlansTab
-            profile={profile}
-            members={household.members}
-            plans={evaluated}
-            filters={filters}
-            onFiltersChange={setFilters}
-            compareIds={activeCompareIds}
-            maxCompare={MAX_COMPARE}
-            onToggleCompare={toggleCompare}
-            onOpenCompare={() => setTab('compare')}
-            onEditHousehold={() => {
-              setChatOpen(false);
-              setTab('household');
-            }}
-            onProfileChange={(update) => setProfile((prev) => prev && update(prev))}
-            drugChecking={drugLookups.checking}
-            drugErrors={drugLookups.errors}
-            onDrugRecheck={drugLookups.recheck}
-            doctors={doctors}
-            candidates={candidates}
-            checkingDoctors={doctorLookups.checking}
-            requiredIds={requiredHospitalsOf(profile)}
-            drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}
-            drugLookup={drugLookup}
-            scenario={scenario}
-            onEditScenario={openScenario}
-            scenarioText={scenarioText}
-          />
-        )}
-        {tab === 'compare' && (
-          <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => setTab('plans')} doctors={doctors}
-            checkingDoctors={doctorLookups.checking}
-            requiredIds={requiredHospitalsOf(profile)}
-            drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}
-            drugLookup={drugLookup}
-            scenario={scenario}
-            onEditScenario={openScenario}
-            scenarioText={scenarioText}
-            members={household.members}
-          />
-        )}
-      </main>
-      <ScenarioPanel
-        open={scenarioOpen && tab !== 'household'}
-        onClose={closeScenario}
-        returnFocus={scenarioOpener}
+  const profileEditor = (onDone: () => void) =>
+    chatOpen ? (
+      <ChatOnboarding
         profile={profile}
-        scenario={scenario}
-        onChange={setScenario}
-        drugLookup={drugLookup}
-        plans={evaluated}
+        onChange={setProfile}
+        messages={chatMessages}
+        onMessages={setChatMessages}
+        onShowPlans={onDone}
+        onUseForm={() => setChatOpen(false)}
       />
+    ) : (
+      <ProfileForm
+        profile={profile}
+        onChange={setProfile}
+        onDone={onDone}
+        onOpenChat={() => setChatOpen(true)}
+        onPatchProvider={(id, patch) =>
+          setProfile((prev) =>
+            prev && { ...prev, providers: (prev.providers ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) },
+          )
+        }
+        checking={doctorLookups.checking}
+        onRecheck={doctorLookups.recheck}
+      />
+    );
+
+  if (inSetup(profile)) {
+    return (
+      <div className="shell">
+        <AppHeader user={user} saveState={saveState} onSignOut={signOut} />
+        <main className="app">
+          <Onboarding mode={chatOpen ? 'chat' : 'form'} onMode={(m) => setChatOpen(m === 'chat')}>
+            {profileEditor(finishSetup)}
+          </Onboarding>
+        </main>
+      </div>
+    );
+  }
+
+  const fitting = justSetUp ? applyFilters(evaluated, filters, doctors).length : 0;
+  return (
+    <div className="shell">
+      <AppHeader
+        user={user}
+        saveState={saveState}
+        nav={[
+          { id: 'plans', label: 'Plans', count: evaluated.length },
+          { id: 'compare', label: 'Compare', count: compared.length },
+        ]}
+        current={page}
+        onNavigate={(id) => goTo(id as Page)}
+        onOpenHousehold={openHousehold}
+        onSignOut={signOut}
+      />
+      <div
+        className={['app', scenarioOpen && page !== 'household' && 'with-panel', page === 'plans' && compared.length > 0 && 'with-tray']
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {page === 'household' ? (
+          <div className="page-head">
+            <button type="button" className="back-link" onClick={() => goTo(profile.lastPage ?? 'plans')}>
+              ← Back to {profile.lastPage === 'compare' ? 'Compare' : 'plans'}
+            </button>
+            <h1>Your household and needs</h1>
+            <p className="muted">Changes save as you go, and every plan's price and fit updates with them.</p>
+          </div>
+        ) : (
+          <p className="estimate-note" role="note">
+            <strong>Estimates.</strong> Premiums and benefits are from {PLAN_YEAR} state and insurer documents; care prices are rough,
+            and networks need confirming with the insurer and hospital before you enroll.
+          </p>
+        )}
+
+        {justSetUp && page === 'plans' && (
+          <div className="welcome" role="status">
+            <div>
+              <strong>You're all set.</strong> {fitting} of {evaluated.length} plans have everything you marked as a must-have, sorted by
+              your yearly cost. Tick up to {MAX_SHORTLIST} to compare side by side.
+            </div>
+            <button type="button" className="link-button" onClick={() => setJustSetUp(false)}>
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* The credit only changes prices when there is one; otherwise it belongs with the household's details. */}
+        {(page === 'household' || subsidy.monthlyCredit > 0) && (
+          <SubsidySummary subsidy={subsidy} hasChildren={household.members.some((m) => m.age < 19)} />
+        )}
+
+        <main>
+          {page === 'household' && profileEditor(() => goTo('plans'))}
+          {page === 'plans' && (
+            <PlansTab
+              profile={profile}
+              members={household.members}
+              plans={evaluated}
+              filters={filters}
+              onFiltersChange={setFilters}
+              compareIds={activeCompareIds}
+              maxCompare={MAX_SHORTLIST}
+              onToggleCompare={toggleCompare}
+              onEditHousehold={openHousehold}
+              onProfileChange={(update) => setProfile((prev) => prev && update(prev))}
+              drugChecking={drugLookups.checking}
+              drugErrors={drugLookups.errors}
+              onDrugRecheck={drugLookups.recheck}
+              doctors={doctors}
+              candidates={candidates}
+              checkingDoctors={doctorLookups.checking}
+              requiredIds={requiredHospitalsOf(profile)}
+              drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}
+              drugLookup={drugLookup}
+              scenario={scenario}
+              onEditScenario={openScenario}
+              scenarioText={scenarioText}
+            />
+          )}
+          {page === 'compare' && (
+            <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => goTo('plans')} doctors={doctors}
+              checkingDoctors={doctorLookups.checking}
+              requiredIds={requiredHospitalsOf(profile)}
+              drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}
+              drugLookup={drugLookup}
+              scenario={scenario}
+              onEditScenario={openScenario}
+              scenarioText={scenarioText}
+              members={household.members}
+            />
+          )}
+        </main>
+        {page === 'plans' && (
+          <CompareTray
+            plans={compared}
+            max={MAX_SHORTLIST}
+            onRemove={toggleCompare}
+            onClear={() => setProfile((prev) => prev && { ...prev, shortlist: [] })}
+            onOpen={() => goTo('compare')}
+          />
+        )}
+        <ScenarioPanel
+          open={scenarioOpen && page !== 'household'}
+          onClose={closeScenario}
+          returnFocus={scenarioOpener}
+          profile={profile}
+          scenario={scenario}
+          onChange={setScenario}
+          drugLookup={drugLookup}
+          plans={evaluated}
+        />
+      </div>
     </div>
   );
 }

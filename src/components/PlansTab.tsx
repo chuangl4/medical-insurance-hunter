@@ -24,7 +24,6 @@ interface Props extends PlanCardContext {
   compareIds: string[];
   maxCompare: number;
   onToggleCompare: (id: string) => void;
-  onOpenCompare: () => void;
   onEditHousehold: () => void;
   onProfileChange: (update: (prev: Profile) => Profile) => void;
   drugChecking: string[];

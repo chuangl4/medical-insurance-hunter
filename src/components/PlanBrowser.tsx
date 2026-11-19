@@ -23,7 +23,6 @@ interface Props extends PlanCardContext {
   compareIds: string[];
   maxCompare: number;
   onToggleCompare: (id: string) => void;
-  onOpenCompare: () => void;
   /** Shown above the plan list, such as how to read the yearly costs. */
   intro?: ReactNode;
 }
@@ -114,7 +113,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 }
 
 export function PlanBrowser(props: Props) {
-  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, onOpenCompare, intro, ...context } = props;
+  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, intro, ...context } = props;
   const { doctors } = context;
   const [sortKey, setSortKey] = useState<SortKey>('scenarioYear');
   const [descending, setDescending] = useState(false);
@@ -255,11 +254,6 @@ export function PlanBrowser(props: Props) {
             <button type="button" className="secondary" onClick={() => setDescending((d) => !d)}>
               {descending ? 'Highest first' : 'Lowest first'}
             </button>
-            {compareIds.length > 0 && (
-              <button type="button" className="primary" onClick={onOpenCompare}>
-                Compare {compareIds.length}
-              </button>
-            )}
           </div>
         </div>
         {chips.length > 0 && (

@@ -41,3 +41,14 @@ describe('your scenario', () => {
     expect(() => profileSchema.parse({ ...base, scenario: { ...scenario, approved: ['not-an-id'] } })).toThrow();
   });
 });
+
+describe('where you left off', () => {
+  it('saves setup progress, the compare list and the last page', () => {
+    const parsed = profileSchema.parse({ ...base, setupDone: false, shortlist: ['plan-a', 'plan-b'], lastPage: 'compare' });
+    expect(parsed).toMatchObject({ setupDone: false, shortlist: ['plan-a', 'plan-b'], lastPage: 'compare' });
+  });
+  it('rejects a long shortlist or an unknown page', () => {
+    expect(() => profileSchema.parse({ ...base, shortlist: ['a', 'b', 'c', 'd', 'e'] })).toThrow();
+    expect(() => profileSchema.parse({ ...base, lastPage: 'household' })).toThrow();
+  });
+});

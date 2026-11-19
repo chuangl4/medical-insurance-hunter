@@ -62,8 +62,8 @@ export function SignIn({ onSignedIn }: Props) {
 
   return (
     <div className="panel sign-in">
-      <h2>Sign in</h2>
-      <p>Your family's profile is saved to your account, so it's there on any computer you sign in from.</p>
+      <h2>Get started</h2>
+      <p className="muted">Sign in to save your family's details to your account, so they're there on any computer you use.</p>
       {config?.googleClientId && <div ref={buttonRef} />}
       {config?.devLogin && (
         <button type="button" className="secondary" onClick={() => api.devSignIn().then(onSignedIn, (e: Error) => setError(e.message))}>
