@@ -24,7 +24,6 @@ export const OVERALL_TEXT = { good: 'Fits your needs', check: 'Fits, with things
 
 export interface PlanCardContext {
   doctors: Provider[];
-  candidates: Provider[];
   checkingDoctors: string[];
   requiredIds: string[];
   /** Must-have hospitals and doctors unticked in the filters: still shown on each plan, but missing one no longer makes a plan miss a need. */
@@ -48,7 +47,7 @@ interface Props extends PlanCardContext {
 /** How a plan fits the household: the parts of the "Your fit" line, and what the details list. */
 export function planFit(
   item: EvaluatedPlan,
-  ctx: Pick<PlanCardContext, 'doctors' | 'candidates' | 'checkingDoctors' | 'requiredIds' | 'optionalIds' | 'drugLines' | 'drugLookup'>,
+  ctx: Pick<PlanCardContext, 'doctors' | 'checkingDoctors' | 'requiredIds' | 'optionalIds' | 'drugLines' | 'drugLookup'>,
 ) {
   const { plan } = item;
   const drugs = plan.benefits
@@ -59,7 +58,6 @@ export function planFit(
         return { line, how, kind };
       })
     : [];
-  const myCandidates = ctx.candidates.filter((c) => c.candidateFor === plan.carrier);
   const others = otherAccess(plan, ctx.requiredIds);
   const required = (id: string) => !ctx.optionalIds.includes(id);
   const hospitalPart = (ids: string[]) => hospitalFit(ids.map((id) => ({ name: HOSPITALS[id].name, status: hospitalStatus(plan, id) })));
@@ -77,11 +75,8 @@ export function planFit(
     others.known
       ? ({ key: 'others', label: 'Other hospitals', level: 'info', detail: `${others.inCount + others.conditionalCount} of ${others.total}` } satisfies FitPart)
       : null,
-    myCandidates.length
-      ? ({ key: 'candidates', label: 'Candidates', level: 'info', detail: `${myCandidates.length} with this insurer` } satisfies FitPart)
-      : null,
   ].filter((p): p is FitPart => p !== null);
-  return { drugs, myCandidates, others, parts, overall: overallFit(judged) };
+  return { drugs, others, parts, overall: overallFit(judged) };
 }
 
 /**
@@ -94,7 +89,7 @@ export function PlanCard(props: Props) {
   const [fitOpen, setFitOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const { drugs, myCandidates, others, parts, overall } = planFit(item, props);
+  const { drugs, others, parts, overall } = planFit(item, props);
   const net = networkTypeOf(plan);
 
   return (
@@ -232,21 +227,6 @@ export function PlanCard(props: Props) {
                   <li key={d.id} className={`hospital doctor-${status}`}>
                     <span className="hospital-name">{d.name}:</span> {checking && status === 'unknown' ? 'Checking…' : DOCTOR_STATUS_LABELS[status]}{' '}
                     <DoctorHelp provider={d} plan={plan} checking={checking} />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {myCandidates.length > 0 && (
-            <ul className="hospital-list candidate-list">
-              <li className="muted">Candidate doctors with this insurer:</li>
-              {myCandidates.map((c) => {
-                const mark = c.confirmed?.[plan.carrier];
-                return (
-                  <li key={c.id} className={`hospital doctor-${mark ?? 'likely'}`}>
-                    <span className="hospital-name">{c.name}</span>
-                    {c.note && <span className="muted"> ({c.note})</span>}:{' '}
-                    {mark === 'in' ? 'You confirmed in network' : mark === 'out' ? 'You marked out of network' : "Listed in the insurer's directory; confirm"}
                   </li>
                 );
               })}

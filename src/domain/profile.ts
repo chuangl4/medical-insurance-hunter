@@ -72,8 +72,8 @@ export interface Provider extends DoctorFields {
   name: string;
   hospitalId: string | null;
   /**
-   * Set for a candidate doctor: someone you'd see if you chose this insurer (as named in `Plan.carrier`). Candidates
-   * appear on that insurer's plans but never filter plans and aren't checked automatically.
+   * Set for a candidate doctor from earlier versions: someone you'd see if you chose this insurer. No longer shown or
+   * used; kept so saved profiles stay valid, and so these never count as must-have doctors.
    */
   candidateFor?: string;
   /** A short note for a candidate, such as specialty and clinic. */

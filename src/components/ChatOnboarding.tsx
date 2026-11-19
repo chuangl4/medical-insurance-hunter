@@ -142,6 +142,8 @@ export function ChatOnboarding({ profile, onChange, messages, onMessages, onShow
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
   const latestId = messages[messages.length - 1]?.id;
 
+  // Candidate doctors from earlier versions stay saved but aren't shown.
+  const mustBeIn = (profile.providers ?? []).filter((p) => !p.candidateFor);
   return (
     <div className="chat-layout">
       <section className="panel chat" aria-label="Setup chat with Scout">
@@ -268,11 +270,11 @@ export function ChatOnboarding({ profile, onChange, messages, onMessages, onShow
             )}
           </div>
         ))}
-        {(profile.providers ?? []).length > 0 && (
+        {mustBeIn.length > 0 && (
           <div className="side-member">
             <strong>Must be in network</strong>
             <ul>
-              {(profile.providers ?? []).map((p) => (
+              {mustBeIn.map((p) => (
                 <li key={p.id}>
                   <span>
                     {p.name} {!p.hospitalId && <span className="muted">(check directories)</span>}

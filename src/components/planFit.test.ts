@@ -6,7 +6,7 @@ import { evaluatePlan } from '../domain/calc';
 import { planFit } from './PlanCard';
 
 const household = householdFromProfile({ ...EMPTY_PROFILE, members: [{ id: 'm1', label: 'Test', age: 40, careItems: [] }] });
-const ctx = { doctors: [], candidates: [], checkingDoctors: [], requiredIds: [...HOSPITAL_IDS], drugLines: [], drugLookup: () => undefined };
+const ctx = { doctors: [], checkingDoctors: [], requiredIds: [...HOSPITAL_IDS], drugLines: [], drugLookup: () => undefined };
 
 describe('unticked must-haves', () => {
   // A real plan that misses at least one tracked hospital, so the test follows the data.

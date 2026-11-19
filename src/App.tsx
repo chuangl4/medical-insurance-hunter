@@ -139,8 +139,6 @@ export function App() {
   }, [providerHospitals]);
   // Doctors and clinics: everything else on the must-have list. Each one joins the filter when added.
   const doctors = useMemo(() => (profile?.providers ?? []).filter((p) => !p.hospitalId && !p.candidateFor && p.name.trim()), [profile?.providers]);
-  // Candidate doctors show on their insurer's plans only and never filter.
-  const candidates = useMemo(() => (profile?.providers ?? []).filter((p) => p.candidateFor && p.name.trim()), [profile?.providers]);
   const doctorIds = doctors.map((d) => d.id).join(',');
   useEffect(() => {
     if (!doctorIds) return;
@@ -362,7 +360,6 @@ export function App() {
             }
             optionalIds={optionalIds}
               doctors={doctors}
-              candidates={candidates}
               checkingDoctors={doctorLookups.checking}
               requiredIds={requiredHospitalsOf(profile)}
               drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}

@@ -123,7 +123,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 export function PlanBrowser(props: Props) {
   const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, intro, ...rest } = props;
   const { hospitals, untrackedHospitals, meds, onToggleMed, onEditHousehold, ...context } = rest;
-  const { doctors, candidates } = context;
+  const { doctors } = context;
   const [sortKey, setSortKey] = useState<SortKey>('scenarioYear');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showMisses, setShowMisses] = useState(false);
@@ -179,7 +179,7 @@ export function PlanBrowser(props: Props) {
         {filtersOpen ? 'Hide filters' : `Filters${chips.length ? ` (${chips.length})` : ''}`}
       </button>
       <aside className={filtersOpen ? 'filters open' : 'filters'} aria-label="Filters" id="plan-filters">
-        {(mustHaves.length > 0 || meds.length > 0 || candidates.length > 0) && (
+        {(mustHaves.length > 0 || meds.length > 0) && (
           <section className="filter-section must-haves">
             <div className="filters-head">
               <h2>Your must-haves</h2>
@@ -217,15 +217,6 @@ export function PlanBrowser(props: Props) {
                 ))}
                 <p className="hint">Unticked ones are left out of every plan's yearly cost and fit.</p>
               </fieldset>
-            )}
-            {candidates.length > 0 && (
-              <div className="filter-group">
-                <span className="group-label">Candidate doctors</span>
-                <p className="hint">
-                  {candidates.length === 1 ? `${candidates[0].name} is` : `${candidates.length} doctors are`} someone you'd see only if you
-                  picked a particular insurer. They show on that insurer's plans and never hide a plan.
-                </p>
-              </div>
             )}
           </section>
         )}

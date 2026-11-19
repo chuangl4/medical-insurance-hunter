@@ -8,7 +8,7 @@ import type { DoctorStatus } from './doctors';
 export type FitLevel = 'good' | 'check' | 'bad' | 'info';
 
 export interface FitPart {
-  key: 'hospitals' | 'doctors' | 'meds' | 'others' | 'candidates';
+  key: 'hospitals' | 'doctors' | 'meds' | 'others';
   label: string;
   level: FitLevel;
   detail: string;
