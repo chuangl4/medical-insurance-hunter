@@ -22,7 +22,6 @@ export const SORT_LABELS: Record<SortKey, string> = {
 export type BuyingRoute = 'any' | 'exchange' | 'direct';
 
 export interface Filters {
-  search: string;
   metals: Metal[];
   networks: NetworkChoice[];
   carriers: string[];
@@ -39,7 +38,6 @@ export interface Filters {
 }
 
 export const EMPTY_FILTERS: Filters = {
-  search: '',
   metals: [],
   networks: [],
   carriers: [],
@@ -61,9 +59,7 @@ function routeAllows(route: BuyingRoute, channel: Channel): boolean {
 
 export function applyFilters(plans: EvaluatedPlan[], f: Filters, providers: Provider[] = []): EvaluatedPlan[] {
   const doctors = providers.filter((p) => f.doctors.includes(p.id));
-  const search = f.search.trim().toLowerCase();
   return plans.filter(({ plan, netMonthly, deductible, oopMax }) => {
-    if (search && !`${plan.name} ${plan.carrier}`.toLowerCase().includes(search)) return false;
     if (f.metals.length && !f.metals.includes(plan.metal)) return false;
     if (f.networks.length && !f.networks.includes(networkOf(plan))) return false;
     if (f.carriers.length && !f.carriers.includes(plan.carrier)) return false;

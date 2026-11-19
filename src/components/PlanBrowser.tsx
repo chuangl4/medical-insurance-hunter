@@ -62,7 +62,6 @@ const moreFilterCount = (f: Filters) =>
 /** Each active plan filter as a removable chip. */
 function activeChips(f: Filters): { key: string; label: string; clear: Partial<Filters> }[] {
   return [
-    ...(f.search.trim() ? [{ key: 'search', label: `“${f.search.trim()}”`, clear: { search: '' } }] : []),
     ...f.metals.map((m) => ({ key: `metal-${m}`, label: m.charAt(0).toUpperCase() + m.slice(1), clear: { metals: f.metals.filter((x) => x !== m) } })),
     ...f.networks.map((n) => ({ key: `net-${n}`, label: NETWORK_LABELS[n] ?? n, clear: { networks: f.networks.filter((x) => x !== n) } })),
     ...f.carriers.map((c) => ({ key: `car-${c}`, label: c, clear: { carriers: f.carriers.filter((x) => x !== c) } })),
@@ -229,10 +228,6 @@ export function PlanBrowser(props: Props) {
               </button>
             )}
           </div>
-          <label className="field">
-            <span>Search</span>
-            <input type="search" placeholder="Plan or carrier" value={filters.search} onChange={(e) => set({ search: e.target.value })} />
-          </label>
           <CheckGroup legend="Metal level" capitalize options={METALS} selected={filters.metals} counts={counts.metals} onChange={(metals) => set({ metals })} />
           <CheckGroup
             legend="Network type"
