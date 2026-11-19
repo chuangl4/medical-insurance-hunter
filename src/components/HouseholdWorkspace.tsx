@@ -20,12 +20,16 @@ interface Props {
  */
 export function HouseholdWorkspace({ profile, onChange, messages, onMessages, onDone, onPatchProvider, checking, onRecheck }: Props) {
   const [open, setOpen] = useState<SectionId | null>(null);
+  // Highlight what Scout's latest reply changed, until the next message or an undo.
+  const latest = messages[messages.length - 1];
+  const changed = latest?.role === 'assistant' && !latest.undone ? latest.changed ?? [] : [];
   return (
     <div className={open ? 'chat-layout editing' : 'chat-layout'}>
       <ChatOnboarding profile={profile} onChange={onChange} messages={messages} onMessages={onMessages} />
       <ProfileSections
         profile={profile}
         onChange={onChange}
+        changed={changed}
         open={open}
         onOpen={setOpen}
         onDone={onDone}

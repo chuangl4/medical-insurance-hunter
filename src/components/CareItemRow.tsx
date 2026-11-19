@@ -83,7 +83,14 @@ export function CareItemRow<T extends EditableItem>({ item, onChange, onRemove }
       <button type="button" className="link-button" onClick={onRemove} aria-label={`Remove ${item.name || 'this care'}`}>
         Remove
       </button>
-      {medication && <DrugLink name={item.name} drug={item.drug} onChange={(drug) => onChange({ ...item, drug })} />}
+      {medication && (
+        <DrugLink
+          name={item.name}
+          drug={item.drug}
+          notInDatabase={item.notInDrugDatabase}
+          onChange={(drug, notInDatabase) => onChange({ ...item, drug, notInDrugDatabase: notInDatabase || undefined })}
+        />
+      )}
       {item.notes && <small className="care-notes">{item.notes}</small>}
       {selfPay && (
         <div className="cash-detail">

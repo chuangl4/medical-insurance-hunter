@@ -4,7 +4,7 @@ import { HOSPITALS } from '../data/hospitalNetworks';
 import { KING_COUNTY_PLANS } from '../data/kingCounty2027';
 import { carriersToCheck, requiredHospitalsOf } from '../useDoctorLookups';
 import { checklist, findGaps } from '../domain/onboarding';
-import { newId, type AnswerKey, type CareItem, type Profile, type ProfileMember, type Provider } from '../domain/profile';
+import { needsDrugLink, newId, type AnswerKey, type CareItem, type Profile, type ProfileMember, type Provider } from '../domain/profile';
 import { money, parseOptionalNumber } from '../format';
 import { CareItemRow } from './CareItemRow';
 import { DoctorPanel } from './DoctorPanel';
@@ -14,6 +14,8 @@ export type SectionId = 'people' | 'location' | 'providers' | 'income';
 interface Props {
   profile: Profile;
   onChange: (next: Profile) => void;
+  /** Parts Scout's latest reply changed, to highlight (see changedParts). */
+  changed?: string[];
   /** The section being edited, if any. Only one is open at a time. */
   open: SectionId | null;
   onOpen: (id: SectionId | null) => void;
@@ -46,6 +48,8 @@ interface SectionProps {
   id: SectionId;
   title: string;
   done: boolean;
+  /** Scout just changed something here. */
+  fresh?: boolean;
   open: boolean;
   onToggle: () => void;
   summary: ReactNode;
@@ -53,15 +57,16 @@ interface SectionProps {
 }
 
 /** One part of the profile: a short summary, and the full fields while it's being edited. */
-function Section({ id, title, done, open, onToggle, summary, children }: SectionProps) {
+function Section({ id, title, done, fresh, open, onToggle, summary, children }: SectionProps) {
   const bodyId = `profile-${id}`;
   return (
-    <section className={['ps-card', open && 'open', done ? 'ps-done' : 'ps-todo'].filter(Boolean).join(' ')} aria-label={title}>
+    <section className={['ps-card', open && 'open', fresh && 'ps-fresh', done ? 'ps-done' : 'ps-todo'].filter(Boolean).join(' ')} aria-label={title}>
       <div className="ps-head">
         <span className="ps-mark" aria-hidden="true">
           {done ? '✓' : '○'}
         </span>
         <h3>{title}</h3>
+        {fresh && <span className="ps-fresh-tag">Just updated</span>}
         <span className="visually-hidden">{done ? '(done)' : '(still needed)'}</span>
         <button type="button" className="ps-toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
           {open ? 'Done' : 'Edit'}
@@ -74,7 +79,7 @@ function Section({ id, title, done, open, onToggle, summary, children }: Section
   );
 }
 
-export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPatchProvider, checking, onRecheck }: Props) {
+export function ProfileSections({ profile, onChange, changed = [], open, onOpen, onDone, onPatchProvider, checking, onRecheck }: Props) {
   const update = (patch: Partial<Profile>) => onChange({ ...profile, ...patch });
   /** Records that a question was answered here, so the chat doesn't ask it again. */
   const answer = (key: AnswerKey, patch: Partial<Profile>) =>
@@ -94,6 +99,8 @@ export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPat
   const steps = checklist(profile);
   const doneCount = steps.filter((s) => s.done).length;
   const complete = gaps.size === 0;
+  const fresh = new Set(changed);
+  const freshClass = (key: string) => (fresh.has(key) ? 'ps-fresh-line' : undefined);
   const toggle = (id: SectionId) => onOpen(open === id ? null : id);
 
   // Keep the tax household in step with covered people unless the user has set it differently.
@@ -141,8 +148,9 @@ export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPat
 
       <Section
         id="people"
+        fresh={fresh.has('section:people')}
         title="Who needs coverage"
-        done={!anyGap('people', 'age', 'care')}
+        done={!anyGap('people', 'age', 'care', 'drug')}
         open={open === 'people'}
         onToggle={() => toggle('people')}
         summary={
@@ -151,7 +159,7 @@ export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPat
           ) : (
             profile.members.map((m) => (
               <div className="ps-member" key={m.id}>
-                <strong>
+                <strong className={freshClass(`member:${m.id}`)}>
                   {m.label || 'Unnamed'}, {m.needsAge ? 'age needed' : m.age}
                 </strong>
                 {m.careItems.length === 0 ? (
@@ -159,9 +167,10 @@ export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPat
                 ) : (
                   <ul>
                     {m.careItems.map((i) => (
-                      <li key={i.id}>
+                      <li key={i.id} className={freshClass(`item:${i.id}`)}>
                         {i.name || 'Unnamed item'}{' '}
                         <span className="muted">{i.category === 'selfPay' ? `$${i.monthlyCost ?? 0}/mo` : `×${i.perYear}/yr`}</span>
+                        {needsDrugLink(i) && <span className="ps-flag"> · confirm which drug</span>}
                       </li>
                     ))}
                   </ul>
@@ -243,6 +252,7 @@ export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPat
 
       <Section
         id="location"
+        fresh={fresh.has('section:location')}
         title="Where you live"
         done={!gaps.has('location')}
         open={open === 'location'}
@@ -266,6 +276,7 @@ export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPat
 
       <Section
         id="providers"
+        fresh={fresh.has('section:providers')}
         title="Must-have doctors and hospitals"
         done={!gaps.has('providers')}
         open={open === 'providers'}
@@ -276,7 +287,7 @@ export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPat
           ) : (
             <ul className="ps-list">
               {shown.map((p) => (
-                <li key={p.id}>
+                <li key={p.id} className={freshClass(`provider:${p.id}`)}>
                   {p.name || 'Unnamed'}{' '}
                   <span className="muted">{p.hospitalId ? 'hospital' : checking.includes(p.id) ? 'checking networks…' : 'doctor or clinic'}</span>
                 </li>
@@ -339,6 +350,7 @@ export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPat
 
       <Section
         id="income"
+        fresh={fresh.has('section:income')}
         title="Income and subsidies"
         done={!anyGap('taxHousehold', 'income', 'employerOffer', 'immigration')}
         open={open === 'income'}
@@ -404,16 +416,10 @@ export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPat
       </Section>
 
       <div className="ps-actions">
-        {complete ? (
+        {complete && (
           <button type="button" className="primary" onClick={onDone}>
             Show me plans
           </button>
-        ) : (
-          profile.members.length > 0 && (
-            <button type="button" className="secondary" onClick={onDone}>
-              Skip ahead to plans
-            </button>
-          )
         )}
       </div>
     </aside>

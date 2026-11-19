@@ -15,6 +15,7 @@ export const careItemSchema = z.object({
   notes: text(500),
   cashReason: z.enum(CASH_REASONS).optional(),
   drug: z.object({ rxcui: z.string().regex(/^\d{1,10}$/), name: text(300).min(1) }).optional(),
+  notInDrugDatabase: z.boolean().optional(),
 });
 
 const planDrugStatus = { covered: z.boolean(), tier: z.enum(DRUG_TIERS).optional(), restrictions: z.array(z.enum(RESTRICTIONS)).max(3).optional() };

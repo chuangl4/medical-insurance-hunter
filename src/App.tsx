@@ -12,13 +12,13 @@ import { SubsidySummary } from './components/SubsidySummary';
 import { LEGACY_DRUG_NAMES } from './data/careNeeds';
 import { KING_COUNTY_PLANS } from './data/kingCounty2027';
 import { estimateSubsidy, evaluatePlan, isSoldIn } from './domain/calc';
-import { HOSPITAL_IDS, REQUIRED_HOSPITALS } from './data/hospitalNetworks';
 import { EMPTY_FILTERS, applyFilters, type Filters } from './domain/filter';
 import {
   EMPTY_PROFILE,
   MAX_SHORTLIST,
   householdFromProfile,
   inSetup,
+  SAMPLE_MEMBER,
   profileFromLegacy,
   type AppPage,
   type LegacyHousehold,
@@ -65,8 +65,10 @@ export function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('saved');
-  const [filters, setFilters] = useState<Filters>({ ...EMPTY_FILTERS, hospitals: REQUIRED_HOSPITALS });
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [page, setPage] = useState<Page>('plans');
+  /** Looking at plans before setup is finished. Kept in memory, so the next visit opens setup again. */
+  const [browsing, setBrowsing] = useState(false);
   /** Set when first-time setup has just finished, for a one-time welcome on the plans page. */
   const [justSetUp, setJustSetUp] = useState(false);
   // Kept in memory only, so the conversation survives switching tabs but not a reload.
@@ -124,15 +126,16 @@ export function App() {
       setProfile(null);
       lastSaved.current = null;
       setChatMessages([]);
+      setBrowsing(false);
       setJustSetUp(false);
     });
   };
 
-  // Must-have hospitals from the profile join the network filter.
-  const providerHospitals = (profile?.providers ?? []).flatMap((p) => (p.hospitalId ? [p.hospitalId] : [])).join(',');
+  // Must-have hospitals from the profile join the network filter, and leave it when removed from the profile.
+  const providerHospitals = requiredHospitalsOf(profile).join(',');
   useEffect(() => {
-    if (!providerHospitals) return;
-    setFilters((f) => ({ ...f, hospitals: [...new Set([...f.hospitals, ...providerHospitals.split(',')])] }));
+    const ids = providerHospitals ? providerHospitals.split(',') : [];
+    setFilters((f) => ({ ...f, hospitals: [...new Set([...f.hospitals.filter((id) => ids.includes(id)), ...ids])] }));
   }, [providerHospitals]);
   // Doctors and clinics: everything else on the must-have list. Each one joins the filter when added.
   const doctors = useMemo(() => (profile?.providers ?? []).filter((p) => !p.hospitalId && !p.candidateFor && p.name.trim()), [profile?.providers]);
@@ -144,11 +147,18 @@ export function App() {
 
   // Must-haves unticked in the filters: shown on each plan, but missing one doesn't make a plan miss a need.
   const optionalIds = useMemo(
-    () => [...HOSPITAL_IDS.filter((id) => !filters.hospitals.includes(id)), ...doctors.filter((d) => !filters.doctors.includes(d.id)).map((d) => d.id)],
-    [filters.hospitals, filters.doctors, doctors],
+    () => [
+      ...(providerHospitals ? providerHospitals.split(',') : []).filter((id) => !filters.hospitals.includes(id)),
+      ...doctors.filter((d) => !filters.doctors.includes(d.id)).map((d) => d.id),
+    ],
+    [providerHospitals, filters.hospitals, filters.doctors, doctors],
   );
 
-  const household = useMemo(() => householdFromProfile(profile ?? EMPTY_PROFILE), [profile]);
+  // Premiums depend on age, so with nobody added yet, plans are priced for a sample adult (see SAMPLE_MEMBER).
+  const household = useMemo(() => {
+    const base = profile ?? EMPTY_PROFILE;
+    return householdFromProfile(base.members.length ? base : { ...base, members: [SAMPLE_MEMBER] });
+  }, [profile]);
   // Your scenario is saved with the profile, so it follows you to other browsers.
   const scenario = profile?.scenario ?? DEFAULT_SCENARIO;
   const setScenario = useCallback((next: CareScenario) => setProfile((prev) => prev && { ...prev, scenario: next }), []);
@@ -200,12 +210,23 @@ export function App() {
     if (next !== 'household') setProfile((prev) => (prev && prev.lastPage !== next ? { ...prev, lastPage: next } : prev));
     window.scrollTo({ top: 0 });
   };
-  const openHousehold = () => goTo('household');
+  // While setup is unfinished, the household lives on the setup page.
+  const openHousehold = () => {
+    if (profile && inSetup(profile)) {
+      setBrowsing(false);
+      window.scrollTo({ top: 0 });
+    } else goTo('household');
+  };
+  const browsePlans = () => {
+    setBrowsing(true);
+    goTo('plans');
+  };
   const finishSetup = () => {
     // Plans need at least one person to price; the form and chat both say who's still missing.
     if (!profile?.members.length) return;
     setProfile((prev) => prev && { ...prev, setupDone: true, lastPage: 'plans' });
     setJustSetUp(true);
+    setBrowsing(false);
     setPage('plans');
     window.scrollTo({ top: 0 });
   };
@@ -258,12 +279,13 @@ export function App() {
     />
   );
 
-  if (inSetup(profile)) {
+  const previewing = inSetup(profile);
+  if (previewing && !browsing) {
     return (
       <div className="shell">
         <AppHeader user={user} saveState={saveState} onSignOut={signOut} />
         <main className="app">
-          <Onboarding>
+          <Onboarding planCount={evaluated.length} hasPeople={profile.members.length > 0} onBrowse={browsePlans} onSeePlans={finishSetup}>
             {profileEditor(finishSetup)}
           </Onboarding>
         </main>
@@ -271,6 +293,13 @@ export function App() {
     );
   }
 
+  // Before setup, nothing is a must-have yet: saved must-haves wait until there's a household to check.
+  const shownFilters = previewing ? { ...filters, hospitals: [], doctors: [] } : filters;
+  const setShownFilters = (next: Filters) =>
+    setFilters(previewing ? { ...next, hospitals: filters.hospitals, doctors: filters.doctors } : next);
+  const shownOptionalIds = previewing ? [] : optionalIds;
+  const requiredIds = previewing ? [] : requiredHospitalsOf(profile);
+  const shownScenarioText = profile.members.length ? scenarioText : `a sample ${SAMPLE_MEMBER.age}-year-old, no regular care`;
   const fitting = justSetUp ? applyFilters(evaluated, filters, doctors).length : 0;
   return (
     <div className="shell">
@@ -300,10 +329,23 @@ export function App() {
             <p className="muted">Tell Scout, or edit any part of your profile directly. Changes save as you go, and every plan's price and fit updates with them.</p>
           </div>
         ) : (
+          <>
+            {previewing && (
+              <div className="preview-banner" role="note">
+                <p>
+                  <strong>Sample prices.</strong> These are for one {SAMPLE_MEMBER.age}-year-old adult with no regular care. Add your
+                  household to see your own costs and which plans keep your doctors.
+                </p>
+                <button type="button" className="primary" onClick={openHousehold}>
+                  Add your household
+                </button>
+              </div>
+            )}
           <p className="estimate-note" role="note">
             <strong>Estimates.</strong> Premiums and benefits are from {PLAN_YEAR} state and insurer documents; care prices are rough,
             and networks need confirming with the insurer and hospital before you enroll.
           </p>
+          </>
         )}
 
         {justSetUp && page === 'plans' && (
@@ -330,12 +372,13 @@ export function App() {
               profile={profile}
               members={household.members}
               plans={evaluated}
-              filters={filters}
-              onFiltersChange={setFilters}
+              filters={shownFilters}
+              onFiltersChange={setShownFilters}
               compareIds={activeCompareIds}
               maxCompare={MAX_SHORTLIST}
               onToggleCompare={toggleCompare}
               onEditHousehold={openHousehold}
+              setupPrompt={previewing}
               onProfileChange={(update) => setProfile((prev) => prev && update(prev))}
               drugChecking={drugLookups.checking}
               drugErrors={drugLookups.errors}
@@ -343,26 +386,26 @@ export function App() {
             onToggleMed={(id) =>
               setScenario({ ...scenario, stopped: scenario.stopped.includes(id) ? scenario.stopped.filter((x) => x !== id) : [...scenario.stopped, id] })
             }
-            optionalIds={optionalIds}
+            optionalIds={shownOptionalIds}
               doctors={doctors}
               checkingDoctors={doctorLookups.checking}
-              requiredIds={requiredHospitalsOf(profile)}
+              requiredIds={requiredIds}
               drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}
               drugLookup={drugLookup}
               scenario={scenario}
               onEditScenario={openScenario}
-              scenarioText={scenarioText}
+              scenarioText={shownScenarioText}
             />
           )}
           {page === 'compare' && (
             <CompareTable plans={compared} onRemove={toggleCompare} onBrowse={() => goTo('plans')} doctors={doctors}
               checkingDoctors={doctorLookups.checking}
-              requiredIds={requiredHospitalsOf(profile)}
+              requiredIds={requiredIds}
               drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}
               drugLookup={drugLookup}
               scenario={scenario}
               onEditScenario={openScenario}
-              scenarioText={scenarioText}
+              scenarioText={shownScenarioText}
               members={household.members}
             />
           )}

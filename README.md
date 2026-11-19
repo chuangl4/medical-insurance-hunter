@@ -52,7 +52,7 @@ Accuracy, checked 2026-11-16 against Washington Healthplanfinder's prescription 
 
 ## Deploy
 
-On the server, from a fresh clone (so no personal presets get bundled): `npm ci`, `npm run build`, then `npm start`. It serves the app and API on `PORT` (default 3001). Put it behind HTTPS (for example Caddy or nginx), since the session cookie is marked Secure in production. The database lives in `DATA_DIR` (default `data/`); back it up along with `PROFILE_KEY`.
+On the server, from a fresh clone: `npm ci`, `npm run build`, then `npm start`. It serves the app and API on `PORT` (default 3001). Put it behind HTTPS (for example Caddy or nginx), since the session cookie is marked Secure in production. The database lives in `DATA_DIR` (default `data/`); back it up along with `PROFILE_KEY`.
 
 ## Where things live
 
@@ -61,7 +61,7 @@ On the server, from a fresh clone (so no personal presets get bundled): `npm ci`
 - `src/domain/rules2027.ts`: yearly subsidy rules, poverty guidelines, age curve, and care price assumptions, with sources
 - `src/domain/calc.ts`: premiums, tax credit estimate, and out-of-pocket costs
 - `src/domain/filter.ts`: filtering and sorting
-- `src/data/hospitalNetworks.ts`: must-have hospital status, using your personal presets
+- `src/data/hospitalNetworks.ts`: the hospitals the app checks, and each plan's status at them
 - `src/data/planNetworks.ts`: each plan's provider network
 - `src/data/hospitalLists.ts`: hospitals' own published plan lists, by network, with conditions, sources and dates
 - `src/data/facilityNetworks.ts`: hospital access by insurer from Healthplanfinder, with the date checked
@@ -73,31 +73,9 @@ On the server, from a fresh clone (so no personal presets get bundled): `npm ci`
 - `src/domain/freshness.ts`: hand-maintained data, its age limits, and how to refresh it
 - `src/components/`: sign-in, profile and care editors, plan browser, and comparison table
 
-## Personal presets
+## Must-have hospitals
 
-To add hospitals the app can check networks for, and notes the setup chat can reuse (such as cash prices you've looked up), create `src/data/personal/config.ts`. Git ignores that folder, so keep personal details there rather than in tracked files. The app works without it.
-
-```ts
-import type { PersonalConfig } from '../personalConfig';
-
-const config: PersonalConfig = {
-  careNeeds: {
-    example: { label: 'Example care', adds: '2 specialist visits', care: { specialistVisits: 2 } },
-  },
-  selfPayDrugs: { exampleDrug: { label: 'Example drug', monthlyCost: 50 } },
-  hospitals: {
-    exampleHospital: {
-      name: 'Example Hospital',
-      source: 'https://example.com/accepted-insurance',
-      // Or read a hospital in src/data/hospitalLists.ts: status: listNetworkStatus('evergreen')
-      status: (plan) => (plan.carrier === 'Molina' ? 'in' : 'unknown'),
-    },
-  },
-  requiredHospitals: ['exampleHospital'],
-};
-
-export default config;
-```
+Each account picks its own must-have hospitals in its profile (Your household and needs, under doctors and hospitals). The hospitals to choose from are in `src/data/facilityNetworks.ts`; network status comes from each hospital's own list in `src/data/hospitalLists.ts` when there is one, else from Healthplanfinder. To add a hospital, add it to `FACILITIES` and, if it publishes a plan list, to `HOSPITAL_LISTS`. Nothing personal belongs in tracked files: family details live only in each account's encrypted profile.
 
 ## Keeping data current
 

@@ -1,5 +1,6 @@
 import { povertyLine } from './calc';
-import { CATEGORY_LABELS, newId, type AnswerKey, type CareItem, type Profile, type ProfileMember } from './profile';
+import type { DrugRef } from './drugs';
+import { CATEGORY_LABELS, MEDICATION_CATEGORIES, needsDrugLink, newId, type AnswerKey, type CareItem, type Profile, type ProfileMember } from './profile';
 import { MAX_SUBSIDY_FPL, PLAN_YEAR } from './rules2027';
 import type { FilingStatus, ImmigrationStatus } from './types';
 
@@ -68,6 +69,13 @@ export function findGaps(profile: Profile): Gap[] {
         ask: `The care ${nameOf(m)} (member ${m.id}) expects next year: regular and specialist doctors, prescriptions (name, how often, generic or brand), lab work, tests and scans, therapy, and any planned surgery, pregnancy, or hospital stay. Mark it complete once they confirm nothing else is coming, including "nothing".`,
       });
     }
+    for (const item of m.careItems.filter(needsDrugLink)) {
+      gaps.push({
+        id: `drug:${item.id}`,
+        label: `Confirm ${item.name}`,
+        ask: `Which drug ${nameOf(m)}'s "${item.name}" (item ${item.id}) is, so each plan's drug list can be checked: look it up with searchDrugs, then link it with linkItems, or ask the user to choose or correct the name. If they say it isn't a standard drug (compounded, for example), set linkItems with rxcui null.`,
+      });
+    }
   }
   if (!answered.has('providers')) {
     gaps.push({
@@ -133,7 +141,10 @@ export function checklist(profile: Profile): ChecklistStep[] {
   return [
     { label: 'Who needs coverage', done: !open.has('people') && !has('age:') },
     { label: 'Where you live', done: !open.has('location') },
-    ...profile.members.map((m) => ({ label: `${nameOf(m)}'s care`, done: !open.has(`care:${m.id}`) })),
+    ...profile.members.map((m) => ({
+      label: `${nameOf(m)}'s care`,
+      done: !open.has(`care:${m.id}`) && !m.careItems.some((i) => open.has(`drug:${i.id}`)),
+    })),
     ...(profile.members.length ? [] : [{ label: 'Everyone\'s care', done: false }]),
     { label: 'Must-have doctors and hospitals', done: !open.has('providers') },
     { label: 'Income and subsidies', done: !['taxHousehold', 'income', 'employerOffer', 'immigration'].some((id) => open.has(id)) },
@@ -144,8 +155,15 @@ export function checklist(profile: Profile): ChecklistStep[] {
 export interface ChatUpdates {
   newMembers: { ref: string; label: string; age: number | null }[];
   memberChanges: { memberRef: string; label: string | null; age: number | null }[];
-  addItems: (Omit<CareItem, 'id' | 'cashReason'> & { memberRef: string; cashReason: CareItem['cashReason'] | null })[];
+  addItems: (Omit<CareItem, 'id' | 'cashReason' | 'drug' | 'notInDrugDatabase'> & {
+    memberRef: string;
+    cashReason: CareItem['cashReason'] | null;
+    /** The medication's drug database entry, from a search Scout ran for this reply; null when not linked. */
+    drug: DrugRef | null;
+  })[];
   removeItemIds: string[];
+  /** Links an existing medication to its drug database entry, or, with drug null, records that it isn't in the database. */
+  linkItems: { itemId: string; drug: DrugRef | null }[];
   /** People whose care list the user confirmed is complete. */
   careComplete: string[];
   /** The user confirmed the list of people needing coverage is complete. */
@@ -168,6 +186,7 @@ export const NO_UPDATES: ChatUpdates = {
   memberChanges: [],
   addItems: [],
   removeItemIds: [],
+  linkItems: [],
   careComplete: [],
   rosterComplete: false,
   household: {
@@ -183,6 +202,29 @@ export const NO_UPDATES: ChatUpdates = {
   noMustHaveProviders: false,
 };
 
+const firstWord = (name: string) => name.trim().toLowerCase().split(/[^a-z0-9]+/)[0] ?? '';
+
+/**
+ * Scout corrects a care item by removing it and adding a new one. For a medication linked to the drug database, the
+ * corrected one keeps the old one's id, link and price, so its plan-by-plan coverage and your scenario choices (which
+ * are keyed by both) carry over instead of quietly dropping out.
+ */
+function carryOver(item: CareItem, replaced: CareItem[]): CareItem {
+  if (!MEDICATION_CATEGORIES.includes(item.category)) return item;
+  const word = firstWord(item.name);
+  const index = replaced.findIndex((old) => old.drug && word && (firstWord(old.name) === word || firstWord(old.drug.name) === word));
+  if (index < 0) return item;
+  const [old] = replaced.splice(index, 1);
+  return { ...item, id: old.id, drug: item.drug ?? old.drug, monthlyCost: item.monthlyCost ?? old.monthlyCost, notes: item.notes || old.notes };
+}
+
+/** A link Scout set on an existing medication: linked to a drug, or marked as not in the drug database. */
+function linked(item: CareItem, drug: DrugRef | null): CareItem {
+  if (!MEDICATION_CATEGORIES.includes(item.category)) return item;
+  const { notInDrugDatabase: _flag, drug: _drug, ...rest } = item;
+  return drug ? { ...rest, drug } : { ...rest, notInDrugDatabase: true };
+}
+
 /** Applies chat updates. Anything pointing at an unknown person or item is ignored. */
 export function applyChatUpdates(profile: Profile, u: ChatUpdates): Profile {
   const refToId = new Map(profile.members.map((m) => [m.id, m.id]));
@@ -194,23 +236,31 @@ export function applyChatUpdates(profile: Profile, u: ChatUpdates): Profile {
   const changes = new Map(u.memberChanges.map((c) => [refToId.get(c.memberRef), c]));
   const complete = new Set(u.careComplete.map((ref) => refToId.get(ref)));
   const removed = new Set(u.removeItemIds);
+  const links = new Map(u.linkItems.map((l) => [l.itemId, l.drug]));
 
   const members = [...profile.members, ...added].map((member): ProfileMember => {
     const { needsAge, ...rest } = member;
     const change = changes.get(member.id);
+    const replaced = member.careItems.filter((item) => removed.has(item.id) && item.drug);
     const next: ProfileMember = {
       ...rest,
       label: change?.label || member.label,
       age: change?.age ?? member.age,
       careItems: [
-        ...member.careItems.filter((item) => !removed.has(item.id)),
+        ...member.careItems.filter((item) => !removed.has(item.id)).map((item) => (links.has(item.id) ? linked(item, links.get(item.id)!) : item)),
         ...u.addItems
           .filter((item) => refToId.get(item.memberRef) === member.id)
-          .map(({ memberRef: _ref, cashReason, ...item }): CareItem => ({
-            ...item,
-            id: newId('care'),
-            ...(item.category === 'selfPay' && cashReason ? { cashReason } : {}),
-          })),
+          .map(({ memberRef: _ref, cashReason, drug, ...item }): CareItem =>
+            carryOver(
+              {
+                ...item,
+                id: newId('care'),
+                ...(item.category === 'selfPay' && cashReason ? { cashReason } : {}),
+                ...(drug && MEDICATION_CATEGORIES.includes(item.category) ? { drug } : {}),
+              },
+              replaced,
+            ),
+          ),
       ],
     };
     if (needsAge && change?.age == null) next.needsAge = true;
@@ -262,6 +312,13 @@ const IMMIGRATION_LABELS: Record<ImmigrationStatus, string> = {
   other: 'other status',
 };
 
+/** How an item's drug link changed, as a suffix for its line in the change list. */
+function linkNote(was: CareItem | undefined, item: CareItem): string {
+  if (item.drug && item.drug.rxcui !== was?.drug?.rxcui) return `, linked to ${item.drug.name}`;
+  if (item.notInDrugDatabase && !was?.notInDrugDatabase) return ', not in the drug database';
+  return '';
+}
+
 /** Plain-language list of what one set of updates changed, shown under the assistant's reply. */
 export function describeChanges(before: Profile, after: Profile, u: ChatUpdates): string[] {
   const lines: string[] = [];
@@ -272,11 +329,19 @@ export function describeChanges(before: Profile, after: Profile, u: ChatUpdates)
     const old = before.members.find((b) => b.id === m.id);
     if (old && old.label !== m.label) lines.push(`Renamed ${nameOf(old)} to ${nameOf(m)}`);
     if (old && (old.age !== m.age || (old.needsAge && !m.needsAge))) lines.push(`${nameOf(m)} is ${m.age}`);
-    const oldIds = new Set(old?.careItems.map((i) => i.id) ?? []);
     for (const item of m.careItems) {
-      if (oldIds.has(item.id)) continue;
+      const was = old?.careItems.find((i) => i.id === item.id);
+      const same = was && was.name === item.name && was.category === item.category && was.perYear === item.perYear && was.monthlyCost === item.monthlyCost;
+      if (same) continue;
       const amount = item.category === 'selfPay' ? `${dollars(item.monthlyCost ?? 0)}/month` : `${item.perYear}× a year`;
-      lines.push(`${nameOf(m)}: ${item.name} (${CATEGORY_LABELS[item.category].toLowerCase()}, ${amount})`);
+      // A corrected medication keeps its id (see carryOver), so it reads as an update rather than an add.
+      lines.push(`${nameOf(m)}: ${was ? 'updated ' : ''}${item.name} (${CATEGORY_LABELS[item.category].toLowerCase()}, ${amount})${linkNote(was, item)}`);
+    }
+    for (const item of m.careItems) {
+      const was = old?.careItems.find((i) => i.id === item.id);
+      const same = was && was.name === item.name && was.category === item.category && was.perYear === item.perYear && was.monthlyCost === item.monthlyCost;
+      // Only a link changed: the line above skipped it.
+      if (same && linkNote(was, item)) lines.push(`${nameOf(m)}: ${item.name}${linkNote(was, item)}`);
     }
     const keptIds = new Set(m.careItems.map((i) => i.id));
     for (const item of old?.careItems ?? []) if (!keptIds.has(item.id)) lines.push(`${nameOf(m)}: removed ${item.name}`);
@@ -297,4 +362,39 @@ export function describeChanges(before: Profile, after: Profile, u: ChatUpdates)
   for (const p of after.providers ?? []) if (!oldProviders.has(p.id)) lines.push(`Must be in network: ${p.name}`);
   if (u.noMustHaveProviders && !u.providers.length) lines.push('No must-have doctors or hospitals');
   return lines;
+}
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * The parts of the profile one reply changed, so the profile can point them out: `section:<id>` for each card,
+ * `member:<id>` for a new or edited person, `item:<id>` for a new or edited care item, `provider:<id>` for a new or edited
+ * doctor or hospital.
+ */
+export function changedParts(before: Profile, after: Profile): string[] {
+  const parts = new Set<string>();
+  for (const m of after.members) {
+    const old = before.members.find((b) => b.id === m.id);
+    if (!old || old.label !== m.label || old.age !== m.age || old.needsAge !== m.needsAge || old.careReviewed !== m.careReviewed) {
+      parts.add(`member:${m.id}`);
+    }
+    for (const item of m.careItems) {
+      if (!same(item, old?.careItems.find((i) => i.id === item.id))) parts.add(`item:${item.id}`);
+    }
+    // A removed item leaves nothing to point at, so point at its person.
+    if (old?.careItems.some((i) => !m.careItems.some((x) => x.id === i.id))) parts.add(`member:${m.id}`);
+  }
+  const roster = (p: Profile) => (p.answered ?? []).includes('roster');
+  if (parts.size || before.members.length !== after.members.length || roster(before) !== roster(after)) parts.add('section:people');
+  if (before.inKingCounty !== after.inKingCounty) parts.add('section:location');
+  for (const p of after.providers ?? []) {
+    if (!same(p, (before.providers ?? []).find((b) => b.id === p.id))) parts.add(`provider:${p.id}`);
+  }
+  const providersAnswered = (p: Profile) => (p.answered ?? []).includes('providers');
+  if (!same(before.providers ?? [], after.providers ?? []) || providersAnswered(before) !== providersAnswered(after)) {
+    parts.add('section:providers');
+  }
+  const income = (p: Profile) => [p.overSubsidyLimit, p.annualIncome, p.taxHouseholdSize, p.filingStatus, p.immigration, p.affordableEmployerOffer];
+  if (!same(income(before), income(after))) parts.add('section:income');
+  return [...parts];
 }

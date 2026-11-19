@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { HOSPITAL_IDS, hospitalStatus } from '../data/hospitalNetworks';
+import { hospitalStatus } from '../data/hospitalNetworks';
 import { KING_COUNTY_PLANS } from '../data/kingCounty2027';
 import { EMPTY_PROFILE, householdFromProfile } from '../domain/profile';
 import { evaluatePlan } from '../domain/calc';
 import { planFit } from './PlanCard';
 
 const household = householdFromProfile({ ...EMPTY_PROFILE, members: [{ id: 'm1', label: 'Test', age: 40, careItems: [] }] });
-const ctx = { doctors: [], checkingDoctors: [], requiredIds: [...HOSPITAL_IDS], drugLines: [], drugLookup: () => undefined };
+// Two hospitals picked as must-haves, as a household would from its profile.
+const HOSPITAL_IDS = ['overlake', 'valley'];
+const ctx = { doctors: [], checkingDoctors: [], requiredIds: HOSPITAL_IDS, drugLines: [], drugLookup: () => undefined };
 
 describe('unticked must-haves', () => {
   // A real plan that misses at least one tracked hospital, so the test follows the data.

@@ -130,10 +130,16 @@ export function ScenarioPanel({ open, onClose, returnFocus, profile, scenario, o
   const notListed = (rxcui: string) => plans.filter((p) => drugLookup(rxcui, p.plan)?.covered === false).length;
   // Which medications count is set with your must-haves; here you only choose what happens where one isn't listed.
   const leftOut = meds.filter((m) => scenario.stopped.includes(m.id));
-  const choices = meds
-    .filter((m) => !scenario.stopped.includes(m.id) && m.rxcui)
+  const counted = meds.filter((m) => !scenario.stopped.includes(m.id));
+  const checked = (rxcui: string) => plans.some((p) => drugLookup(rxcui, p.plan) !== undefined);
+  const choices = counted
+    .filter((m) => m.rxcui && checked(m.rxcui))
     .map((med) => ({ med, missing: notListed(med.rxcui!) }))
     .filter((c) => c.missing > 0);
+  // Medications with no choice to make yet, said out loud so they never just vanish from this list.
+  const unlinked = counted.filter((m) => !m.rxcui);
+  const unchecked = counted.filter((m) => m.rxcui && !checked(m.rxcui));
+  const names = (list: MedItem[]) => list.map((m) => m.name).join(', ');
 
   return (
     <aside ref={panel} className="scenario-panel" role="dialog" aria-modal="false" aria-labelledby="scenario-panel-title" tabIndex={-1}>
@@ -208,7 +214,7 @@ export function ScenarioPanel({ open, onClose, returnFocus, profile, scenario, o
           </label>
         </fieldset>
 
-        {(choices.length > 0 || leftOut.length > 0) && (
+        {(choices.length > 0 || leftOut.length > 0 || unlinked.length > 0 || unchecked.length > 0) && (
           <fieldset className="sc-group sc-meds">
             <legend>Medications not on every drug list</legend>
             {choices.map(({ med: m, missing }) => (
@@ -230,7 +236,16 @@ export function ScenarioPanel({ open, onClose, returnFocus, profile, scenario, o
                 </select>
               </label>
             ))}
-            {choices.length === 0 && <p className="hint">Every medication in your costs is on every plan's drug list.</p>}
+            {choices.length === 0 && unlinked.length === 0 && unchecked.length === 0 && (
+              <p className="hint">Every medication in your costs is on every plan's drug list.</p>
+            )}
+            {unlinked.length > 0 && (
+              <p className="hint">
+                Priced as cash on every plan: {names(unlinked)}. To check each plan's drug list and choose an exception instead, link{' '}
+                {unlinked.length === 1 ? 'it' : 'each one'} to the drug database under Your household and needs.
+              </p>
+            )}
+            {unchecked.length > 0 && <p className="hint">Still checking drug lists for {names(unchecked)}.</p>}
             {leftOut.length > 0 && (
               <p className="hint">
                 Left out of your costs: {leftOut.map((m) => m.name).join(', ')}. Change this under Your must-haves on the Plans page.

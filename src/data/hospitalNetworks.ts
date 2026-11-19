@@ -1,14 +1,26 @@
 import { doctorStatus, type DoctorFields } from '../domain/doctors';
+import { listNetworkStatus } from '../domain/hospitalAccess';
 import type { Plan } from '../domain/types';
-import { PERSONAL, type Hospital, type NetworkStatus } from './personalConfig';
+import { FACILITIES, FACILITY_SOURCE } from './facilityNetworks';
+import { HOSPITAL_LISTS } from './hospitalLists';
 
-export type { NetworkStatus } from './personalConfig';
 export type HospitalId = string;
+/** 'out' is confirmed out of network; 'not-listed' only means the hospital's list didn't name the plan. */
+export type NetworkStatus = 'in' | 'limited' | 'out' | 'not-listed' | 'unknown';
 
-/** Hospitals come from the personal config, so none are tracked without it. */
-export const HOSPITALS: Record<HospitalId, Hospital> = PERSONAL.hospitals ?? {};
-export const HOSPITAL_IDS: HospitalId[] = Object.keys(HOSPITALS);
-export const REQUIRED_HOSPITALS: HospitalId[] = PERSONAL.requiredHospitals ?? [];
+export interface Hospital {
+  name: string;
+  source: string;
+  status: (plan: Plan) => NetworkStatus;
+}
+
+/**
+ * Every hospital the app can check networks for, the same for everyone. Which ones matter to a household comes from
+ * its own profile: a must-have provider with a `hospitalId`.
+ */
+export const HOSPITALS: Record<HospitalId, Hospital> = Object.fromEntries(
+  FACILITIES.map((f) => [f.id, { name: f.name, source: HOSPITAL_LISTS[f.id]?.source ?? FACILITY_SOURCE.url, status: listNetworkStatus(f.id) }]),
+);
 
 export const STATUS_LABELS: Record<NetworkStatus, string> = {
   in: 'In network',

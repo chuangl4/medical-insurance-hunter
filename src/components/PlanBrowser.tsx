@@ -33,6 +33,8 @@ interface Props extends PlanCardContext {
   meds: { id: string; name: string; who: string; included: boolean }[];
   onToggleMed: (id: string) => void;
   onEditHousehold: () => void;
+  /** Setup isn't finished: open the filters with a prompt to add the household. */
+  setupPrompt?: boolean;
 }
 
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -121,7 +123,7 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 
 export function PlanBrowser(props: Props) {
   const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, intro, ...rest } = props;
-  const { hospitals, untrackedHospitals, meds, onToggleMed, onEditHousehold, ...context } = rest;
+  const { hospitals, untrackedHospitals, meds, onToggleMed, onEditHousehold, setupPrompt, ...context } = rest;
   const { doctors } = context;
   const [sortKey, setSortKey] = useState<SortKey>('scenarioYear');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -150,7 +152,7 @@ export function PlanBrowser(props: Props) {
   const toggleMustHave = (m: (typeof mustHaves)[number]) =>
     set({ [m.field]: m.on ? filters[m.field].filter((x) => x !== m.id) : [...filters[m.field], m.id] });
   // Unticked must-haves stay visible as chips, so a list that includes plans without them says so.
-  const optionalChips = mustHaves
+  const optionalChips = (setupPrompt ? [] : mustHaves)
     .filter((m) => !m.on)
     .map((m) => ({ key: `opt-${m.id}`, label: `Optional: ${m.name}`, title: `Make ${m.name} a must-have again`, onClick: () => toggleMustHave(m) }));
   const chips = activeChips(filters);
@@ -166,6 +168,7 @@ export function PlanBrowser(props: Props) {
           selected={compareIds.includes(item.plan.id)}
           compareFull={compareIds.length >= maxCompare}
           onToggleCompare={onToggleCompare}
+          hideFit={setupPrompt}
           {...context}
         />
       ))}
@@ -178,7 +181,16 @@ export function PlanBrowser(props: Props) {
         {filtersOpen ? 'Hide filters' : `Filters${chips.length ? ` (${chips.length})` : ''}`}
       </button>
       <aside className={filtersOpen ? 'filters open' : 'filters'} aria-label="Filters" id="plan-filters">
-        {(mustHaves.length > 0 || meds.length > 0) && (
+        {setupPrompt && (
+          <section className="setup-prompt">
+            <h2>See which plans fit you</h2>
+            <p>Add who needs coverage, your doctors and hospitals, and your medications. We'll check every plan against them and work out your own yearly cost.</p>
+            <button type="button" className="primary" onClick={onEditHousehold}>
+              Add your household
+            </button>
+          </section>
+        )}
+        {!setupPrompt && (mustHaves.length > 0 || meds.length > 0) && (
           <section className="filter-section must-haves">
             <div className="filters-head">
               <h2>Your must-haves</h2>

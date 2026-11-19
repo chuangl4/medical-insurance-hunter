@@ -50,7 +50,24 @@ export interface CareItem {
   notes: string;
   /** For self-pay items: why the plan won't pay, which decides the suggested next steps. */
   cashReason?: CashReason;
+  /** The user said this medication isn't in the drug database (a compounded product, say), so it's never linked. */
+  notInDrugDatabase?: boolean;
 }
+
+/** Care categories that are medications, and so can be linked to the drug database. */
+export const MEDICATION_CATEGORIES: CareCategory[] = ['genericFills', 'brandFills', 'selfPay'];
+
+/**
+ * A medication that should be linked to the drug database but isn't yet, so its coverage can't be checked plan by plan.
+ * Things plans almost never cover (cosmetic or compounded products) and ones the user says aren't in the database don't
+ * need a link.
+ */
+export const needsDrugLink = (item: CareItem): boolean =>
+  MEDICATION_CATEGORIES.includes(item.category) &&
+  !item.drug &&
+  !item.notInDrugDatabase &&
+  item.cashReason !== 'usuallyNotCovered' &&
+  item.name.trim().length > 0;
 
 export interface ProfileMember {
   id: string;
@@ -117,6 +134,12 @@ export const MAX_SHORTLIST = 4;
 
 /** First-time setup: setup started and not finished, or nobody to price plans for yet. */
 export const inSetup = (profile: Profile): boolean => profile.setupDone === false || profile.members.length === 0;
+
+/**
+ * Who plans are priced for before anyone is added: one adult with no regular care. Age 40 is the usual example in
+ * published premium comparisons (KFF uses it), and sits mid-way on the age curve. Never saved to the profile.
+ */
+export const SAMPLE_MEMBER: ProfileMember = { id: 'sample', label: 'Sample adult', age: 40, careItems: [] };
 
 export const EMPTY_PROFILE: Profile = {
   version: 1,

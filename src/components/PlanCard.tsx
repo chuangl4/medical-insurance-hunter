@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChangeScenarioButton } from './ChangeScenarioButton';
-import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
+import { HOSPITALS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
 import { EXCEPTION_TERM } from '../data/exceptionPolicies';
 import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import { RESTRICTION_LABELS, TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, drugCostText, type CoverageLookup, type DrugLine } from '../domain/drugs';
@@ -42,7 +42,12 @@ interface Props extends PlanCardContext {
   selected: boolean;
   compareFull: boolean;
   onToggleCompare: (id: string) => void;
+  /** No household yet, so there's nothing to check the plan against. */
+  hideFit?: boolean;
 }
+
+/** The household's must-have hospitals the app has network status for. */
+const trackedHospitals = (requiredIds: string[]) => requiredIds.filter((id) => HOSPITALS[id]);
 
 /** How a plan fits the household: the parts of the "Your fit" line, and what the details list. */
 export function planFit(
@@ -60,16 +65,17 @@ export function planFit(
     : [];
   const others = otherAccess(plan, ctx.requiredIds);
   const required = (id: string) => !ctx.optionalIds.includes(id);
+  const hospitalIds = trackedHospitals(ctx.requiredIds);
   const hospitalPart = (ids: string[]) => hospitalFit(ids.map((id) => ({ name: HOSPITALS[id].name, status: hospitalStatus(plan, id) })));
   const doctorPart = (docs: Provider[]) =>
     doctorFit(docs.map((d) => ({ status: doctorStatusFor(d, plan).status, checking: ctx.checkingDoctors.includes(d.id) })));
   const drugPart = drugFit(drugs.map((d) => d.kind));
   // The line shows every hospital and doctor; only the ticked must-haves decide whether the plan misses a need.
-  const judged = [hospitalPart(HOSPITAL_IDS.filter(required)), doctorPart(ctx.doctors.filter((d) => required(d.id))), drugPart].filter(
+  const judged = [hospitalPart(hospitalIds.filter(required)), doctorPart(ctx.doctors.filter((d) => required(d.id))), drugPart].filter(
     (p): p is FitPart => p !== null,
   );
   const parts = [
-    hospitalPart(HOSPITAL_IDS),
+    hospitalPart(hospitalIds),
     doctorPart(ctx.doctors),
     drugPart,
     others.known
@@ -84,12 +90,13 @@ export function planFit(
  * per-hospital, per-doctor and per-medication details; "Plan details" opens the general facts about the plan.
  */
 export function PlanCard(props: Props) {
-  const { item, selected, compareFull, onToggleCompare, doctors, checkingDoctors, drugLookup, scenario, onEditScenario } = props;
+  const { item, selected, compareFull, onToggleCompare, hideFit, doctors, checkingDoctors, drugLookup, scenario, onEditScenario } = props;
   const { plan } = item;
   const [fitOpen, setFitOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const { drugs, others, parts, overall } = planFit(item, props);
+  const hospitalIds = trackedHospitals(props.requiredIds);
   const net = networkTypeOf(plan);
 
   return (
@@ -154,7 +161,7 @@ export function PlanCard(props: Props) {
 
       <NetworkRulesLine plan={plan} />
 
-      {parts.length > 0 && (
+      {!hideFit && parts.length > 0 && (
         <button
           type="button"
           className="fit-strip"
@@ -177,11 +184,11 @@ export function PlanCard(props: Props) {
         </button>
       )}
 
-      {fitOpen && (
+      {!hideFit && fitOpen && (
         <div className="fit-details">
-          {HOSPITAL_IDS.length > 0 && (
+          {hospitalIds.length > 0 && (
             <ul className="hospital-list">
-              {HOSPITAL_IDS.map((id) => {
+              {hospitalIds.map((id) => {
                 const status = hospitalStatus(plan, id);
                 const access = facilityAccess(plan, id);
                 return (
@@ -199,7 +206,7 @@ export function PlanCard(props: Props) {
               })}
               <li className="hint">
                 From hospital and insurer lists, often by insurer rather than plan. Check{' '}
-                {HOSPITAL_IDS.map((id, index) => (
+                {hospitalIds.map((id, index) => (
                   <span key={id}>
                     {index > 0 && ' and '}
                     <a href={HOSPITALS[id].source} target="_blank" rel="noreferrer">

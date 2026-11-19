@@ -1,4 +1,4 @@
-import { HOSPITALS, HOSPITAL_IDS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
+import { HOSPITALS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
 import { ChangeScenarioButton } from './ChangeScenarioButton';
 import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import type { Provider } from '../domain/profile';
@@ -109,10 +109,6 @@ const EXCEPTION_ROW: Row = {
 };
 
 const ROWS: Row[] = [
-  ...HOSPITAL_IDS.map((id) => ({
-    label: HOSPITALS[id].name,
-    text: (p: EvaluatedPlan) => STATUS_LABELS[hospitalStatus(p.plan, id)],
-  })),
   { label: 'Monthly premium', text: (p) => money(p.netMonthly), value: (p) => p.netMonthly },
   { label: 'Tax credit', text: (p) => (p.creditMonthly > 0 ? `${money(p.creditMonthly)}/mo` : 'None') },
   { label: SCENARIO_LABELS.scenario, text: (p) => moneyOrUnknown(p.scenarioYear), value: (p) => p.scenarioYear },
@@ -216,7 +212,7 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
       );
     },
   }));
-  const hospitalRows: Row[] = HOSPITAL_IDS.map((id) => ({
+  const hospitalRows: Row[] = requiredIds.filter((id) => HOSPITALS[id]).map((id) => ({
     label: HOSPITALS[id].name,
     text: (p) => {
       const a = facilityAccess(p.plan, id);
@@ -224,7 +220,7 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
       return `${STATUS_LABELS[status]}${a.note && status !== 'in' ? ` (${a.note})` : ''}${a.disagrees ? ` (Healthplanfinder: ${a.directorySays === 'in' ? 'in network' : 'not covered'})` : ''}`;
     },
   }));
-  const facilityRows: Row[] = FACILITIES.filter((f) => !requiredIds.includes(f.id) && !HOSPITAL_IDS.includes(f.id)).map((f) => ({
+  const facilityRows: Row[] = FACILITIES.filter((f) => !requiredIds.includes(f.id)).map((f) => ({
     label: `${f.name}${f.why ? ` (${f.why.split(' (')[0].toLowerCase()})` : ''}`,
     text: (p) => {
       const a = facilityAccess(p.plan, f.id);
@@ -258,7 +254,7 @@ export function CompareTable({ plans, onRemove, onBrowse, doctors, checkingDocto
       },
     };
   };
-  const base = ROWS.slice(HOSPITAL_IDS.length).flatMap((r): Row[] => {
+  const base = ROWS.flatMap((r): Row[] => {
     if (r.label === SCENARIO_LABELS.scenario) return [scenarioRow('scenario')];
     if (r.label === SCENARIO_LABELS.worst) return [scenarioRow('worst'), ...drugRows, DRUG_TIER_ROW, EXCEPTION_ROW];
     return [r];

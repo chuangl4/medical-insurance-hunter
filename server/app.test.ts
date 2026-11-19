@@ -268,6 +268,7 @@ describe('cleaning assistant output', () => {
   it('drops unknown people, items, and hospitals, and keeps numbers in range', () => {
     const cleaned = cleanOutput(
       {
+        searchDrugs: [],
         reply: ' Woof! ',
         quickReplies: [' Yes ', '', 'No', 'Maybe', 'Later', 'Extra'],
         updates: {
@@ -280,11 +281,17 @@ describe('cleaning assistant output', () => {
             { memberRef: 'ghost', label: 'X', age: 1 },
           ],
           addItems: [
-            { memberRef: 'm1', name: 'Inhaler', category: 'brandFills', perYear: 900, monthlyCost: 50, notes: '', cashReason: 'preferCash' },
-            { memberRef: 'new-1', name: 'Cream', category: 'selfPay', perYear: 1, monthlyCost: -5, notes: 'Estimated', cashReason: 'usuallyNotCovered' },
-            { memberRef: 'nobody', name: 'Lost', category: 'labTests', perYear: 1, monthlyCost: null, notes: '', cashReason: null },
+            { memberRef: 'm1', name: 'Inhaler', category: 'brandFills', perYear: 900, monthlyCost: 50, notes: '', cashReason: 'preferCash', rxcui: '111' },
+            { memberRef: 'new-1', name: 'Cream', category: 'selfPay', perYear: 1, monthlyCost: -5, notes: 'Estimated', cashReason: 'usuallyNotCovered', rxcui: '999' },
+            { memberRef: 'nobody', name: 'Lost', category: 'labTests', perYear: 1, monthlyCost: null, notes: '', cashReason: null, rxcui: null },
           ],
           removeItemIds: ['c1', 'not-an-item'],
+          linkItems: [
+            { itemId: 'c1', rxcui: '111' },
+            { itemId: 'c1', rxcui: '999' },
+            { itemId: 'c1', rxcui: null },
+            { itemId: 'not-an-item', rxcui: null },
+          ],
           careComplete: ['m1', 'ghost'],
           rosterComplete: true,
           household: { ...NO_UPDATES.household, annualIncome: -10, taxHouseholdSize: 99 },
@@ -296,6 +303,8 @@ describe('cleaning assistant output', () => {
         },
       },
       { profile, knownHospitals: [{ id: 'h1', name: 'Hospital One' }] },
+      // Only drugs a search found in this reply can be linked.
+      new Map([['111', { rxcui: '111', name: 'Test inhaler 90 MCG [Brandname]' }]]),
     );
     expect(cleaned.reply).toBe('Woof!');
     expect(cleaned.quickReplies).toEqual(['Yes', 'No', 'Maybe', 'Later']);
@@ -303,10 +312,23 @@ describe('cleaning assistant output', () => {
     expect(u.newMembers).toEqual([{ ref: 'new-1', label: 'Kid', age: 13 }]);
     expect(u.memberChanges).toEqual([{ memberRef: 'm1', label: null, age: 51 }]);
     expect(u.addItems).toEqual([
-      { memberRef: 'm1', name: 'Inhaler', category: 'brandFills', perYear: 366, monthlyCost: null, notes: '', cashReason: null },
-      { memberRef: 'new-1', name: 'Cream', category: 'selfPay', perYear: 12, monthlyCost: 0, notes: 'Estimated', cashReason: 'usuallyNotCovered' },
+      {
+        memberRef: 'm1',
+        name: 'Inhaler',
+        category: 'brandFills',
+        perYear: 366,
+        monthlyCost: null,
+        notes: '',
+        cashReason: null,
+        drug: { rxcui: '111', name: 'Test inhaler 90 MCG [Brandname]' },
+      },
+      { memberRef: 'new-1', name: 'Cream', category: 'selfPay', perYear: 12, monthlyCost: 0, notes: 'Estimated', cashReason: 'usuallyNotCovered', drug: null },
     ]);
     expect(u.removeItemIds).toEqual(['c1']);
+    expect(u.linkItems).toEqual([
+      { itemId: 'c1', drug: { rxcui: '111', name: 'Test inhaler 90 MCG [Brandname]' } },
+      { itemId: 'c1', drug: null },
+    ]);
     expect(u.careComplete).toEqual(['m1']);
     expect(u.household).toMatchObject({ annualIncome: 0, taxHouseholdSize: 20 });
     expect(u.providers).toEqual([

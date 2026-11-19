@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import { PARSER_HINTS } from '../data/careNeeds';
 import { HOSPITALS } from '../data/hospitalNetworks';
-import { applyChatUpdates, describeChanges, findGaps, nextGaps } from '../domain/onboarding';
+import { applyChatUpdates, changedParts, describeChanges, findGaps, nextGaps } from '../domain/onboarding';
 import { newId, type Profile } from '../domain/profile';
 
 export interface ChatMessage {
@@ -12,6 +11,8 @@ export interface ChatMessage {
   quickReplies?: string[];
   /** What this reply changed in the profile. */
   changes?: string[];
+  /** The parts of the profile this reply changed, which the profile highlights (see changedParts). */
+  changed?: string[];
   /** The profile before this reply's changes, for Undo. */
   before?: Profile;
   undone?: boolean;
@@ -97,7 +98,7 @@ export function ChatOnboarding({ profile, onChange, messages, onMessages }: Prop
           role: m.role,
           content: m.undone ? `${m.text}\n\n[The user undid the changes from this reply.]` : m.text,
         }));
-      const result = await api.chat({ messages: sent, profile: profileRef.current, hints: PARSER_HINTS, knownHospitals: KNOWN_HOSPITALS });
+      const result = await api.chat({ messages: sent, profile: profileRef.current, knownHospitals: KNOWN_HOSPITALS });
       const before = profileRef.current;
       const after = applyChatUpdates(before, result.updates);
       const changes = describeChanges(before, after, result.updates);
@@ -110,6 +111,7 @@ export function ChatOnboarding({ profile, onChange, messages, onMessages }: Prop
           text: result.reply,
           quickReplies: result.quickReplies,
           changes,
+          changed: changes.length ? changedParts(before, after) : undefined,
           before: changes.length ? before : undefined,
         },
       ]);
@@ -153,12 +155,20 @@ export function ChatOnboarding({ profile, onChange, messages, onMessages }: Prop
                 <p>{m.text}</p>
                 {m.changes && m.changes.length > 0 && (
                   <div className={m.undone ? 'changes undone' : 'changes'}>
-                    <span className="changes-title">{m.undone ? 'Undone' : 'Saved to your profile'}</span>
-                    <ul>
-                      {m.changes.map((c) => (
-                        <li key={c}>{c}</li>
-                      ))}
-                    </ul>
+                    {/* The profile highlights what changed; the list stays a click away, mainly for small screens. */}
+                    <details>
+                      <summary className="changes-title">
+                        {m.undone ? 'Undone' : 'Updated your profile'}{' '}
+                        <span className="muted">
+                          ({m.changes.length === 1 ? '1 change' : `${m.changes.length} changes`})
+                        </span>
+                      </summary>
+                      <ul>
+                        {m.changes.map((c) => (
+                          <li key={c}>{c}</li>
+                        ))}
+                      </ul>
+                    </details>
                     {m.before && m.id === lastAssistant?.id && m.id === latestId && !busy && (
                       <button type="button" className="link-button" onClick={() => undo(m)}>
                         Undo

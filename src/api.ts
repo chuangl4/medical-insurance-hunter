@@ -48,7 +48,6 @@ export const api = {
   chat: (body: {
     messages: { role: 'user' | 'assistant'; content: string }[];
     profile: Profile;
-    hints: string[];
     knownHospitals: { id: string; name: string }[];
   }) => call<{ reply: string; quickReplies: string[]; updates: ChatUpdates }>('/api/chat', { method: 'POST', body }),
   searchDoctors: (query: { first: string; last: string; city: string }) =>

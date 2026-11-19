@@ -1,4 +1,4 @@
-import type { NetworkStatus } from '../data/personalConfig';
+import type { NetworkStatus } from '../data/hospitalNetworks';
 import type { DoctorStatus } from './doctors';
 
 /**

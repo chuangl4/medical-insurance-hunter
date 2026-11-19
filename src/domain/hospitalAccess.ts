@@ -1,6 +1,6 @@
 import { FACILITIES, facilityStatus, type Facility, type FacilityStatus } from '../data/facilityNetworks';
 import { HOSPITAL_LISTS, type ListStatus } from '../data/hospitalLists';
-import type { NetworkStatus } from '../data/personalConfig';
+import type { NetworkStatus } from '../data/hospitalNetworks';
 import { planNetwork } from '../data/planNetworks';
 import type { Plan } from './types';
 

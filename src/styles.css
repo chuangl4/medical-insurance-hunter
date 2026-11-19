@@ -199,9 +199,9 @@ a:hover, .link-button:hover { text-decoration-color: currentColor; }
 .bubble.assistant { background: var(--surface-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
 .bubble.user { background: var(--accent); color: var(--accent-text); border-bottom-right-radius: 4px; }
 .bubble.error { background: var(--warn-bg); color: var(--warn-text); border-color: var(--warn-border); }
-.changes { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 0.86rem; }
+.changes { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 0.86rem; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
 .changes ul { margin: 4px 0; padding-left: 18px; }
-.changes-title { font-weight: 600; color: var(--accent); }
+.changes-title { font-weight: 600; color: var(--accent); cursor: pointer; }
 .changes.undone { opacity: 0.6; }
 .changes.undone ul { text-decoration: line-through; }
 .changes.undone .changes-title { color: var(--muted); }
@@ -236,6 +236,13 @@ a:hover, .link-button:hover { text-decoration-color: currentColor; }
 .ps-progress-head h2 { font-size: 1.05rem; }
 .ps-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.15s; }
 .ps-card.open { border-color: var(--accent); }
+/* What Scout's latest reply changed: the card's border and a tag, and a marker on each changed line. */
+.ps-card.ps-fresh:not(.open) { border-color: var(--accent); animation: fresh-glow 1.6s ease-out; }
+.ps-fresh-tag { font-size: 0.75rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; }
+.ps-fresh-line { background: var(--accent-soft); border-radius: 4px; box-shadow: -4px 0 0 var(--accent-soft), 4px 0 0 var(--accent-soft); animation: fresh-pop 0.6s ease-out; }
+@keyframes fresh-glow { from { box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow); } }
+@keyframes fresh-pop { from { background: var(--accent); color: var(--accent-text); } }
+@media (prefers-reduced-motion: reduce) { .ps-card.ps-fresh, .ps-fresh-line { animation: none; } }
 .ps-head { display: flex; align-items: center; gap: 8px; }
 .ps-head h3 { flex: 1; font-size: 0.98rem; }
 .ps-mark { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 0.72rem; font-weight: 700; }
@@ -379,6 +386,7 @@ a:hover, .link-button:hover { text-decoration-color: currentColor; }
 .access-line { margin: 2px 0 0; font-size: 0.88rem; color: var(--warn-text); }
 .access-line.access-full { color: var(--accent); }
 .flag-inline { color: var(--warn-text); font-size: 0.82rem; }
+.ps-flag { color: var(--warn-text); font-size: 0.85rem; font-weight: 600; }
 .flag-list { list-style: none; margin: 10px 0 0; padding: 8px 12px; background: var(--warn-bg); border-radius: 8px; font-size: 0.85rem; color: var(--warn-text); display: flex; flex-direction: column; gap: 4px; }
 
 /* Prescription coverage */
@@ -611,6 +619,15 @@ a:hover, .link-button:hover { text-decoration-color: currentColor; }
 /* First-time setup */
 .onboarding { display: flex; flex-direction: column; gap: 24px; }
 .onboarding-head { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding-top: 16px; }
+
+/* Setup's early way out, and what browsing before setup looks like */
+.onboarding-alt { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.preview-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 16px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--accent); }
+.preview-banner p { flex: 1 1 360px; margin: 0; font-size: 0.94rem; }
+.setup-prompt { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin: -2px -2px 0; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--accent); }
+.setup-prompt h2 { font-size: 0.98rem; color: var(--accent); }
+.setup-prompt p { margin: 0; font-size: 0.88rem; }
+.setup-prompt .primary { align-self: flex-start; }
 
 /* Household page and the post-setup welcome */
 .page-head { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }

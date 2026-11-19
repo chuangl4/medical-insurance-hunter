@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { FACILITIES } from '../data/facilityNetworks';
-import { HOSPITALS, HOSPITAL_IDS } from '../data/hospitalNetworks';
+import { HOSPITALS } from '../data/hospitalNetworks';
 import { cashLines } from '../domain/cashMeds';
 import { applyFilters, type Filters } from '../domain/filter';
 import type { Profile, Provider } from '../domain/profile';
@@ -25,6 +25,8 @@ interface Props extends PlanCardContext {
   maxCompare: number;
   onToggleCompare: (id: string) => void;
   onEditHousehold: () => void;
+  /** Setup isn't finished: the filters open with a prompt to add the household. */
+  setupPrompt?: boolean;
   onProfileChange: (update: (prev: Profile) => Profile) => void;
   drugChecking: string[];
   drugErrors: Record<string, string>;
@@ -57,9 +59,9 @@ export function PlansTab(props: Props) {
   const drugs = linkedDrugs(profile);
   const cash = cashLines(profile);
   const unfinished = unfinishedLookups(doctors, checkingDoctors);
-  const hospitals = HOSPITAL_IDS.map((id) => ({ id, name: HOSPITALS[id].name }));
+  const hospitals = requiredIds.filter((id) => HOSPITALS[id]).map((id) => ({ id, name: HOSPITALS[id].name }));
   // Must-have hospitals the app has no per-plan status for; shown, but they can't filter.
-  const untrackedHospitals = requiredIds.filter((id) => !HOSPITAL_IDS.includes(id)).map((id) => ({ id, name: hospitalName(id) }));
+  const untrackedHospitals = requiredIds.filter((id) => !HOSPITALS[id]).map((id) => ({ id, name: hospitalName(id) }));
   const meds = medItems(profile).map((m) => ({ id: m.id, name: m.name, who: m.who, included: !rest.scenario.stopped.includes(m.id) }));
   const hasDrugView = drugs.length > 0 || cash.length > 0;
   const views: { id: View; label: string }[] = [

@@ -5,13 +5,16 @@ import type { DrugRef } from '../domain/drugs';
 interface Props {
   name: string;
   drug: DrugRef | undefined;
-  onChange: (drug: DrugRef | undefined) => void;
+  /** The user said it isn't in the drug database, so the app stops asking. */
+  notInDatabase?: boolean;
+  /** A drug to link, or none; `notInDatabase` records that there's nothing to link it to. */
+  onChange: (drug: DrugRef | undefined, notInDatabase?: boolean) => void;
 }
 
 type Option = { rxcui: string; name: string; brand: boolean };
 
 /** Links a medication to its RxNorm entry, so its coverage can be checked plan by plan. */
-export function DrugLink({ name, drug, onChange }: Props) {
+export function DrugLink({ name, drug, notInDatabase, onChange }: Props) {
   const [query, setQuery] = useState(name.split(/\s+/)[0] ?? '');
   const [results, setResults] = useState<{ query: string; options: Option[] } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,13 +46,26 @@ export function DrugLink({ name, drug, onChange }: Props) {
       </p>
     );
   }
-  if (!open) {
+  if (!open && notInDatabase) {
     return (
       <p className="drug-link">
+        <small className="muted">Not in the drug database, so plans' drug lists aren't checked for it.</small>{' '}
+        <button type="button" className="link-button" onClick={() => setOpen(true)}>
+          Search again
+        </button>
+      </p>
+    );
+  }
+  if (!open) {
+    return (
+      <p className="drug-link needs-link">
         <button type="button" className="link-button" onClick={() => setOpen(true)}>
           Link to the drug database
         </button>{' '}
-        <small className="muted">so each plan's coverage can be checked and priced</small>
+        <small className="muted">so each plan's coverage can be checked and priced</small>{' '}
+        <button type="button" className="link-button" onClick={() => onChange(undefined, true)}>
+          It's not a standard drug
+        </button>
       </p>
     );
   }
@@ -82,7 +98,7 @@ export function DrugLink({ name, drug, onChange }: Props) {
                   type="button"
                   className="secondary"
                   onClick={() => {
-                    onChange({ rxcui: o.rxcui, name: o.name });
+                    onChange({ rxcui: o.rxcui, name: o.name }, false);
                     setOpen(false);
                   }}
                 >

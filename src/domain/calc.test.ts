@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   benchmarkPremium,
   contributionPercent,
@@ -13,18 +13,6 @@ import type { Benefits, Household, Member, Plan } from './types';
 import { KING_COUNTY_PLANS } from '../data/kingCounty2027';
 import { hospitalStatus } from '../data/hospitalNetworks';
 
-// Tests use fictional presets, so they don't depend on anyone's personal config.
-vi.mock('../data/personalConfig', () => ({
-  PERSONAL: {
-    hospitals: {
-      testHospital: {
-        name: 'Test Hospital',
-        source: 'https://example.test',
-        status: (p: Plan) => (p.carrier === 'Carrier In' ? 'in' : 'not-listed'),
-      },
-    },
-  },
-}));
 
 const member = (age: number, extra: Partial<Member> = {}): Member => ({
   id: String(age),
@@ -243,13 +231,15 @@ describe('over the subsidy limit', () => {
 
 describe('hospital networks', () => {
   it('reports each hospital status and filters to required hospitals', () => {
-    const inNetwork = plan({ id: 'a', name: 'In', carrier: 'Carrier In' });
-    const outOfNetwork = plan({ id: 'b', name: 'Out', carrier: 'Carrier Out' });
-    expect(hospitalStatus(inNetwork, 'testHospital')).toBe('in');
-    expect(hospitalStatus(outOfNetwork, 'testHospital')).toBe('not-listed');
+    // Swedish First Hill has no list of its own, so its status comes from Healthplanfinder by insurer.
+    const inNetwork = plan({ id: 'a', name: 'In', carrier: 'Premera Blue Cross' });
+    const outOfNetwork = plan({ id: 'b', name: 'Out', carrier: 'Wellpoint' });
+    expect(hospitalStatus(inNetwork, 'swedishFirstHill')).toBe('in');
+    expect(hospitalStatus(outOfNetwork, 'swedishFirstHill')).toBe('out');
+    expect(hospitalStatus(plan({ id: 'c', name: 'Unknown', carrier: 'Carrier In' }), 'swedishFirstHill')).toBe('unknown');
     expect(hospitalStatus(inNetwork, 'missingHospital')).toBe('unknown');
     const evaluated = [inNetwork, outOfNetwork].map((p) => evaluatePlan(p, household(), 0));
-    expect(applyFilters(evaluated, { ...EMPTY_FILTERS, hospitals: ['testHospital'] }).map((p) => p.plan.name)).toEqual(['In']);
+    expect(applyFilters(evaluated, { ...EMPTY_FILTERS, hospitals: ['swedishFirstHill'] }).map((p) => p.plan.name)).toEqual(['In']);
     expect(applyFilters(evaluated, EMPTY_FILTERS)).toHaveLength(2);
   });
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api';
-import { HOSPITALS, REQUIRED_HOSPITALS, hospitalStatus } from './data/hospitalNetworks';
+import { HOSPITALS, hospitalStatus } from './data/hospitalNetworks';
 import { KING_COUNTY_PLANS } from './data/kingCounty2027';
 import { autoPick, nameParts, registryQuery } from './domain/doctors';
 import type { Profile, Provider } from './domain/profile';
@@ -16,8 +16,9 @@ export function carriersToCheck(hospitalIds: string[]): string[] {
   return fit.length ? fit : all;
 }
 
+/** The household's must-have hospitals, from its own profile. */
 export const requiredHospitalsOf = (profile: Profile | null) => [
-  ...new Set([...REQUIRED_HOSPITALS, ...(profile?.providers ?? []).flatMap((p) => (p.hospitalId ? [p.hospitalId] : []))]),
+  ...new Set((profile?.providers ?? []).flatMap((p) => (p.hospitalId ? [p.hospitalId] : []))),
 ];
 
 // Candidates belong to one insurer by definition, so they aren't checked against the others.
