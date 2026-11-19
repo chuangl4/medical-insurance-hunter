@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { approveAll, coverageLookup, drugCostText, fillCostText, describeEvidence, ifExceptionApproved, listDisagrees, listNote, type DrugCoverage } from './drugs';
+import { approveAll, coverageLookup, drugCostText, fillCostText, describeEvidence, ifExceptionApproved, listDisagrees, listNote, pickDrug, type DrugCoverage } from './drugs';
 import type { Plan } from './types';
 
 const plan = (id: string) => ({ id, carrier: 'Test Insurer' }) as Plan;
@@ -91,5 +91,30 @@ describe('what one fill costs', () => {
   });
   it('caps a copay at the price', () => {
     expect(fillCostText({ kind: 'copay', amount: 75, afterDeductible: false }, 40, 2800)).toBe('full price ($40) per fill, since the $75 copay is more');
+  });
+});
+
+describe('matching a typed medication to search results', () => {
+  const opt = (rxcui: string, name: string) => ({ rxcui, name, brand: name.includes('[') });
+  const options = [
+    opt('1', 'atorvastatin 10 MG Oral Tablet'),
+    opt('2', 'atorvastatin 20 MG Oral Tablet'),
+    opt('3', 'atorvastatin 20 MG Oral Tablet [Lipitor]'),
+    opt('4', 'atorvastatin 120 MG Oral Tablet'),
+  ];
+
+  it('links the one product that fits the strength and brand typed', () => {
+    expect(pickDrug('Lipitor 20 mg', options).match?.rxcui).toBe('3');
+    expect(pickDrug('atorvastatin 20mg daily', options).match?.rxcui).toBe('2');
+  });
+
+  it('offers choices when the name alone fits several', () => {
+    const { match, choices } = pickDrug('atorvastatin', options);
+    expect(match).toBeNull();
+    expect(choices.map((c) => c.rxcui)).toEqual(['1', '2', '4']);
+  });
+
+  it('keeps everything when a strength matches nothing', () => {
+    expect(pickDrug('atorvastatin 5 mg', options).choices).toHaveLength(3);
   });
 });

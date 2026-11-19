@@ -199,3 +199,42 @@ export function describeEvidence(carrier: string, e: ListEvidence): string {
   if (e.assumption) parts.push(e.assumption);
   return parts.join('; ');
 }
+
+/** One product a drug-database search returned. */
+export interface DrugOption {
+  rxcui: string;
+  name: string;
+  brand: boolean;
+}
+
+const UNITS: Record<string, string> = { mg: 'MG', mcg: 'MCG', g: 'G', ml: 'ML' };
+
+/** Strengths typed in a medication's name ("20 mg", "0.5mg"), as patterns over RxNorm's names ("20 MG"). */
+function typedStrengths(typed: string): RegExp[] {
+  return [...typed.matchAll(/(\d+(?:\.\d+)?)\s*(mcg|mg|ml|g)\b/gi)].map(
+    ([, n, unit]) => new RegExp(`(^|[^\\d.])${n.replace('.', '\\.')} ${UNITS[unit.toLowerCase()]}\\b`, 'i'),
+  );
+}
+
+const words = (text: string) => text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+const brandOf = (option: DrugOption) => /\[([^\]]+)\]/.exec(option.name)?.[1].toLowerCase();
+
+/**
+ * Narrows search results to what the user typed: the strength if they gave one, and the brand or the generic if the
+ * name says which. A single product left is a clear match; otherwise the rest are choices to offer. A filter that would
+ * leave nothing is skipped, so the user still sees what was found.
+ */
+export function pickDrug(typed: string, options: DrugOption[]): { match: DrugOption | null; choices: DrugOption[] } {
+  const narrow = (list: DrugOption[], keep: (o: DrugOption) => boolean) => {
+    const kept = list.filter(keep);
+    return kept.length ? kept : list;
+  };
+  const typedWords = new Set(words(typed));
+  const strengths = typedStrengths(typed);
+  let choices = narrow(options, (o) => strengths.every((s) => s.test(o.name)));
+  const namesBrand = (o: DrugOption) => words(brandOf(o) ?? '').some((w) => typedWords.has(w));
+  if (choices.some(namesBrand)) choices = narrow(choices, namesBrand);
+  // The generic's name is the start of every product name ("atorvastatin 20 MG Oral Tablet").
+  else if (choices.some((o) => typedWords.has(words(o.name)[0] ?? ''))) choices = narrow(choices, (o) => !o.brand);
+  return { match: choices.length === 1 ? choices[0] : null, choices };
+}

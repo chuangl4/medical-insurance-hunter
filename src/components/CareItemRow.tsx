@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CASH_REASONS, CASH_REASON_LABELS, CASH_RULE, HSA_TIP, cashActions, type CashReason } from '../domain/cashMeds';
 import { CARE_CATEGORIES, CATEGORY_LABELS, type CareCategory, type CareItem } from '../domain/profile';
 import { money } from '../format';
@@ -20,7 +21,10 @@ export function CareItemRow<T extends EditableItem>({ item, onChange, onRemove }
   const selfPay = item.category === 'selfPay';
   const medication = MEDICATION.includes(item.category);
   const linkedFill = Boolean(item.drug) && !selfPay;
-  const setCategory = (category: CareCategory) =>
+  // A medication's name is looked up in the drug database once the user has finished entering it.
+  const [lookup, setLookup] = useState<string>();
+  const setCategory = (category: CareCategory) => {
+    if (!medication && MEDICATION.includes(category)) setLookup(item.name);
     onChange({
       ...item,
       category,
@@ -29,12 +33,18 @@ export function CareItemRow<T extends EditableItem>({ item, onChange, onRemove }
       drug: MEDICATION.includes(category) ? item.drug : undefined,
       cashReason: category === 'selfPay' ? (item.cashReason ?? 'notOnDrugList') : undefined,
     });
+  };
 
   return (
     <div className="care-item">
       <label className="field care-name">
         <span>Care</span>
-        <input value={item.name} maxLength={120} onChange={(e) => onChange({ ...item, name: e.target.value })} />
+        <input
+          value={item.name}
+          maxLength={120}
+          onChange={(e) => onChange({ ...item, name: e.target.value })}
+          onBlur={() => medication && setLookup(item.name)}
+        />
       </label>
       <label className="field">
         <span>Counts as</span>
@@ -88,6 +98,7 @@ export function CareItemRow<T extends EditableItem>({ item, onChange, onRemove }
           name={item.name}
           drug={item.drug}
           notInDatabase={item.notInDrugDatabase}
+          lookup={lookup}
           onChange={(drug, notInDatabase) => onChange({ ...item, drug, notInDrugDatabase: notInDatabase || undefined })}
         />
       )}

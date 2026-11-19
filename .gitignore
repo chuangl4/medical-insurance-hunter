@@ -9,3 +9,6 @@ src/data/personal/
 # Server secrets and the database (encrypted profiles, sessions)
 .env
 /data/
+
+# Build output
+*.tsbuildinfo
