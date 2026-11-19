@@ -126,9 +126,14 @@ export function ScenarioPanel({ open, onClose, returnFocus, profile, scenario, o
 
   if (!profile || !open) return null;
   const set = (patch: Partial<CareScenario>) => onChange({ ...scenario, ...patch });
-  const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   const preset = presetOf(scenario);
   const notListed = (rxcui: string) => plans.filter((p) => drugLookup(rxcui, p.plan)?.covered === false).length;
+  // Which medications count is set with your must-haves; here you only choose what happens where one isn't listed.
+  const leftOut = meds.filter((m) => scenario.stopped.includes(m.id));
+  const choices = meds
+    .filter((m) => !scenario.stopped.includes(m.id) && m.rxcui)
+    .map((med) => ({ med, missing: notListed(med.rxcui!) }))
+    .filter((c) => c.missing > 0);
 
   return (
     <aside ref={panel} className="scenario-panel" role="dialog" aria-modal="false" aria-labelledby="scenario-panel-title" tabIndex={-1}>
@@ -203,41 +208,34 @@ export function ScenarioPanel({ open, onClose, returnFocus, profile, scenario, o
           </label>
         </fieldset>
 
-        {meds.length > 0 && (
+        {(choices.length > 0 || leftOut.length > 0) && (
           <fieldset className="sc-group sc-meds">
-            <legend>Medications</legend>
-            {meds.map((m) => {
-              const taking = !scenario.stopped.includes(m.id);
-              const missing = m.rxcui ? notListed(m.rxcui) : 0;
-              return (
-                <div key={m.id} className="sc-med">
-                  <label className="check">
-                    <input type="checkbox" checked={taking} onChange={() => set({ stopped: toggle(scenario.stopped, m.id) })} />
-                    <span>
-                      {m.name} <span className="muted">· {m.who}</span>
-                    </span>
-                  </label>
-                  {taking && m.rxcui && missing > 0 && (
-                    <label className="sc-field sc-indent">
-                      <span>
-                        Not on {missing} of {plans.length} plans' drug lists. On those plans:
-                      </span>
-                      <select
-                        value={scenario.approved.includes(m.rxcui) ? 'approved' : 'cash'}
-                        onChange={(e) => {
-                          const approved = scenario.approved.filter((x) => x !== m.rxcui);
-                          set({ approved: e.target.value === 'approved' ? [...approved, m.rxcui!] : approved });
-                        }}
-                      >
-                        <option value="cash">Pay cash</option>
-                        <option value="approved">Assume an exception is approved</option>
-                      </select>
-                    </label>
-                  )}
-                  {taking && m.monthly !== null && <small className="hint sc-indent">{money(m.monthly)} a month in cash on any plan.</small>}
-                </div>
-              );
-            })}
+            <legend>Medications not on every drug list</legend>
+            {choices.map(({ med: m, missing }) => (
+              <label key={m.id} className="sc-field sc-med">
+                <span>
+                  <strong>{m.name}</strong> <span className="muted">· {m.who}</span>
+                  <br />
+                  Not on {missing} of {plans.length} plans' drug lists. On those plans:
+                </span>
+                <select
+                  value={scenario.approved.includes(m.rxcui!) ? 'approved' : 'cash'}
+                  onChange={(e) => {
+                    const approved = scenario.approved.filter((x) => x !== m.rxcui);
+                    set({ approved: e.target.value === 'approved' ? [...approved, m.rxcui!] : approved });
+                  }}
+                >
+                  <option value="cash">Pay cash</option>
+                  <option value="approved">Assume an exception is approved</option>
+                </select>
+              </label>
+            ))}
+            {choices.length === 0 && <p className="hint">Every medication in your costs is on every plan's drug list.</p>}
+            {leftOut.length > 0 && (
+              <p className="hint">
+                Left out of your costs: {leftOut.map((m) => m.name).join(', ')}. Change this under Your must-haves on the Plans page.
+              </p>
+            )}
           </fieldset>
         )}
       </div>
