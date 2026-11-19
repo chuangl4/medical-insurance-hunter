@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { PARSER_HINTS } from '../data/careNeeds';
 import { HOSPITALS } from '../data/hospitalNetworks';
-import { applyChatUpdates, checklist, describeChanges, findGaps, nextGaps } from '../domain/onboarding';
+import { applyChatUpdates, describeChanges, findGaps, nextGaps } from '../domain/onboarding';
 import { newId, type Profile } from '../domain/profile';
 
 export interface ChatMessage {
@@ -24,8 +24,6 @@ interface Props {
   onChange: (next: Profile) => void;
   messages: ChatMessage[];
   onMessages: (next: ChatMessage[]) => void;
-  onShowPlans: () => void;
-  onUseForm: () => void;
 }
 
 /** Messages sent back for context; the profile carries everything older. */
@@ -66,7 +64,7 @@ function greeting(profile: Profile): ChatMessage {
   };
 }
 
-export function ChatOnboarding({ profile, onChange, messages, onMessages, onShowPlans, onUseForm }: Props) {
+export function ChatOnboarding({ profile, onChange, messages, onMessages }: Props) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const profileRef = useRef(profile);
@@ -129,24 +127,20 @@ export function ChatOnboarding({ profile, onChange, messages, onMessages, onShow
     onMessages(messages.map((m) => (m.id === message.id ? { ...m, undone: true, before: undefined } : m)));
   };
 
-  const removeItem = (memberId: string, itemId: string) =>
-    onChange({
-      ...profile,
-      members: profile.members.map((m) => (m.id === memberId ? { ...m, careItems: m.careItems.filter((i) => i.id !== itemId) } : m)),
-    });
-  const removeProvider = (id: string) => onChange({ ...profile, providers: (profile.providers ?? []).filter((p) => p.id !== id) });
-
-  const steps = checklist(profile);
-  const doneCount = steps.filter((s) => s.done).length;
-  const complete = findGaps(profile).length === 0;
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
   const latestId = messages[messages.length - 1]?.id;
 
-  // Candidate doctors from earlier versions stay saved but aren't shown.
-  const mustBeIn = (profile.providers ?? []).filter((p) => !p.candidateFor);
   return (
-    <div className="chat-layout">
-      <section className="panel chat" aria-label="Setup chat with Scout">
+      <section className="panel chat" aria-label="Chat with Scout">
+        <header className="chat-head">
+          <span className="avatar" aria-hidden="true">
+            🐶
+          </span>
+          <div>
+            <h2>Scout</h2>
+            <p className="hint">Tell me about your family in your own words. I'll fill in your profile.</p>
+          </div>
+        </header>
         <div className="chat-log" role="log" aria-live="polite">
           {messages.map((m) => (
             <div key={m.id} className={`bubble-row ${m.role}`}>
@@ -227,84 +221,9 @@ export function ChatOnboarding({ profile, onChange, messages, onMessages, onShow
           </button>
         </form>
         <small className="hint">
-          Your messages go to the Claude API so Scout can read them. Only the details shown on the right are saved to your
+          Your messages go to the Claude API so Scout can read them. Only the details shown under Your profile are saved to your
           profile. Enter sends; Shift+Enter adds a line.
         </small>
       </section>
-
-      <aside className="panel chat-side" aria-label="Your profile so far">
-        <h2>Your profile so far</h2>
-        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={doneCount}>
-          <div className="progress-bar" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
-        </div>
-        <ul className="checklist">
-          {steps.map((s) => (
-            <li key={s.label} className={s.done ? 'done' : undefined}>
-              <span aria-hidden="true">{s.done ? '✓' : '○'}</span> {s.label}
-              <span className="visually-hidden">{s.done ? ' (done)' : ' (still needed)'}</span>
-            </li>
-          ))}
-        </ul>
-        {profile.inKingCounty === false && <p className="warn">Plan prices here are for King County and may not match where you live.</p>}
-
-        {profile.members.map((m) => (
-          <div className="side-member" key={m.id}>
-            <strong>
-              {m.label || 'Unnamed'}, {m.needsAge ? 'age needed' : m.age}
-            </strong>
-            {m.careItems.length === 0 ? (
-              <p className="hint">{m.careReviewed ? 'No regular care expected.' : 'No care yet.'}</p>
-            ) : (
-              <ul>
-                {m.careItems.map((i) => (
-                  <li key={i.id}>
-                    <span>
-                      {i.name} <span className="muted">{i.category === 'selfPay' ? `$${i.monthlyCost ?? 0}/mo` : `×${i.perYear}/yr`}</span>
-                    </span>
-                    <button type="button" className="remove" onClick={() => removeItem(m.id, i.id)} aria-label={`Remove ${i.name}`}>
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
-        {mustBeIn.length > 0 && (
-          <div className="side-member">
-            <strong>Must be in network</strong>
-            <ul>
-              {mustBeIn.map((p) => (
-                <li key={p.id}>
-                  <span>
-                    {p.name} {!p.hospitalId && <span className="muted">(check directories)</span>}
-                  </span>
-                  <button type="button" className="remove" onClick={() => removeProvider(p.id)} aria-label={`Remove ${p.name}`}>
-                    ✕
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div className="side-actions">
-          {complete ? (
-            <button type="button" className="primary" onClick={onShowPlans}>
-              Show me plans 🐾
-            </button>
-          ) : (
-            profile.members.length > 0 && (
-              <button type="button" className="secondary" onClick={onShowPlans}>
-                Skip ahead to plans
-              </button>
-            )
-          )}
-          <button type="button" className="link-button" onClick={onUseForm}>
-            {profile.members.length ? 'Edit details in the form' : 'I’d rather fill in a form'}
-          </button>
-        </div>
-      </aside>
-    </div>
   );
 }

@@ -1,19 +1,23 @@
 import type { FilingStatus, ImmigrationStatus } from '../domain/types';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { HOSPITALS } from '../data/hospitalNetworks';
 import { KING_COUNTY_PLANS } from '../data/kingCounty2027';
 import { carriersToCheck, requiredHospitalsOf } from '../useDoctorLookups';
-import { findGaps } from '../domain/onboarding';
+import { checklist, findGaps } from '../domain/onboarding';
 import { newId, type AnswerKey, type CareItem, type Profile, type ProfileMember, type Provider } from '../domain/profile';
-import { parseOptionalNumber } from '../format';
+import { money, parseOptionalNumber } from '../format';
 import { CareItemRow } from './CareItemRow';
 import { DoctorPanel } from './DoctorPanel';
+
+export type SectionId = 'people' | 'location' | 'providers' | 'income';
 
 interface Props {
   profile: Profile;
   onChange: (next: Profile) => void;
+  /** The section being edited, if any. Only one is open at a time. */
+  open: SectionId | null;
+  onOpen: (id: SectionId | null) => void;
   onDone: () => void;
-  onOpenChat: () => void;
   /** Updates one provider in the latest profile. Used for slow lookups that finish after other edits. */
   onPatchProvider: (id: string, patch: Partial<Provider>) => void;
   /** Doctors being looked up right now. */
@@ -32,8 +36,45 @@ const blankItem = (): CareItem => ({
   notes: '',
 });
 
+const FILING_LABEL: Record<FilingStatus, string> = {
+  single: 'Single or head of household',
+  joint: 'Married filing jointly',
+  separate: 'Married filing separately',
+};
 
-export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProvider, checking, onRecheck }: Props) {
+interface SectionProps {
+  id: SectionId;
+  title: string;
+  done: boolean;
+  open: boolean;
+  onToggle: () => void;
+  summary: ReactNode;
+  children: ReactNode;
+}
+
+/** One part of the profile: a short summary, and the full fields while it's being edited. */
+function Section({ id, title, done, open, onToggle, summary, children }: SectionProps) {
+  const bodyId = `profile-${id}`;
+  return (
+    <section className={['ps-card', open && 'open', done ? 'ps-done' : 'ps-todo'].filter(Boolean).join(' ')} aria-label={title}>
+      <div className="ps-head">
+        <span className="ps-mark" aria-hidden="true">
+          {done ? '✓' : '○'}
+        </span>
+        <h3>{title}</h3>
+        <span className="visually-hidden">{done ? '(done)' : '(still needed)'}</span>
+        <button type="button" className="ps-toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
+          {open ? 'Done' : 'Edit'}
+        </button>
+      </div>
+      <div id={bodyId} className={open ? 'ps-body' : 'ps-summary'}>
+        {open ? children : summary}
+      </div>
+    </section>
+  );
+}
+
+export function ProfileSections({ profile, onChange, open, onOpen, onDone, onPatchProvider, checking, onRecheck }: Props) {
   const update = (patch: Partial<Profile>) => onChange({ ...profile, ...patch });
   /** Records that a question was answered here, so the chat doesn't ask it again. */
   const answer = (key: AnswerKey, patch: Partial<Profile>) =>
@@ -44,10 +85,16 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProv
   const setProviders = (next: typeof providers) => answer('providers', { providers: next });
   const hospitalKey = requiredHospitalsOf(profile).join(',');
   const carriers = useMemo(() => carriersToCheck(hospitalKey ? hospitalKey.split(',') : []), [hospitalKey]);
-  const gaps = findGaps(profile);
   const updateMember = (id: string, patch: Partial<ProfileMember>) =>
     update({ members: profile.members.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
   const updateItems = (member: ProfileMember, careItems: CareItem[]) => updateMember(member.id, { careItems });
+
+  const gaps = new Set(findGaps(profile).map((g) => g.id));
+  const anyGap = (...prefixes: string[]) => [...gaps].some((id) => prefixes.some((p) => id === p || id.startsWith(`${p}:`)));
+  const steps = checklist(profile);
+  const doneCount = steps.filter((s) => s.done).length;
+  const complete = gaps.size === 0;
+  const toggle = (id: SectionId) => onOpen(open === id ? null : id);
 
   // Keep the tax household in step with covered people unless the user has set it differently.
   const taxSizeFor = (nextCount: number) =>
@@ -67,44 +114,63 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProv
     });
   };
 
+  const incomeSummary = profile.overSubsidyLimit
+    ? 'Income above the subsidy limit, so no tax credit.'
+    : [
+        profile.annualIncome === null || profile.annualIncome === undefined ? 'Income not given' : `${money(profile.annualIncome)} income`,
+        `${profile.taxHouseholdSize} on the tax return`,
+        FILING_LABEL[profile.filingStatus],
+        profile.affordableEmployerOffer ? 'affordable job-based offer' : null,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+
   return (
-    <form
-      className="stack"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onDone();
-      }}
-    >
-      <div className="panel chat-prompt">
-        <span className="avatar" aria-hidden="true">
-          🐶
-        </span>
-        <div>
-          {gaps.length ? (
-            <p>
-              <strong>Scout still needs {gaps.length === 1 ? 'one thing' : `${gaps.length} things`}:</strong>{' '}
-              {gaps.map((g) => g.label).join(' · ')}
-            </p>
-          ) : (
-            <p>New care or a new medication? Tell Scout in your own words.</p>
-          )}
+    <aside className="profile-side" aria-label="Your profile">
+      <div className="ps-progress">
+        <div className="ps-progress-head">
+          <h2>Your profile</h2>
+          <span className="muted">
+            {doneCount} of {steps.length} done
+          </span>
         </div>
-        <button type="button" className="primary" onClick={onOpenChat}>
-          {gaps.length ? 'Finish with Scout' : 'Chat with Scout'}
-        </button>
+        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={doneCount}>
+          <div className="progress-bar" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+        </div>
       </div>
 
-      <fieldset className="panel">
-        <legend>Location</legend>
-        <label className="check">
-          <input type="checkbox" checked={profile.inKingCounty === true} onChange={(e) => update({ inKingCounty: e.target.checked })} />
-          <span>We live in King County, Washington</span>
-        </label>
-        <p className="hint">Plan data covers King County only for now.</p>
-      </fieldset>
-
-      <fieldset className="panel">
-        <legend>Who needs coverage</legend>
+      <Section
+        id="people"
+        title="Who needs coverage"
+        done={!anyGap('people', 'age', 'care')}
+        open={open === 'people'}
+        onToggle={() => toggle('people')}
+        summary={
+          profile.members.length === 0 ? (
+            <p className="hint">No one yet.</p>
+          ) : (
+            profile.members.map((m) => (
+              <div className="ps-member" key={m.id}>
+                <strong>
+                  {m.label || 'Unnamed'}, {m.needsAge ? 'age needed' : m.age}
+                </strong>
+                {m.careItems.length === 0 ? (
+                  <p className="hint">{m.careReviewed ? 'No regular care expected.' : 'No care listed yet.'}</p>
+                ) : (
+                  <ul>
+                    {m.careItems.map((i) => (
+                      <li key={i.id}>
+                        {i.name || 'Unnamed item'}{' '}
+                        <span className="muted">{i.category === 'selfPay' ? `$${i.monthlyCost ?? 0}/mo` : `×${i.perYear}/yr`}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))
+          )
+        }
+      >
         <p className="hint">Each item is costed under every plan. Change the numbers to match what your doctors plan; these are estimates, not medical advice.</p>
         <div className="members">
           {profile.members.map((member) => (
@@ -173,49 +239,91 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProv
           />
           <span>That's everyone who needs coverage</span>
         </label>
-      </fieldset>
+      </Section>
 
-      <fieldset className="panel">
-        <legend>Doctors and hospitals</legend>
+      <Section
+        id="location"
+        title="Where you live"
+        done={!gaps.has('location')}
+        open={open === 'location'}
+        onToggle={() => toggle('location')}
+        summary={
+          profile.inKingCounty === true ? (
+            <p>King County, Washington</p>
+          ) : profile.inKingCounty === false ? (
+            <p className="warn">Outside King County. Plan prices here may not match where you live.</p>
+          ) : (
+            <p className="hint">Not answered yet.</p>
+          )
+        }
+      >
+        <label className="check">
+          <input type="checkbox" checked={profile.inKingCounty === true} onChange={(e) => update({ inKingCounty: e.target.checked })} />
+          <span>We live in King County, Washington</span>
+        </label>
+        <p className="hint">Plan data covers King County only for now.</p>
+      </Section>
+
+      <Section
+        id="providers"
+        title="Must-have doctors and hospitals"
+        done={!gaps.has('providers')}
+        open={open === 'providers'}
+        onToggle={() => toggle('providers')}
+        summary={
+          shown.length === 0 ? (
+            <p className="hint">None listed.</p>
+          ) : (
+            <ul className="ps-list">
+              {shown.map((p) => (
+                <li key={p.id}>
+                  {p.name || 'Unnamed'}{' '}
+                  <span className="muted">{p.hospitalId ? 'hospital' : checking.includes(p.id) ? 'checking networks…' : 'doctor or clinic'}</span>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      >
         {shown.length === 0 && <p className="hint">None listed.</p>}
         {shown.map((p) => (
           <div className="provider-row" key={p.id}>
-          <div className="member-head">
-            <label className="field">
-              <span>Name</span>
-              <input
-                value={p.name}
-                maxLength={120}
-                onChange={(e) => setProviders(providers.map((x) => (x.id === p.id ? { ...x, name: e.target.value } : x)))}
+            <div className="member-head">
+              <label className="field">
+                <span>Name</span>
+                <input
+                  value={p.name}
+                  maxLength={120}
+                  onChange={(e) => setProviders(providers.map((x) => (x.id === p.id ? { ...x, name: e.target.value } : x)))}
+                />
+              </label>
+              <label className="field">
+                <span>Type</span>
+                <select
+                  value={p.hospitalId ?? ''}
+                  onChange={(e) => setProviders(providers.map((x) => (x.id === p.id ? { ...x, hospitalId: e.target.value || null } : x)))}
+                >
+                  <option value="">Doctor or clinic</option>
+                  {Object.entries(HOSPITALS).map(([id, h]) => (
+                    <option key={id} value={id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" className="link-button" onClick={() => setProviders(providers.filter((x) => x.id !== p.id))}>
+                Remove
+              </button>
+            </div>
+            {!p.hospitalId && p.name.trim() && (
+              <DoctorPanel
+                provider={p}
+                carriers={carriers}
+                onPatch={(patch) => onPatchProvider(p.id, patch)}
+                checking={checking.includes(p.id)}
+                onRecheck={() => onRecheck(p)}
               />
-            </label>
-            <label className="field">
-              <span>Type</span>
-              <select
-                value={p.hospitalId ?? ''}
-                onChange={(e) => setProviders(providers.map((x) => (x.id === p.id ? { ...x, hospitalId: e.target.value || null } : x)))}
-              >
-                <option value="">Doctor or clinic</option>
-                {Object.entries(HOSPITALS).map(([id, h]) => (
-                  <option key={id} value={id}>
-                    {h.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="link-button" onClick={() => setProviders(providers.filter((x) => x.id !== p.id))}>
-              Remove
-            </button>
-          </div>
-          {!p.hospitalId && p.name.trim() && (
-            <DoctorPanel
-              provider={p}
-              carriers={carriers}
-              onPatch={(patch) => onPatchProvider(p.id, patch)}
-              checking={checking.includes(p.id)}
-              onRecheck={() => onRecheck(p)}
-            />
-          )}
+            )}
           </div>
         ))}
         <p className="hint">
@@ -227,10 +335,16 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProv
         <button type="button" className="secondary" onClick={() => setProviders([...providers, { id: newId('provider'), name: '', hospitalId: null }])}>
           Add a doctor or hospital
         </button>
-      </fieldset>
+      </Section>
 
-      <fieldset className="panel">
-        <legend>Income and subsidy details</legend>
+      <Section
+        id="income"
+        title="Income and subsidies"
+        done={!anyGap('taxHousehold', 'income', 'employerOffer', 'immigration')}
+        open={open === 'income'}
+        onToggle={() => toggle('income')}
+        summary={<p>{incomeSummary}</p>}
+      >
         <label className="check">
           <input type="checkbox" checked={profile.overSubsidyLimit} onChange={(e) => update({ overSubsidyLimit: e.target.checked })} />
           <span>My income is above the subsidy limit, so skip these questions</span>
@@ -262,9 +376,9 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProv
               <label className="field">
                 <span>Tax filing status</span>
                 <select value={profile.filingStatus} onChange={(e) => answer('taxHousehold', { filingStatus: e.target.value as FilingStatus })}>
-                  <option value="single">Single or head of household</option>
-                  <option value="joint">Married filing jointly</option>
-                  <option value="separate">Married filing separately</option>
+                  <option value="single">{FILING_LABEL.single}</option>
+                  <option value="joint">{FILING_LABEL.joint}</option>
+                  <option value="separate">{FILING_LABEL.separate}</option>
                 </select>
               </label>
               <label className="field">
@@ -287,13 +401,21 @@ export function ProfileForm({ profile, onChange, onDone, onOpenChat, onPatchProv
             </label>
           </>
         )}
-      </fieldset>
+      </Section>
 
-      <div className="form-actions">
-        <button type="submit" className="primary">
-          See plans
-        </button>
+      <div className="ps-actions">
+        {complete ? (
+          <button type="button" className="primary" onClick={onDone}>
+            Show me plans
+          </button>
+        ) : (
+          profile.members.length > 0 && (
+            <button type="button" className="secondary" onClick={onDone}>
+              Skip ahead to plans
+            </button>
+          )
+        )}
       </div>
-    </form>
+    </aside>
   );
 }

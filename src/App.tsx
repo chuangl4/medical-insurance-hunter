@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, type User } from './api';
-import { ChatOnboarding, type ChatMessage } from './components/ChatOnboarding';
+import type { ChatMessage } from './components/ChatOnboarding';
+import { HouseholdWorkspace } from './components/HouseholdWorkspace';
 import { CompareTable } from './components/CompareTable';
 import { CompareTray } from './components/CompareTray';
 import { PlansTab } from './components/PlansTab';
-import { ProfileForm } from './components/ProfileForm';
 import { AppHeader, type SaveState } from './components/AppHeader';
 import { Landing } from './components/Landing';
 import { Onboarding } from './components/Onboarding';
@@ -67,7 +67,6 @@ export function App() {
   const [saveState, setSaveState] = useState<SaveState>('saved');
   const [filters, setFilters] = useState<Filters>({ ...EMPTY_FILTERS, hospitals: REQUIRED_HOSPITALS });
   const [page, setPage] = useState<Page>('plans');
-  const [chatOpen, setChatOpen] = useState(true);
   /** Set when first-time setup has just finished, for a one-time welcome on the plans page. */
   const [justSetUp, setJustSetUp] = useState(false);
   // Kept in memory only, so the conversation survives switching tabs but not a reload.
@@ -85,7 +84,6 @@ export function App() {
         setProfile(loaded);
         // Returning users open where they left off; a Compare page with nothing on it falls back to plans.
         setPage(loaded.lastPage === 'compare' && (loaded.shortlist ?? []).length > 0 ? 'compare' : 'plans');
-        setChatOpen(true);
       },
       (e: Error) => setLoadError(e.message),
     );
@@ -126,7 +124,6 @@ export function App() {
       setProfile(null);
       lastSaved.current = null;
       setChatMessages([]);
-      setChatOpen(true);
       setJustSetUp(false);
     });
   };
@@ -203,10 +200,7 @@ export function App() {
     if (next !== 'household') setProfile((prev) => (prev && prev.lastPage !== next ? { ...prev, lastPage: next } : prev));
     window.scrollTo({ top: 0 });
   };
-  const openHousehold = () => {
-    setChatOpen(false);
-    goTo('household');
-  };
+  const openHousehold = () => goTo('household');
   const finishSetup = () => {
     // Plans need at least one person to price; the form and chat both say who's still missing.
     if (!profile?.members.length) return;
@@ -247,38 +241,29 @@ export function App() {
     );
   }
 
-  const profileEditor = (onDone: () => void) =>
-    chatOpen ? (
-      <ChatOnboarding
-        profile={profile}
-        onChange={setProfile}
-        messages={chatMessages}
-        onMessages={setChatMessages}
-        onShowPlans={onDone}
-        onUseForm={() => setChatOpen(false)}
-      />
-    ) : (
-      <ProfileForm
-        profile={profile}
-        onChange={setProfile}
-        onDone={onDone}
-        onOpenChat={() => setChatOpen(true)}
-        onPatchProvider={(id, patch) =>
-          setProfile((prev) =>
-            prev && { ...prev, providers: (prev.providers ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) },
-          )
-        }
-        checking={doctorLookups.checking}
-        onRecheck={doctorLookups.recheck}
-      />
-    );
+  const profileEditor = (onDone: () => void) => (
+    <HouseholdWorkspace
+      profile={profile}
+      onChange={setProfile}
+      messages={chatMessages}
+      onMessages={setChatMessages}
+      onDone={onDone}
+      onPatchProvider={(id, patch) =>
+        setProfile((prev) =>
+          prev && { ...prev, providers: (prev.providers ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) },
+        )
+      }
+      checking={doctorLookups.checking}
+      onRecheck={doctorLookups.recheck}
+    />
+  );
 
   if (inSetup(profile)) {
     return (
       <div className="shell">
         <AppHeader user={user} saveState={saveState} onSignOut={signOut} />
         <main className="app">
-          <Onboarding mode={chatOpen ? 'chat' : 'form'} onMode={(m) => setChatOpen(m === 'chat')}>
+          <Onboarding>
             {profileEditor(finishSetup)}
           </Onboarding>
         </main>
@@ -312,7 +297,7 @@ export function App() {
               ← Back to {profile.lastPage === 'compare' ? 'Compare' : 'plans'}
             </button>
             <h1>Your household and needs</h1>
-            <p className="muted">Changes save as you go, and every plan's price and fit updates with them.</p>
+            <p className="muted">Tell Scout, or edit any part of your profile directly. Changes save as you go, and every plan's price and fit updates with them.</p>
           </div>
         ) : (
           <p className="estimate-note" role="note">

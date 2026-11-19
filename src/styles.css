@@ -74,6 +74,8 @@ h3 { font-size: 1.05rem; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 0; min-width: 0; box-shadow: var(--shadow); }
 fieldset.panel { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
 legend { font-weight: 700; padding: 0 6px; }
+/* A floated legend renders inside the card, like the headings on the Plans page, not notched into its border. */
+fieldset.panel > legend { float: left; width: 100%; padding: 0; font-size: 1.05rem; line-height: 1.3; }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; font-weight: 600; min-width: 0; }
 .field small { font-weight: 400; color: var(--muted); }
 input:not([type="checkbox"]), select { font: inherit; font-weight: 400; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; width: 100%; min-width: 0; }
@@ -142,6 +144,9 @@ button.secondary { background: var(--surface); color: var(--text); border: 1px s
 .status-in .hospital-name, .status-limited .hospital-name, .status-not-listed .hospital-name, .status-out .hospital-name { font-weight: 400; }
 .plan-links { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.86rem; }
 a { color: var(--accent); }
+/* Quieter underlines: still marked as links, without a heavy rule under every action. */
+a, .link-button { text-decoration-thickness: 1px; text-underline-offset: 0.2em; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+a:hover, .link-button:hover { text-decoration-color: currentColor; }
 .empty { background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; padding: 28px; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .empty button.secondary { align-self: center; }
 
@@ -153,6 +158,11 @@ a { color: var(--accent); }
 .compare-carrier { font-weight: 400; }
 .best { background: var(--accent-soft); font-weight: 700; }
 
+/* Keep the filters in view beside a long plan list (below the 60px top bar, above the compare tray). */
+@media (min-width: 761px) {
+  .filters { position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  .app.with-tray .filters { max-height: calc(100vh - 92px - 112px); }
+}
 @media (max-width: 760px) {
   .browser { grid-template-columns: 1fr; gap: 12px; }
   button.filters-toggle { display: block; justify-self: start; }
@@ -179,9 +189,8 @@ a { color: var(--accent); }
 }
 
 /* Setup chat */
-.chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
 .chat { display: flex; flex-direction: column; gap: 10px; }
-.chat-log { display: flex; flex-direction: column; gap: 12px; max-height: min(62vh, 640px); min-height: 280px; overflow-y: auto; padding: 4px 2px; }
+.chat-log { display: flex; flex-direction: column; gap: 12px; max-height: max(260px, calc(100vh - 400px)); min-height: 260px; overflow-y: auto; padding: 4px 2px; }
 .bubble-row { display: flex; gap: 8px; align-items: flex-end; }
 .bubble-row.user { justify-content: flex-end; }
 .avatar { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--accent-soft); display: grid; place-items: center; font-size: 1.2rem; }
@@ -208,28 +217,46 @@ a { color: var(--accent); }
 .chip:hover { background: var(--accent-soft); }
 .chat-input { display: flex; gap: 8px; align-items: flex-end; }
 .chat-input textarea { flex: 1; resize: vertical; min-height: 44px; }
-.chat-side { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 16px; }
-.chat-side h2 { margin: 0; font-size: 1.05rem; }
 .progress { height: 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
 .progress-bar { height: 100%; background: var(--accent); transition: width 300ms ease; }
-.checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: var(--muted); }
-.checklist li.done { color: var(--text); }
-.checklist li.done span[aria-hidden] { color: var(--accent); font-weight: 700; }
-.side-member { border-top: 1px solid var(--border); padding-top: 8px; font-size: 0.9rem; }
-.side-member ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-.side-member li { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.side-member p { margin: 4px 0 0; }
-.remove { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 0.8rem; padding: 0 2px; }
-.remove:hover { color: var(--text); }
-.side-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; border-top: 1px solid var(--border); padding-top: 10px; }
-.chat-prompt { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.chat-prompt > div { flex: 1 1 240px; }
-.chat-prompt p { margin: 0; }
 @media (max-width: 820px) {
-  .chat-layout { grid-template-columns: 1fr; }
-  .chat-side { position: static; }
   .bubble { max-width: 88%; }
   .chips { padding-left: 0; }
+}
+
+/* Household page: chat with Scout beside the profile. Opening a section for editing widens the profile side. */
+.chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); gap: 20px; align-items: start; }
+.chat-layout.editing { grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.2fr); }
+.chat-layout > .chat { position: sticky; top: 76px; }
+.chat-head { display: flex; gap: 10px; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.chat-head h2 { font-size: 1rem; }
+.profile-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; container-type: inline-size; }
+.ps-progress { display: flex; flex-direction: column; gap: 8px; padding: 2px 2px 4px; }
+.ps-progress-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.ps-progress-head h2 { font-size: 1.05rem; }
+.ps-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.15s; }
+.ps-card.open { border-color: var(--accent); }
+.ps-head { display: flex; align-items: center; gap: 8px; }
+.ps-head h3 { flex: 1; font-size: 0.98rem; }
+.ps-mark { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 0.72rem; font-weight: 700; }
+.ps-done .ps-mark { background: var(--accent-soft); color: var(--accent); }
+.ps-todo .ps-mark { background: var(--warn-bg); color: var(--warn-text); }
+.ps-toggle { font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--accent); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 3px 14px; cursor: pointer; }
+.ps-toggle:hover { border-color: var(--accent); }
+.ps-card.open .ps-toggle { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.ps-summary { padding-left: 28px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 8px; }
+.ps-summary p { margin: 0; }
+.ps-member ul, .ps-list { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.ps-body { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+.ps-actions { display: flex; gap: 8px; }
+/* Care rows fold to two columns when the profile side is narrow, whatever the window width. */
+@container (max-width: 640px) {
+  .care-item { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .care-name { grid-column: 1 / -1; }
+}
+@media (max-width: 900px) {
+  .chat-layout, .chat-layout.editing { grid-template-columns: 1fr; }
+  .chat-layout > .chat { position: static; }
 }
 
 /* Filter option counts */
@@ -584,10 +611,6 @@ a { color: var(--accent); }
 /* First-time setup */
 .onboarding { display: flex; flex-direction: column; gap: 24px; }
 .onboarding-head { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding-top: 16px; }
-.segmented { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-2); border-radius: 10px; margin-top: 4px; }
-.segmented button { font: inherit; font-size: 0.92rem; font-weight: 600; color: var(--muted); background: transparent; border: 0; border-radius: 8px; padding: 6px 16px; cursor: pointer; }
-.segmented button:hover { color: var(--text); }
-.segmented button[aria-pressed='true'] { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
 
 /* Household page and the post-setup welcome */
 .page-head { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
