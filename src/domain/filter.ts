@@ -11,12 +11,12 @@ export const networkOf = (plan: Plan): NetworkChoice => networkTypeOf(plan).type
 export type SortKey = 'scenarioYear' | 'netMonthly' | 'worstCase' | 'deductible' | 'oopMax' | 'specialist';
 
 export const SORT_LABELS: Record<SortKey, string> = {
-  scenarioYear: 'Your scenario',
-  netMonthly: 'Monthly premium',
-  worstCase: 'Worst case',
-  deductible: 'Deductible',
-  oopMax: 'Out-of-pocket limit',
-  specialist: 'Specialist copay',
+  scenarioYear: 'Lowest yearly cost (your scenario)',
+  netMonthly: 'Lowest monthly premium',
+  worstCase: 'Lowest worst case',
+  deductible: 'Lowest deductible',
+  oopMax: 'Lowest out-of-pocket limit',
+  specialist: 'Lowest specialist copay',
 };
 
 export type BuyingRoute = 'any' | 'exchange' | 'direct';
@@ -103,15 +103,15 @@ function sortValue(p: EvaluatedPlan, key: SortKey): number | null {
   return p[key];
 }
 
-export function sortPlans(plans: EvaluatedPlan[], key: SortKey, descending = false): EvaluatedPlan[] {
-  const direction = descending ? -1 : 1;
+/** Cheapest first: every sort is a cost, where lower is better. */
+export function sortPlans(plans: EvaluatedPlan[], key: SortKey): EvaluatedPlan[] {
   return [...plans].sort((a, b) => {
     const av = sortValue(a, key);
     const bv = sortValue(b, key);
     if (av === bv) return a.plan.name.localeCompare(b.plan.name);
-    // Plans missing this value stay last in either direction.
+    // Plans missing this value go last.
     if (av === null) return 1;
     if (bv === null) return -1;
-    return av < bv ? -direction : direction;
+    return av - bv;
   });
 }

@@ -116,9 +116,8 @@ export function PlanBrowser(props: Props) {
   const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, intro, ...context } = props;
   const { doctors } = context;
   const [sortKey, setSortKey] = useState<SortKey>('scenarioYear');
-  const [descending, setDescending] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [groupByFit, setGroupByFit] = useState(true);
+  const [showMisses, setShowMisses] = useState(false);
   const [moreOpen, setMoreOpen] = useState(() => moreFilterCount(filters) > 0);
   const set = (patch: Partial<Filters>) => onFiltersChange({ ...filters, ...patch });
 
@@ -131,10 +130,11 @@ export function PlanBrowser(props: Props) {
     }),
     [plans, filters, doctors],
   );
-  const visible = useMemo(() => sortPlans(applyFilters(plans, filters, doctors), sortKey, descending), [plans, filters, doctors, sortKey, descending]);
+  const visible = useMemo(() => sortPlans(applyFilters(plans, filters, doctors), sortKey), [plans, filters, doctors, sortKey]);
   const fits = new Map(visible.map((p) => [p.plan.id, planFit(p, context).overall]));
   const canGroup = [...fits.values()].some((f) => f !== null);
-  const grouped = groupByFit && canGroup;
+  // A plan with nothing to judge it by joins the ones to confirm rather than dropping out.
+  const inGroup = (level: (typeof GROUPS)[number]) => visible.filter((p) => (fits.get(p.plan.id) ?? 'check') === level);
   const chips = activeChips(filters);
   const mustHaveCount = filters.hospitals.length + filters.doctors.length;
   const more = moreFilterCount(filters);
@@ -245,15 +245,6 @@ export function PlanBrowser(props: Props) {
                 ))}
               </select>
             </label>
-            {canGroup && (
-              <label className="check inline-check">
-                <input type="checkbox" checked={groupByFit} onChange={(e) => setGroupByFit(e.target.checked)} />
-                <span>Group by fit</span>
-              </label>
-            )}
-            <button type="button" className="secondary" onClick={() => setDescending((d) => !d)}>
-              {descending ? 'Highest first' : 'Lowest first'}
-            </button>
           </div>
         </div>
         {chips.length > 0 && (
@@ -287,11 +278,27 @@ export function PlanBrowser(props: Props) {
           </div>
         )}
 
-        {grouped
+        {canGroup
           ? GROUPS.map((level) => {
-              // A plan with nothing to judge it by joins the ones to confirm rather than dropping out.
-              const members = visible.filter((p) => (fits.get(p.plan.id) ?? 'check') === level);
+              const members = inGroup(level);
               if (members.length === 0) return null;
+              // Plans that miss a need are rarely the answer: folded away, unless they're all there is.
+              const folded = level === 'bad' && !showMisses && members.length < visible.length;
+              if (folded) {
+                return (
+                  <div key={level} className="misses-folded">
+                    <span>
+                      <strong>
+                        {members.length} plan{members.length === 1 ? '' : 's'}
+                      </strong>{' '}
+                      {members.length === 1 ? 'misses' : 'miss'} a need: a must-have hospital or doctor is out of network or not listed.
+                    </span>
+                    <button type="button" className="secondary" onClick={() => setShowMisses(true)}>
+                      Show {members.length === 1 ? 'it' : 'them'}
+                    </button>
+                  </div>
+                );
+              }
               return (
                 <section key={level} className={`fit-group fit-group-${level}`} aria-labelledby={`fit-group-${level}`}>
                   <div className="fit-group-head">
@@ -299,6 +306,11 @@ export function PlanBrowser(props: Props) {
                       {OVERALL_TEXT[level]} <span className="muted">({members.length})</span>
                     </h2>
                     <p className="hint">{GROUP_HINTS[level]}</p>
+                    {level === 'bad' && showMisses && members.length < visible.length && (
+                      <button type="button" className="link-button" onClick={() => setShowMisses(false)}>
+                        Hide these
+                      </button>
+                    )}
                   </div>
                   {renderList(members)}
                 </section>

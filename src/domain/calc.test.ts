@@ -335,7 +335,6 @@ describe('filters and sorting', () => {
   it('sorts plans with missing values last in both directions', () => {
     const list = [...plans, evaluatePlan(plan({ id: '4', name: 'Unknown', benefits: null }), h, 0)];
     expect(names(sortPlans(list, 'deductible')).at(-1)).toBe('Unknown');
-    expect(names(sortPlans(list, 'deductible', true)).at(-1)).toBe('Unknown');
     expect(names(applyFilters(list, { ...EMPTY_FILTERS, maxDeductible: 999999 }))).not.toContain('Unknown');
   });
 
@@ -360,7 +359,6 @@ describe('filters and sorting', () => {
 
   it('sorts in both directions', () => {
     expect(names(sortPlans(plans, 'netMonthly'))).toEqual(['Cheap', 'Mid', 'Rich']);
-    expect(names(sortPlans(plans, 'netMonthly', true))).toEqual(['Rich', 'Mid', 'Cheap']);
   });
 });
 
