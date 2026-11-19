@@ -27,6 +27,8 @@ export interface PlanCardContext {
   candidates: Provider[];
   checkingDoctors: string[];
   requiredIds: string[];
+  /** Must-have hospitals and doctors unticked in the filters: still shown on each plan, but missing one no longer makes a plan miss a need. */
+  optionalIds: string[];
   drugLines: DrugLine[];
   drugLookup: CoverageLookup;
   /** Your scenario, for the medication choices it makes. */
@@ -44,7 +46,10 @@ interface Props extends PlanCardContext {
 }
 
 /** How a plan fits the household: the parts of the "Your fit" line, and what the details list. */
-export function planFit(item: EvaluatedPlan, ctx: Pick<PlanCardContext, 'doctors' | 'candidates' | 'checkingDoctors' | 'requiredIds' | 'drugLines' | 'drugLookup'>) {
+export function planFit(
+  item: EvaluatedPlan,
+  ctx: Pick<PlanCardContext, 'doctors' | 'candidates' | 'checkingDoctors' | 'requiredIds' | 'optionalIds' | 'drugLines' | 'drugLookup'>,
+) {
   const { plan } = item;
   const drugs = plan.benefits
     ? ctx.drugLines.map((line) => {
@@ -56,10 +61,19 @@ export function planFit(item: EvaluatedPlan, ctx: Pick<PlanCardContext, 'doctors
     : [];
   const myCandidates = ctx.candidates.filter((c) => c.candidateFor === plan.carrier);
   const others = otherAccess(plan, ctx.requiredIds);
+  const required = (id: string) => !ctx.optionalIds.includes(id);
+  const hospitalPart = (ids: string[]) => hospitalFit(ids.map((id) => ({ name: HOSPITALS[id].name, status: hospitalStatus(plan, id) })));
+  const doctorPart = (docs: Provider[]) =>
+    doctorFit(docs.map((d) => ({ status: doctorStatusFor(d, plan).status, checking: ctx.checkingDoctors.includes(d.id) })));
+  const drugPart = drugFit(drugs.map((d) => d.kind));
+  // The line shows every hospital and doctor; only the ticked must-haves decide whether the plan misses a need.
+  const judged = [hospitalPart(HOSPITAL_IDS.filter(required)), doctorPart(ctx.doctors.filter((d) => required(d.id))), drugPart].filter(
+    (p): p is FitPart => p !== null,
+  );
   const parts = [
-    hospitalFit(HOSPITAL_IDS.map((id) => ({ name: HOSPITALS[id].name, status: hospitalStatus(plan, id) }))),
-    doctorFit(ctx.doctors.map((d) => ({ status: doctorStatusFor(d, plan).status, checking: ctx.checkingDoctors.includes(d.id) }))),
-    drugFit(drugs.map((d) => d.kind)),
+    hospitalPart(HOSPITAL_IDS),
+    doctorPart(ctx.doctors),
+    drugPart,
     others.known
       ? ({ key: 'others', label: 'Other hospitals', level: 'info', detail: `${others.inCount + others.conditionalCount} of ${others.total}` } satisfies FitPart)
       : null,
@@ -67,7 +81,7 @@ export function planFit(item: EvaluatedPlan, ctx: Pick<PlanCardContext, 'doctors
       ? ({ key: 'candidates', label: 'Candidates', level: 'info', detail: `${myCandidates.length} with this insurer` } satisfies FitPart)
       : null,
   ].filter((p): p is FitPart => p !== null);
-  return { drugs, myCandidates, others, parts, overall: overallFit(parts) };
+  return { drugs, myCandidates, others, parts, overall: overallFit(judged) };
 }
 
 /**

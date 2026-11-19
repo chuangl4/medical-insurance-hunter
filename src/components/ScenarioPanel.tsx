@@ -53,7 +53,7 @@ function readLegacyScenario(): CareScenario | null {
   }
 }
 
-interface MedItem {
+export interface MedItem {
   id: string;
   name: string;
   who: string;
@@ -63,7 +63,7 @@ interface MedItem {
 }
 
 /** The household's medications: linked ones are priced per plan, unlinked cash ones cost the same everywhere. */
-function medItems(profile: Profile): MedItem[] {
+export function medItems(profile: Profile): MedItem[] {
   return profile.members.flatMap((m) =>
     m.careItems.flatMap((item): MedItem[] => {
       const who = m.label || 'Someone';

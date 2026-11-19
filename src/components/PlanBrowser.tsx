@@ -25,6 +25,14 @@ interface Props extends PlanCardContext {
   onToggleCompare: (id: string) => void;
   /** Shown above the plan list, such as how to read the yearly costs. */
   intro?: ReactNode;
+  /** Must-have hospitals the app tracks per plan; these can filter. */
+  hospitals: { id: string; name: string }[];
+  /** Must-have hospitals without per-plan data: listed, but they can't filter. */
+  untrackedHospitals: { id: string; name: string }[];
+  /** Medications priced into every plan; unticking one leaves it out of costs and fit, as in your scenario. */
+  meds: { id: string; name: string; who: string; included: boolean }[];
+  onToggleMed: (id: string) => void;
+  onEditHousehold: () => void;
 }
 
 const METALS: Metal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -113,8 +121,9 @@ function NumberFilter(props: { label: string; value: number | null; onChange: (v
 }
 
 export function PlanBrowser(props: Props) {
-  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, intro, ...context } = props;
-  const { doctors } = context;
+  const { plans, filters, onFiltersChange, compareIds, maxCompare, onToggleCompare, intro, ...rest } = props;
+  const { hospitals, untrackedHospitals, meds, onToggleMed, onEditHousehold, ...context } = rest;
+  const { doctors, candidates } = context;
   const [sortKey, setSortKey] = useState<SortKey>('scenarioYear');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showMisses, setShowMisses] = useState(false);
@@ -135,6 +144,16 @@ export function PlanBrowser(props: Props) {
   const canGroup = [...fits.values()].some((f) => f !== null);
   // A plan with nothing to judge it by joins the ones to confirm rather than dropping out.
   const inGroup = (level: (typeof GROUPS)[number]) => visible.filter((p) => (fits.get(p.plan.id) ?? 'check') === level);
+  const mustHaves = [
+    ...hospitals.map((h) => ({ ...h, on: filters.hospitals.includes(h.id), field: 'hospitals' as const })),
+    ...doctors.map((d) => ({ id: d.id, name: d.name, on: filters.doctors.includes(d.id), field: 'doctors' as const })),
+  ];
+  const toggleMustHave = (m: (typeof mustHaves)[number]) =>
+    set({ [m.field]: m.on ? filters[m.field].filter((x) => x !== m.id) : [...filters[m.field], m.id] });
+  // Unticked must-haves stay visible as chips, so a list that includes plans without them says so.
+  const optionalChips = mustHaves
+    .filter((m) => !m.on)
+    .map((m) => ({ key: `opt-${m.id}`, label: `Optional: ${m.name}`, title: `Make ${m.name} a must-have again`, onClick: () => toggleMustHave(m) }));
   const chips = activeChips(filters);
   const mustHaveCount = filters.hospitals.length + filters.doctors.length;
   const more = moreFilterCount(filters);
@@ -159,7 +178,57 @@ export function PlanBrowser(props: Props) {
       <button type="button" className="secondary filters-toggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
         {filtersOpen ? 'Hide filters' : `Filters${chips.length ? ` (${chips.length})` : ''}`}
       </button>
-      <aside className={filtersOpen ? 'filters open' : 'filters'} aria-label="Filters">
+      <aside className={filtersOpen ? 'filters open' : 'filters'} aria-label="Filters" id="plan-filters">
+        {(mustHaves.length > 0 || meds.length > 0 || candidates.length > 0) && (
+          <section className="filter-section must-haves">
+            <div className="filters-head">
+              <h2>Your must-haves</h2>
+              <button type="button" className="link-button" onClick={onEditHousehold}>
+                Edit
+              </button>
+            </div>
+            {mustHaves.length > 0 && (
+              <fieldset className="filter-group">
+                <legend>Hospitals and doctors</legend>
+                {mustHaves.map((m) => (
+                  <label key={m.id} className="check">
+                    <input type="checkbox" checked={m.on} onChange={() => toggleMustHave(m)} />
+                    <span>{m.name}</span>
+                  </label>
+                ))}
+                {untrackedHospitals.map((h) => (
+                  <p key={h.id} className="must-have-static">
+                    {h.name} <span className="hint">· network not tracked per plan</span>
+                  </p>
+                ))}
+                <p className="hint">Unticked ones still show on each plan, but plans without them aren't hidden or marked as missing a need.</p>
+              </fieldset>
+            )}
+            {meds.length > 0 && (
+              <fieldset className="filter-group">
+                <legend>Medications in your costs</legend>
+                {meds.map((m) => (
+                  <label key={m.id} className="check">
+                    <input type="checkbox" checked={m.included} onChange={() => onToggleMed(m.id)} />
+                    <span>
+                      {m.name} <span className="muted">· {m.who}</span>
+                    </span>
+                  </label>
+                ))}
+                <p className="hint">Unticked ones are left out of every plan's yearly cost and fit.</p>
+              </fieldset>
+            )}
+            {candidates.length > 0 && (
+              <div className="filter-group">
+                <span className="group-label">Candidate doctors</span>
+                <p className="hint">
+                  {candidates.length === 1 ? `${candidates[0].name} is` : `${candidates.length} doctors are`} someone you'd see only if you
+                  picked a particular insurer. They show on that insurer's plans and never hide a plan.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
         <section className="filter-section">
           <div className="filters-head">
             <h2>Plan filters</h2>
@@ -228,7 +297,23 @@ export function PlanBrowser(props: Props) {
         <div className="results-bar">
           <p aria-live="polite">
             <strong>{visible.length}</strong> of {plans.length} plans
-            {mustHaveCount > 0 && <span className="muted"> · covering your {mustHaveCount} must-haves</span>}
+            {mustHaveCount > 0 && (
+              <>
+                {' '}
+                <span className="muted">·</span>{' '}
+                <button
+                  type="button"
+                  className="link-button"
+                  aria-controls="plan-filters"
+                  onClick={() => {
+                    setFiltersOpen(true);
+                    document.getElementById('plan-filters')?.scrollIntoView({ block: 'nearest' });
+                  }}
+                >
+                  covering your {mustHaveCount} must-have{mustHaveCount === 1 ? '' : 's'}
+                </button>
+              </>
+            )}
           </p>
           <p className="scenario-caption">
             <span className="muted">Your scenario:</span> {context.scenarioText}{' '}
@@ -247,8 +332,15 @@ export function PlanBrowser(props: Props) {
             </label>
           </div>
         </div>
-        {chips.length > 0 && (
+        {chips.length + optionalChips.length > 0 && (
           <ul className="filter-chips" aria-label="Active filters">
+            {optionalChips.map((c) => (
+              <li key={c.key}>
+                <button type="button" className="filter-chip optional-chip" aria-label={c.title} title={c.title} onClick={c.onClick}>
+                  {c.label} <span aria-hidden="true">✕</span>
+                </button>
+              </li>
+            ))}
             {chips.map((c) => (
               <li key={c.key}>
                 <button type="button" className="filter-chip" aria-label={`Remove filter ${c.label}`} onClick={() => set(c.clear)}>

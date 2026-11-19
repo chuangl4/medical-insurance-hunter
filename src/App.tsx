@@ -12,7 +12,7 @@ import { SubsidySummary } from './components/SubsidySummary';
 import { LEGACY_DRUG_NAMES } from './data/careNeeds';
 import { KING_COUNTY_PLANS } from './data/kingCounty2027';
 import { estimateSubsidy, evaluatePlan, isSoldIn } from './domain/calc';
-import { REQUIRED_HOSPITALS } from './data/hospitalNetworks';
+import { HOSPITAL_IDS, REQUIRED_HOSPITALS } from './data/hospitalNetworks';
 import { EMPTY_FILTERS, applyFilters, type Filters } from './domain/filter';
 import {
   EMPTY_PROFILE,
@@ -146,6 +146,12 @@ export function App() {
     if (!doctorIds) return;
     setFilters((f) => ({ ...f, doctors: [...new Set([...f.doctors, ...doctorIds.split(',')])] }));
   }, [doctorIds]);
+
+  // Must-haves unticked in the filters: shown on each plan, but missing one doesn't make a plan miss a need.
+  const optionalIds = useMemo(
+    () => [...HOSPITAL_IDS.filter((id) => !filters.hospitals.includes(id)), ...doctors.filter((d) => !filters.doctors.includes(d.id)).map((d) => d.id)],
+    [filters.hospitals, filters.doctors, doctors],
+  );
 
   const household = useMemo(() => householdFromProfile(profile ?? EMPTY_PROFILE), [profile]);
   // Your scenario is saved with the profile, so it follows you to other browsers.
@@ -351,6 +357,10 @@ export function App() {
               drugChecking={drugLookups.checking}
               drugErrors={drugLookups.errors}
               onDrugRecheck={drugLookups.recheck}
+            onToggleMed={(id) =>
+              setScenario({ ...scenario, stopped: scenario.stopped.includes(id) ? scenario.stopped.filter((x) => x !== id) : [...scenario.stopped, id] })
+            }
+            optionalIds={optionalIds}
               doctors={doctors}
               candidates={candidates}
               checkingDoctors={doctorLookups.checking}
