@@ -14,6 +14,8 @@ import { DoctorHelp } from './DoctorHelp';
 import { ExceptionHelp } from './ExceptionHelp';
 import { NetworkRulesLine } from './NetworkRulesLine';
 import { PlanRules } from './PlanRules';
+import { PlanQuestions } from './PlanQuestions';
+import { CONTRACT_SOURCES } from '../data/contractSources';
 import { QualityRatingLine } from './QualityRatingLine';
 import { ScenarioMath } from './ScenarioMath';
 import type { CareScenario } from '../domain/scenarios';
@@ -319,6 +321,12 @@ export function PlanCard(props: Props) {
             <h4>Quality</h4>
             <QualityRatingLine plan={plan} />
           </section>
+          {CONTRACT_SOURCES[plan.id] && (
+            <section>
+              <h4>Ask about this plan</h4>
+              <PlanQuestions planId={plan.id} />
+            </section>
+          )}
           <p className="plan-links">
             {plan.benefits && (
               <a href={plan.benefits.source} target="_blank" rel="noreferrer">

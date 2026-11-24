@@ -6,6 +6,7 @@ import { createApp, type GoogleIdentity } from './app';
 import { loadConfig, type ServerConfig } from './config';
 import { Store } from './db';
 import { buildMessages, cleanOutput } from './chat';
+import { AnswerRefusedError } from './planQa';
 import { NO_UPDATES } from '../src/domain/onboarding';
 
 const KEY = Buffer.alloc(32, 7).toString('base64');
@@ -36,6 +37,11 @@ const searchDoctors = vi.fn();
 const checkDoctor = vi.fn();
 const searchDrugs = vi.fn();
 const drugCoverage = vi.fn();
+const askPlan = vi.fn();
+const warmPlan = vi.fn();
+/** A made-up plan ID that has a contract in these tests. */
+const PLAN_WITH_CONTRACT = '11111WA0000001';
+const hasContract = (id: string) => id === PLAN_WITH_CONTRACT;
 
 function start(overrides: Partial<ServerConfig> = {}) {
   const config: ServerConfig = {
@@ -55,6 +61,9 @@ function start(overrides: Partial<ServerConfig> = {}) {
     checkDoctor,
     searchDrugs,
     drugCoverage,
+    askPlan,
+    warmPlan,
+    hasContract,
   });
   return new Promise<void>((resolve) => {
     server = app.listen(0, () => {
@@ -82,6 +91,9 @@ afterEach(() => {
   checkDoctor.mockReset();
   searchDrugs.mockReset();
   drugCoverage.mockReset();
+  askPlan.mockReset();
+  warmPlan.mockReset();
+  vi.restoreAllMocks();
 });
 
 describe('server configuration', () => {
@@ -239,6 +251,50 @@ describe('drug coverage lookups', () => {
     drugCoverage.mockResolvedValue({ P1: { covered: false } });
     expect(await (await post('/api/drugs/coverage', { rxcui: '123' }, cookie)).json()).toEqual({ plans: { P1: { covered: false } } });
     expect(drugCoverage).toHaveBeenCalledWith('123');
+  });
+});
+
+describe('plan questions', () => {
+  const ask = (planId: string, body: unknown, cookie = '') => post(`/api/plans/${planId}/ask`, body, cookie);
+  const answer = { segments: [{ text: 'Yes.', refs: [1] }], references: [{ kind: 'contract', quote: 'Covered.', page: 3 }], notStated: false, unsourced: false };
+
+  it('needs sign-in, a plan with a contract, and a valid question', async () => {
+    expect((await ask(PLAN_WITH_CONTRACT, { question: 'Covered?' })).status).toBe(401);
+    const cookie = await signIn();
+    expect((await ask('99999WA9999999', { question: 'Covered?' }, cookie)).status).toBe(404);
+    expect((await ask('not-a-plan', { question: 'Covered?' }, cookie)).status).toBe(404);
+    expect((await ask(PLAN_WITH_CONTRACT, { question: '' }, cookie)).status).toBe(400);
+    expect((await ask(PLAN_WITH_CONTRACT, { question: 'x'.repeat(1001) }, cookie)).status).toBe(400);
+    expect(askPlan).not.toHaveBeenCalled();
+  });
+
+  it("answers with the user's own saved profile, and passes earlier turns along", async () => {
+    const cookie = await signIn();
+    await fetch(base + '/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json', cookie }, body: JSON.stringify({ profile }) });
+    askPlan.mockResolvedValue(answer);
+    const history = [{ question: 'Deductible?', answer: '$1,000.' }];
+    const response = await ask(PLAN_WITH_CONTRACT, { question: 'Covered?', history }, cookie);
+    expect(await response.json()).toEqual(answer);
+    expect(askPlan).toHaveBeenCalledWith(PLAN_WITH_CONTRACT, { question: 'Covered?', history }, expect.objectContaining({ members: profile.members }));
+  });
+
+  it('reports refusals and failures without leaking details', async () => {
+    const cookie = await signIn();
+    askPlan.mockRejectedValueOnce(new AnswerRefusedError('no'));
+    expect((await ask(PLAN_WITH_CONTRACT, { question: 'Covered?' }, cookie)).status).toBe(422);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    askPlan.mockRejectedValueOnce(new Error('upstream secret'));
+    const failed = await ask(PLAN_WITH_CONTRACT, { question: 'Covered?' }, cookie);
+    expect(failed.status).toBe(502);
+    expect(JSON.stringify(await failed.json())).not.toContain('upstream secret');
+  });
+
+  it('warms the cache in the background and answers right away', async () => {
+    const cookie = await signIn();
+    warmPlan.mockResolvedValue(undefined);
+    expect((await post(`/api/plans/${PLAN_WITH_CONTRACT}/warm`, {}, cookie)).status).toBe(204);
+    expect(warmPlan).toHaveBeenCalledWith(PLAN_WITH_CONTRACT);
+    expect((await post('/api/plans/99999WA9999999/warm', {}, cookie)).status).toBe(404);
   });
 });
 

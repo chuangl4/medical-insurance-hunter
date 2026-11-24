@@ -152,6 +152,14 @@ export const chatRequestSchema = z.object({
 });
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
 
+export const planQuestionSchema = z.object({
+  question: text(1000).min(1),
+  history: z.array(z.object({ question: text(1000).min(1), answer: text(4000).min(1) })).max(3).default([]),
+});
+export type PlanQuestion = z.infer<typeof planQuestionSchema>;
+
+export const planIdSchema = z.string().regex(/^\d{5}WA\d{7}$/);
+
 export const doctorSearchSchema = z.object({
   first: text(60),
   last: text(60).min(2),

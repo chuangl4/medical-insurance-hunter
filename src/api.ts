@@ -36,6 +36,24 @@ async function call<T>(path: string, init: { method?: string; body?: unknown } =
   return data as T;
 }
 
+/** A quoted passage an answer relies on: from the plan's contract (with its page), the app's checked facts, or a drug list. */
+export interface PlanReference {
+  kind: 'contract' | 'facts' | 'drugs';
+  quote: string;
+  page?: number;
+  url?: string;
+}
+
+export interface PlanAnswer {
+  segments: { text: string; refs: number[] }[];
+  references: PlanReference[];
+  /** The documents don't answer the question. */
+  notStated: boolean;
+  /** No sourced answer came back, so the reply points to the insurer instead. */
+  unsourced: boolean;
+  source: { title: string; url: string; checked: string; insurer: string };
+}
+
 export const api = {
   config: () => call<AuthConfig>('/api/config'),
   me: () => call<{ user: User }>('/api/me').then((r) => r.user),
@@ -77,6 +95,9 @@ export const api = {
       '/api/drugs/coverage',
       { method: 'POST', body: { rxcui } },
     ).then((r) => r.plans),
+  askPlan: (planId: string, question: string, history: { question: string; answer: string }[]) =>
+    call<PlanAnswer>(`/api/plans/${encodeURIComponent(planId)}/ask`, { method: 'POST', body: { question, history } }),
+  warmPlan: (planId: string) => call<void>(`/api/plans/${encodeURIComponent(planId)}/warm`, { method: 'POST', body: {} }),
   checkDoctor: (body: { doctor: DoctorRecord; carriers: string[]; hospitals: { id: string; name: string }[] }) =>
     call<{ check: ClinicCheck }>('/api/doctors/check', { method: 'POST', body }).then((r) => r.check),
 };

@@ -8,6 +8,9 @@ import { AssistantNotConfiguredError, chat, ReplyRefusedError } from './chat';
 import { checkDoctor, CheckRefusedError, searchDoctors } from './doctors';
 import { drugNames, equivalentRxcuis, searchDrugs } from './drugs';
 import { loadFormularies, lookupCoverage } from './formularyData';
+import { loadContracts } from './contracts';
+import { askPlan, hasContract, warmPlan, type PlanQaDeps } from './planQa';
+import { KING_COUNTY_PLANS } from '../src/data/kingCounty2027';
 
 try {
   process.loadEnvFile();
@@ -36,6 +39,15 @@ async function withClaude<T>(run: () => Promise<T>): Promise<T> {
 const formularies = loadFormularies();
 console.log(`Drug lists loaded: ${formularies.map((f) => `${f.carrier} (${f.planIds.length} plans)`).join(', ') || 'none'}`);
 
+const contracts = loadContracts();
+console.log(`Plan contracts loaded: ${contracts.size} plans`);
+
+const drugCoverage = async (rxcui: string) => {
+  const [ids, names] = await Promise.all([equivalentRxcuis(rxcui), drugNames(rxcui)]);
+  return lookupCoverage(formularies, ids, names);
+};
+const planQa: PlanQaDeps = { client: anthropic, contracts, plans: KING_COUNTY_PLANS, searchDrugs, drugCoverage };
+
 const app = createApp({
   config,
   store,
@@ -48,10 +60,10 @@ const app = createApp({
   chat: (request) => withClaude(() => chat(anthropic, request)),
   searchDoctors,
   searchDrugs,
-  drugCoverage: async (rxcui) => {
-    const [ids, names] = await Promise.all([equivalentRxcuis(rxcui), drugNames(rxcui)]);
-    return lookupCoverage(formularies, ids, names);
-  },
+  drugCoverage,
+  askPlan: (planId, { question, history }, profile) => withClaude(() => askPlan(planQa, { planId, question, history, profile })),
+  warmPlan: (planId) => withClaude(() => warmPlan(planQa, planId)),
+  hasContract: (planId) => hasContract(planQa, planId),
   checkDoctor: (request) => withClaude(() => checkDoctor(anthropic, request)),
   staticDir: config.production ? path.resolve('dist') : undefined,
 });

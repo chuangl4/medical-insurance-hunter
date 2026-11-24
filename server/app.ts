@@ -8,13 +8,30 @@ import { AssistantNotConfiguredError, ReplyRefusedError, type ChatResult } from 
 import type { ClinicCheck, DoctorRecord } from '../src/domain/doctors';
 import type { DrugOption } from './drugs';
 import type { FoundCoverage } from './formularyData';
-import { chatRequestSchema, drugCoverageRequestSchema, drugSearchSchema, doctorCheckSchema, doctorSearchSchema, profileSchema, type ChatRequest, type DoctorCheckRequest } from './schema';
+import { AnswerRefusedError, NoContractError, type PlanAnswer } from './planQa';
+import type { Profile } from '../src/domain/profile';
+import {
+  chatRequestSchema,
+  drugCoverageRequestSchema,
+  drugSearchSchema,
+  doctorCheckSchema,
+  doctorSearchSchema,
+  planIdSchema,
+  planQuestionSchema,
+  profileSchema,
+  type ChatRequest,
+  type DoctorCheckRequest,
+  type PlanQuestion,
+} from './schema';
 
 export const SESSION_COOKIE = 'mih_session';
 const CHAT_TURNS_PER_HOUR = 150;
 const DOCTOR_SEARCHES_PER_HOUR = 60;
 /** Each check runs web searches with Claude, so it costs more than a chat turn. */
 const DOCTOR_CHECKS_PER_HOUR = 20;
+/** Each question reads a whole plan contract with Claude. */
+const PLAN_QUESTIONS_PER_HOUR = 40;
+const PLAN_WARMUPS_PER_HOUR = 60;
 
 export interface GoogleIdentity {
   sub: string;
@@ -38,6 +55,12 @@ export interface AppDeps {
   drugCoverage: (rxcui: string) => Promise<Record<string, FoundCoverage>>;
   /** Checks a doctor's clinic websites and directories. */
   checkDoctor: (request: DoctorCheckRequest) => Promise<ClinicCheck>;
+  /** Answers a question about one plan from its contract and the app's checked data. */
+  askPlan: (planId: string, question: PlanQuestion, profile: Profile | null) => Promise<PlanAnswer>;
+  /** Loads a plan's contract into Claude's prompt cache ahead of a question. */
+  warmPlan: (planId: string) => Promise<void>;
+  /** Plans that have a contract loaded. */
+  hasContract: (planId: string) => boolean;
   /** Built front end to serve in production. */
   staticDir?: string;
 }
@@ -52,7 +75,7 @@ function readCookie(req: Request, name: string): string | null {
   return null;
 }
 
-export function createApp({ config, store, verifyGoogleToken, chat, searchDoctors, checkDoctor, searchDrugs, drugCoverage, staticDir }: AppDeps) {
+export function createApp({ config, store, verifyGoogleToken, chat, searchDoctors, checkDoctor, searchDrugs, drugCoverage, askPlan, warmPlan, hasContract, staticDir }: AppDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.use((_req, res, next) => {
@@ -247,6 +270,57 @@ export function createApp({ config, store, verifyGoogleToken, chat, searchDoctor
       console.error('drug coverage lookup failed:', error instanceof Error ? error.message : error);
       res.status(502).json({ error: "The drug lists couldn't be searched right now. Try again in a moment." });
     }
+  });
+
+  /** The plan from the address, or a 404 when it has no contract loaded. */
+  const contractPlan = (req: AuthedRequest, res: Response): string | null => {
+    const id = planIdSchema.safeParse(req.params.planId);
+    if (!id.success || !hasContract(id.data)) {
+      res.status(404).json({ error: "This plan's contract isn't available, so questions can't be answered for it yet." });
+      return null;
+    }
+    return id.data;
+  };
+
+  const questionAllowed = limiter(PLAN_QUESTIONS_PER_HOUR, 'Too many plan questions this hour. Please try again later.');
+  app.post('/api/plans/:planId/ask', requireUser, async (req: AuthedRequest, res) => {
+    const planId = contractPlan(req, res);
+    if (!planId) return;
+    const parsed = planQuestionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Ask a question of up to 1,000 characters.' });
+      return;
+    }
+    if (!questionAllowed(req, res)) return;
+    const saved = profileSchema.safeParse(store.getProfile(req.user!.id));
+    try {
+      res.json(await askPlan(planId, parsed.data, saved.success ? (saved.data as Profile) : null));
+    } catch (error) {
+      if (error instanceof AnswerRefusedError) {
+        res.status(422).json({ error: 'Claude declined to answer that. Try rewording it.' });
+        return;
+      }
+      if (error instanceof NoContractError) {
+        res.status(404).json({ error: "This plan's contract isn't available, so questions can't be answered for it yet." });
+        return;
+      }
+      if (error instanceof AssistantNotConfiguredError) {
+        res.status(503).json({ error: "Plan questions aren't set up on this server yet (no Claude API key)." });
+        return;
+      }
+      console.error('plan question failed:', error instanceof Error ? error.message : error);
+      res.status(502).json({ error: 'The answer service is unavailable right now. Try again in a moment.' });
+    }
+  });
+
+  const warmAllowed = limiter(PLAN_WARMUPS_PER_HOUR, 'Too many requests this hour.');
+  app.post('/api/plans/:planId/warm', requireUser, async (req: AuthedRequest, res) => {
+    const planId = contractPlan(req, res);
+    if (!planId) return;
+    if (!warmAllowed(req, res)) return;
+    // Best effort: a failed warm-up only means the first question takes longer.
+    warmPlan(planId).catch((error) => console.error('plan warm-up failed:', error instanceof Error ? error.message : error));
+    res.status(204).end();
   });
 
   const checkAllowed = limiter(DOCTOR_CHECKS_PER_HOUR, 'Too many website checks this hour. Please try again later.');

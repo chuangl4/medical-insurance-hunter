@@ -483,6 +483,16 @@ a:hover, .link-button:hover { text-decoration-color: currentColor; }
 .plan-details section { display: flex; flex-direction: column; gap: 6px; }
 .plan-details h4 { margin: 0; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 .plan-details .scenario-math { border-top: 0; padding-top: 0; margin: 0; }
+.plan-questions { display: flex; flex-direction: column; gap: 10px; }
+.plan-turn { display: flex; flex-direction: column; gap: 4px; }
+.plan-question { margin: 0; font-weight: 600; font-size: 0.92rem; }
+.plan-answer p { margin: 0; font-size: 0.92rem; line-height: 1.45; white-space: pre-wrap; }
+.plan-ref-mark { color: var(--accent); font-size: 0.7rem; margin-left: 1px; }
+.plan-refs { margin: 4px 0 0; padding-left: 22px; font-size: 0.82rem; display: flex; flex-direction: column; gap: 4px; }
+.plan-refs q { color: var(--muted); }
+.plan-ask { display: flex; gap: 8px; }
+.plan-ask input { flex: 1; }
+.plan-ask-note { margin: 0; font-size: 0.8rem; }
 .copay-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 14px; margin: 0; font-size: 0.88rem; }
 .copay-grid dt { color: var(--muted); font-size: 0.78rem; }
 .copay-grid dd { margin: 0; }
