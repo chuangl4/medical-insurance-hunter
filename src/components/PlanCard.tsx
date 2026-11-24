@@ -14,7 +14,6 @@ import { DoctorHelp } from './DoctorHelp';
 import { ExceptionHelp } from './ExceptionHelp';
 import { NetworkRulesLine } from './NetworkRulesLine';
 import { PlanRules } from './PlanRules';
-import { PlanQuestions } from './PlanQuestions';
 import { CONTRACT_SOURCES } from '../data/contractSources';
 import { QualityRatingLine } from './QualityRatingLine';
 import { ScenarioMath } from './ScenarioMath';
@@ -37,6 +36,8 @@ export interface PlanCardContext {
   /** Your scenario in one line, and a way to change it. */
   scenarioText: string;
   onEditScenario: (from: HTMLElement) => void;
+  /** Opens the question panel for a plan that has a contract loaded. */
+  onAsk: (planId: string, from: HTMLElement) => void;
 }
 
 interface Props extends PlanCardContext {
@@ -92,7 +93,7 @@ export function planFit(
  * per-hospital, per-doctor and per-medication details; "Plan details" opens the general facts about the plan.
  */
 export function PlanCard(props: Props) {
-  const { item, selected, compareFull, onToggleCompare, hideFit, doctors, checkingDoctors, drugLookup, scenario, onEditScenario } = props;
+  const { item, selected, compareFull, onToggleCompare, hideFit, doctors, checkingDoctors, drugLookup, scenario, onEditScenario, onAsk } = props;
   const { plan } = item;
   const [fitOpen, setFitOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -100,6 +101,7 @@ export function PlanCard(props: Props) {
   const { drugs, others, parts, overall } = planFit(item, props);
   const hospitalIds = trackedHospitals(props.requiredIds);
   const net = networkTypeOf(plan);
+  const hasContract = Boolean(CONTRACT_SOURCES[plan.id]);
 
   return (
     <li className={`plan-card${overall ? ` plan-fit-${overall}` : ''}`}>
@@ -108,16 +110,29 @@ export function PlanCard(props: Props) {
           <h3>{plan.name}</h3>
           <p className="muted">{plan.carrier}</p>
         </div>
-        <button
-          type="button"
-          className={selected ? 'compare-toggle on' : 'compare-toggle'}
-          aria-pressed={selected}
-          disabled={!selected && compareFull}
-          title={!selected && compareFull ? 'Compare is full. Remove a plan from the tray to add this one.' : undefined}
-          onClick={() => onToggleCompare(plan.id)}
-        >
-          {selected ? '✓ Comparing' : compareFull ? 'Compare full' : '+ Compare'}
-        </button>
+        <div className="plan-head-actions">
+          {hasContract && (
+            <button
+              type="button"
+              className="ask-toggle"
+              aria-label={`Ask about ${plan.name}`}
+              title="Ask questions about this plan, answered from its 2027 contract"
+              onClick={(e) => onAsk(plan.id, e.currentTarget)}
+            >
+              <span aria-hidden="true">💬</span> Ask
+            </button>
+          )}
+          <button
+            type="button"
+            className={selected ? 'compare-toggle on' : 'compare-toggle'}
+            aria-pressed={selected}
+            disabled={!selected && compareFull}
+            title={!selected && compareFull ? 'Compare is full. Remove a plan from the tray to add this one.' : undefined}
+            onClick={() => onToggleCompare(plan.id)}
+          >
+            {selected ? '✓ Comparing' : compareFull ? 'Compare full' : '+ Compare'}
+          </button>
+        </div>
       </div>
       <div className="badges">
         <span className={`badge metal-${plan.metal}`}>{plan.metal}</span>
@@ -321,11 +336,10 @@ export function PlanCard(props: Props) {
             <h4>Quality</h4>
             <QualityRatingLine plan={plan} />
           </section>
-          {CONTRACT_SOURCES[plan.id] && (
-            <section>
-              <h4>Ask about this plan</h4>
-              <PlanQuestions planId={plan.id} />
-            </section>
+          {hasContract && (
+            <button type="button" className="link-button ask-link" onClick={(e) => onAsk(plan.id, e.currentTarget)}>
+              Ask a question about this plan's coverage →
+            </button>
           )}
           <p className="plan-links">
             {plan.benefits && (

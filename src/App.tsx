@@ -30,6 +30,9 @@ import { useDrugLookups } from './useDrugLookups';
 import { coverageLookup } from './domain/drugs';
 import { DEFAULT_SCENARIO, applyScenario, scenarioLookup, scenarioSummary, type CareScenario } from './domain/scenarios';
 import { ScenarioPanel, medicationNames, takeLegacyScenario } from './components/ScenarioPanel';
+import { PlanAskPanel, type AskTurn } from './components/PlanAskPanel';
+import { HOSPITALS } from './data/hospitalNetworks';
+import { suggestedQuestions } from './domain/planQuestions';
 
 /** Where earlier versions kept the household. It's moved into the account on first sign-in. */
 const LEGACY_STORAGE_KEY = 'mih.household.v1';
@@ -164,10 +167,25 @@ export function App() {
   const setScenario = useCallback((next: CareScenario) => setProfile((prev) => prev && { ...prev, scenario: next }), []);
   const [scenarioOpen, setScenarioOpen] = useState(false);
   const scenarioOpener = useRef<HTMLElement | null>(null);
+  // Questions about one plan, in a side panel. Conversations stay in memory only, per plan, until the page reloads.
+  const [askPlanId, setAskPlanId] = useState<string | null>(null);
+  const askOpener = useRef<HTMLElement | null>(null);
+  const [askTurns, setAskTurns] = useState<Record<string, AskTurn[]>>({});
   const openScenario = useCallback((from: HTMLElement) => {
     scenarioOpener.current = from;
+    setAskPlanId(null);
     setScenarioOpen(true);
   }, []);
+  const openAsk = useCallback((planId: string, from: HTMLElement) => {
+    askOpener.current = from;
+    setScenarioOpen(false);
+    setAskPlanId(planId);
+  }, []);
+  const closeAsk = useCallback(() => setAskPlanId(null), []);
+  const updateAskTurns = useCallback(
+    (planId: string, update: (turns: AskTurn[]) => AskTurn[]) => setAskTurns((all) => ({ ...all, [planId]: update(all[planId] ?? []) })),
+    [],
+  );
   const closeScenario = useCallback(() => setScenarioOpen(false), []);
   // A scenario an earlier version kept in this browser moves into the profile once.
   const needsScenario = profile !== null && !profile.scenario;
@@ -299,6 +317,11 @@ export function App() {
     setFilters(previewing ? { ...next, hospitals: filters.hospitals, doctors: filters.doctors } : next);
   const shownOptionalIds = previewing ? [] : optionalIds;
   const requiredIds = previewing ? [] : requiredHospitalsOf(profile);
+  const askPlan = askPlanId ? evaluated.find((p) => p.plan.id === askPlanId) : undefined;
+  const askSuggestions = suggestedQuestions({
+    drugNames: scenarioHousehold.members.flatMap((m) => m.drugs ?? []).map((d) => d.name),
+    hospitalNames: requiredIds.flatMap((id) => (HOSPITALS[id] ? [HOSPITALS[id].name] : [])),
+  });
   const shownScenarioText = profile.members.length ? scenarioText : `a sample ${SAMPLE_MEMBER.age}-year-old, no regular care`;
   const fitting = justSetUp ? applyFilters(evaluated, filters, doctors).length : 0;
   return (
@@ -316,7 +339,7 @@ export function App() {
         onSignOut={signOut}
       />
       <div
-        className={['app', scenarioOpen && page !== 'household' && 'with-panel', page === 'plans' && compared.length > 0 && 'with-tray']
+        className={['app', (scenarioOpen || askPlanId) && page !== 'household' && 'with-panel', page === 'plans' && compared.length > 0 && 'with-tray']
           .filter(Boolean)
           .join(' ')}
       >
@@ -395,6 +418,7 @@ export function App() {
               scenario={scenario}
               onEditScenario={openScenario}
               scenarioText={shownScenarioText}
+              onAsk={openAsk}
             />
           )}
           {page === 'compare' && (
@@ -417,6 +441,16 @@ export function App() {
             onRemove={toggleCompare}
             onClear={() => setProfile((prev) => prev && { ...prev, shortlist: [] })}
             onOpen={() => goTo('compare')}
+          />
+        )}
+        {askPlan && page !== 'household' && (
+          <PlanAskPanel
+            plan={{ id: askPlan.plan.id, name: askPlan.plan.name, carrier: askPlan.plan.carrier }}
+            turns={askTurns[askPlan.plan.id] ?? []}
+            onTurnsChange={updateAskTurns}
+            suggestions={askSuggestions}
+            onClose={closeAsk}
+            returnFocus={askOpener}
           />
         )}
         <ScenarioPanel
