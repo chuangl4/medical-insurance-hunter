@@ -66,7 +66,7 @@ function ruleSentences(row: string): string | undefined {
 }
 
 /** Restrictions in the cost table and the excluded/other-covered boxes. */
-export function restrictionsOf(t: string): Pick<NetworkRules, 'urgentCareAway' | 'emergencyNote' | 'priorApproval' | 'notCovered' | 'otherCovered'> {
+export function restrictionsOf(t: string): Pick<NetworkRules, 'urgentCareAway' | 'emergencyNote' | 'priorApproval' | 'childrensDental' | 'notCovered' | 'otherCovered'> {
   const start = t.search(/Common Medical Event/i);
   const body = start >= 0 ? t.slice(start) : t;
 
@@ -93,6 +93,10 @@ export function restrictionsOf(t: string): Pick<NetworkRules, 'urgentCareAway' |
 
   const emergencyNote = ruleSentences(rowAfter(body, /Emergency room care(?=\s+(?:\$|\d|No charge|Not covered))/i) ?? '');
 
+  // The in-network cost comes first; a plan that covers check-ups shows a price or "No charge".
+  const dentalCost = rowAfter(body, /Children.s dental check[- ]*up/i)?.match(COST)?.[0];
+  const childrensDental: NetworkRules['childrensDental'] = dentalCost ? (/^not covered/i.test(dentalCost) ? 'notCovered' : 'covered') : undefined;
+
   const box = (re: RegExp) =>
     (t.match(re)?.[1] ?? '')
       .replace(/Page \d+ of \d+/gi, ' ')
@@ -107,6 +111,7 @@ export function restrictionsOf(t: string): Pick<NetworkRules, 'urgentCareAway' |
     urgentCareAway,
     ...(emergencyNote ? { emergencyNote } : {}),
     priorApproval,
+    ...(childrensDental ? { childrensDental } : {}),
     ...(notCovered.length ? { notCovered } : {}),
     ...(otherCovered.length ? { otherCovered } : {}),
   };
@@ -171,6 +176,12 @@ export const URGENT_AWAY_TEXT: Record<NonNullable<NetworkRules['urgentCareAway']
 export const adultEyeExamsCovered = (r: NetworkRules): boolean | null =>
   r.otherCovered?.some((x) => /eye/i.test(x)) ? true : r.notCovered?.some((x) => /eye/i.test(x)) ? false : null;
 
-/** Children's dental, which some plans leave to a separate dental plan. */
-export const childrensDentalExcluded = (r: NetworkRules): boolean =>
-  Boolean(r.notCovered?.some((x) => /dental/i.test(x) && /child|&|services/i.test(x)));
+/**
+ * Whether the plan includes children's dental check-ups, which most plans leave to a separate dental plan. The cost
+ * table's row decides; the exclusions box is only a fallback, since many summaries mark the row "Not covered" without
+ * listing it there. 'unknown' when neither says, so a missing row is never reported as included.
+ */
+export function childrensDentalStatus(r: NetworkRules): 'covered' | 'notCovered' | 'unknown' {
+  if (r.childrensDental) return r.childrensDental;
+  return r.notCovered?.some((x) => /dental/i.test(x) && /child|&|services/i.test(x)) ? 'notCovered' : 'unknown';
+}

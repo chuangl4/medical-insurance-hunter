@@ -16,10 +16,12 @@ import {
   REFERRAL_TEXT,
   URGENT_AWAY_TEXT,
   adultEyeExamsCovered,
-  childrensDentalExcluded,
+  childrensDentalStatus,
   networkRulesFor,
   networkTypeOf,
 } from '../domain/networkRules';
+
+const DENTAL_TEXT = { covered: 'Children’s dental check-ups included', notCovered: 'No children’s dental', unknown: 'Children’s dental: not stated' } as const;
 import type { EvaluatedPlan, Member } from '../domain/types';
 import { ScenarioGuide } from './ScenarioGuide';
 import { scenarioParts, type CareScenario, type ScenarioId } from '../domain/scenarios';
@@ -144,7 +146,7 @@ const ROWS: Row[] = [
       const r = networkRulesFor(p.plan);
       if (!r) return 'See plan details';
       const eye = adultEyeExamsCovered(r);
-      return `${eye === null ? 'Eye: not stated' : eye ? 'Eye exams covered' : 'No eye exams'} · ${childrensDentalExcluded(r) ? 'No children’s dental' : 'Children’s dental included'}`;
+      return `${eye === null ? 'Eye: not stated' : eye ? 'Eye exams covered' : 'No eye exams'} · ${DENTAL_TEXT[childrensDentalStatus(r)]}`;
     },
   },
   { label: 'Specialist referral', text: (p) => { const r = networkRulesFor(p.plan); return r ? REFERRAL_TEXT[r.referral] : 'See plan details'; } },

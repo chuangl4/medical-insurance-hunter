@@ -39,6 +39,8 @@ export interface NetworkRules {
   emergencyNote?: string;
   /** Services the summary says need prior approval (empty when it lists none, which doesn't mean none are needed). */
   priorApproval?: PriorApprovalService[];
+  /** The "Children's dental check-up" row, in network. Exchange plans never include it; some off-exchange plans do. */
+  childrensDental?: 'covered' | 'notCovered';
   /** The "Services your plan generally does NOT cover" box. */
   notCovered?: string[];
   /** The "Other covered services" box. */

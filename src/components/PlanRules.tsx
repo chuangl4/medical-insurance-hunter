@@ -4,7 +4,7 @@ import {
   REFERRAL_TEXT,
   URGENT_AWAY_TEXT,
   adultEyeExamsCovered,
-  childrensDentalExcluded,
+  childrensDentalStatus,
   networkRulesFor,
 } from '../domain/networkRules';
 import type { Plan } from '../domain/types';
@@ -16,6 +16,7 @@ export function PlanRules({ plan }: { plan: Plan }) {
   const insurer = plan.carrier.replace(/ \(.*\)$/, '');
   const approvals = rules.priorApproval ?? [];
   const eye = adultEyeExamsCovered(rules);
+  const dentalIncluded = childrensDentalStatus(rules) === 'covered';
   return (
     <div className="help-steps plan-rules">
       <span>
@@ -43,12 +44,12 @@ export function PlanRules({ plan }: { plan: Plan }) {
           </>
         )}
       </span>
-      {(eye !== null || childrensDentalExcluded(rules)) && (
+      {(eye !== null || dentalIncluded) && (
         <span>
           <strong>Stands out:</strong>{' '}
           {[
             eye === true ? 'covers routine eye exams for adults (most of these plans don’t)' : null,
-            childrensDentalExcluded(rules) ? 'doesn’t include children’s dental (buy a separate dental plan for children)' : null,
+            dentalIncluded ? 'includes children’s dental check-ups (most plans don’t; ask the insurer what else it covers)' : null,
           ]
             .filter(Boolean)
             .join('; ') || 'nothing unusual'}

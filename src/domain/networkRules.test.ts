@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NetworkRules } from './types';
-import { adultEyeExamsCovered, childrensDentalExcluded, parseSbc, restrictionsOf } from './networkRules';
+import { adultEyeExamsCovered, childrensDentalStatus, parseSbc, restrictionsOf } from './networkRules';
 
 const sbc = (type: string, referral: string, specialistRow: string) =>
   `Summary of Benefits and Coverage Coverage Period: 01/01/2027 - 12/31/2027 Coverage for: Individual/Family | Plan Type: ${type}
@@ -81,7 +81,19 @@ describe('plan restrictions from a summary', () => {
   it('spots adult eye exams and missing children’s dental', () => {
     const r: NetworkRules = { type: 'HMO', referral: 'no', outOfNetwork: 'emergencyOnly', source: '', notCovered: ['Dental care (Adult & Child)'], otherCovered: ['Routine eye care (Adult)'] };
     expect(adultEyeExamsCovered({ ...r })).toBe(true);
-    expect(childrensDentalExcluded({ ...r })).toBe(true);
-    expect(childrensDentalExcluded({ ...r, notCovered: ['Dental care (Adult)'] })).toBe(false);
+    expect(childrensDentalStatus({ ...r })).toBe('notCovered');
+    // Neither the row nor the exclusions box says: unknown, never "included".
+    expect(childrensDentalStatus({ ...r, notCovered: ['Dental care (Adult)'] })).toBe('unknown');
+    // The cost table's row wins over an exclusions box that doesn't mention children's dental.
+    expect(childrensDentalStatus({ ...r, notCovered: ['Dental care (Adult)'], childrensDental: 'notCovered' })).toBe('notCovered');
+    expect(childrensDentalStatus({ ...r, childrensDental: 'covered' })).toBe('covered');
+  });
+
+  it('reads the children’s dental check-up row', () => {
+    const row = (cells: string) =>
+      `Common Medical Event If your child needs dental or eye care Children's glasses No charge Not covered Children's dental check-up ${cells} Excluded Services & Other Covered Services:`;
+    expect(restrictionsOf(row('Not covered Not covered None')).childrensDental).toBe('notCovered');
+    expect(restrictionsOf(row('No charge, deductible does not apply Not covered 2 cleanings / year')).childrensDental).toBe('covered');
+    expect(restrictionsOf('Common Medical Event Specialist visit $40 Not covered').childrensDental).toBeUndefined();
   });
 });
