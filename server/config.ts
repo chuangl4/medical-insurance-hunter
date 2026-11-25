@@ -3,6 +3,8 @@ import path from 'node:path';
 export interface ServerConfig {
   production: boolean;
   port: number;
+  /** Network address to listen on. Defaults to this computer only. */
+  host: string;
   dataDir: string;
   /** OAuth client ID from Google Cloud, used to verify sign-in tokens. */
   googleClientId: string;
@@ -46,7 +48,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
 
   return {
     production,
-    port: Number(env.PORT) || 3001,
+    port: Number(env.PORT) || 3002,
+    host: env.HOST?.trim() || '127.0.0.1',
     dataDir: path.resolve(env.DATA_DIR ?? 'data'),
     googleClientId,
     allowedEmails,

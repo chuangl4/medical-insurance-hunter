@@ -68,8 +68,9 @@ const app = createApp({
   staticDir: config.production ? path.resolve('dist') : undefined,
 });
 
-app.listen(config.port, () => {
-  console.log(`API listening on http://localhost:${config.port}${config.production ? '' : ' (open the Vite URL in development)'}`);
+app.listen(config.port, config.host, (error) => {
+  if (error) throw error;
+  console.log(`API listening on http://${config.host}:${config.port}${config.production ? '' : ' (open the Vite URL in development)'}`);
   if (config.devLoginEmail) console.log(`Dev sign-in is on for ${config.devLoginEmail}. Never use this in production.`);
   if (!config.allowedEmails.length) console.log('ALLOWED_EMAILS is empty, so any Google account can sign in.');
 });

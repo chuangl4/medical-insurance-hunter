@@ -97,6 +97,11 @@ afterEach(() => {
 });
 
 describe('server configuration', () => {
+  it('listens on this computer only unless HOST says otherwise', () => {
+    const env = { PROFILE_KEY: KEY, GOOGLE_CLIENT_ID: 'x' };
+    expect(loadConfig(env).host).toBe('127.0.0.1');
+    expect(loadConfig({ ...env, HOST: '0.0.0.0' }).host).toBe('0.0.0.0');
+  });
   it('requires an encryption key and, in production, an allowlist and no dev sign-in', () => {
     expect(() => loadConfig({ GOOGLE_CLIENT_ID: 'x' })).toThrow(/PROFILE_KEY/);
     expect(() => loadConfig({ NODE_ENV: 'production', PROFILE_KEY: KEY, GOOGLE_CLIENT_ID: 'x' })).toThrow(/ALLOWED_EMAILS/);
@@ -130,6 +135,27 @@ describe('sign-in', () => {
   });
   it('has no dev sign-in unless configured', async () => {
     expect((await post('/api/auth/dev', {})).status).toBe(404);
+  });
+  it('ends saved sessions when an email is taken off the allowlist', async () => {
+    const cookie = await signIn();
+    const config = { ...loadConfig({ PROFILE_KEY: KEY, GOOGLE_CLIENT_ID: 'client-id', ALLOWED_EMAILS: 'other@example.com' }) };
+    const app = createApp({ config, store, verifyGoogleToken: vi.fn(), chat, searchDoctors, checkDoctor, searchDrugs, drugCoverage, askPlan, warmPlan, hasContract });
+    const second = await new Promise<Server>((resolve) => {
+      const s: Server = app.listen(0, '127.0.0.1', () => resolve(s));
+    });
+    const url = `http://127.0.0.1:${(second.address() as AddressInfo).port}`;
+    expect((await fetch(`${url}/api/me`, { headers: { cookie } })).status).toBe(401);
+    expect((await fetch(`${url}/api/profile`, { headers: { cookie } })).status).toBe(401);
+    second.close();
+  });
+  it('uses a separate, Secure cookie in production, which a dev cookie cannot stand in for', async () => {
+    const dev = await signIn();
+    server.close();
+    store.close();
+    await start({ production: true });
+    const response = await post('/api/auth/google', { credential: 'good' });
+    expect(response.headers.get('set-cookie')).toMatch(/^mih_session_prod=.+Secure/);
+    expect((await fetch(`${base}/api/me`, { headers: { cookie: dev } })).status).toBe(401);
   });
   it('ends the session on sign-out', async () => {
     const cookie = await signIn();

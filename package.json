@@ -10,6 +10,7 @@
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "vite preview",
+    "serve": "tsx scripts/serve.mts",
     "test": "vitest run",
     "formularies": "node --max-old-space-size=6144 --import tsx scripts/build-formularies.mts",
     "formularies:pdf": "tsx scripts/convert-formulary-pdfs.mts",
@@ -40,6 +41,6 @@
     "vitest": "^5.1.0"
   },
   "engines": {
-    "node": ">=22.13"
+    "node": ">=22.16"
   }
 }

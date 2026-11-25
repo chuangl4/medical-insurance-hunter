@@ -38,7 +38,7 @@ A household saved in the browser by earlier versions moves into your account the
    - `PROFILE_KEY`: run `openssl rand -base64 32`. Profiles are encrypted with it, so back it up privately; without it, saved profiles can't be read.
    - `ANTHROPIC_API_KEY`: from platform.claude.com. Without it, the setup chat is off and you fill in the form instead.
    - For local testing without Google, set `DEV_LOGIN_EMAIL` (and include it in `ALLOWED_EMAILS`). The server refuses to start with it in production.
-3. `npm run dev` starts the API on port 3001 and the web app on http://localhost:5173.
+3. `npm run dev` starts the API on port 3002 and the web app on http://localhost:5173.
 
 Run the tests with `npm test`.
 
@@ -50,9 +50,18 @@ Drug lists from insurers that publish machine-readable files are built into `ser
 
 Accuracy, checked 2026-11-16 against Washington Healthplanfinder's prescription search: 89 of 90 drug-and-insurer answers matched (10 drugs, 9 insurers). The one miss came from Molina's interim 2026 list.
 
+## Serve from your Mac
+
+`npm run serve` backs up the database if the last copy is over a day old, builds the app, and serves it at http://localhost:3101, keeping the Mac awake. Ctrl-C stops it. It uses the same folder and database as `npm run dev`, which can keep running, and leaves out the tester sign-in. Code changes reach it the next time it starts. Use Chrome or Firefox on localhost; Safari may not keep the Secure session cookie there.
+
+- `npm run serve -- --tailnet` also opens it to your own Tailscale devices, at `https://<this Mac>.<tailnet>.ts.net:8443`.
+- `npm run serve -- --public` also opens it to the internet at that address, through Tailscale Funnel. Only `ALLOWED_EMAILS` can sign in, but scanners will find it, so stop it when it isn't needed.
+
+Add each address you use, with its port, to the Google client's Authorized JavaScript origins. Backups go to `~/medical-insurance-hunter-backups` (change with `BACKUP_DIR`), last 7 kept; copy them, and `PROFILE_KEY` separately, somewhere off this Mac.
+
 ## Deploy
 
-On the server, from a fresh clone: `npm ci`, `npm run build`, then `npm start`. It serves the app and API on `PORT` (default 3001). Put it behind HTTPS (for example Caddy or nginx), since the session cookie is marked Secure in production. The database lives in `DATA_DIR` (default `data/`); back it up along with `PROFILE_KEY`.
+On the server, from a fresh clone: `npm ci`, `npm run build`, then `npm start`. It serves the app and API on `PORT` (default 3002), listening on 127.0.0.1 unless `HOST` is set. Put it behind HTTPS (for example Caddy or nginx), since the session cookie is marked Secure in production. The database lives in `DATA_DIR` (default `data/`); back it up along with `PROFILE_KEY`.
 
 ## Where things live
 

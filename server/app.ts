@@ -24,7 +24,11 @@ import {
   type PlanQuestion,
 } from './schema';
 
-export const SESSION_COOKIE = 'mih_session';
+/**
+ * Browsers share cookies across ports on localhost, and won't let a plain cookie replace a Secure one, so the
+ * production build and the dev server need different names to be signed in side by side.
+ */
+export const sessionCookie = (production: boolean): string => (production ? 'mih_session_prod' : 'mih_session');
 const CHAT_TURNS_PER_HOUR = 150;
 const DOCTOR_SEARCHES_PER_HOUR = 60;
 /** Each check runs web searches with Claude, so it costs more than a chat turn. */
@@ -77,6 +81,7 @@ function readCookie(req: Request, name: string): string | null {
 
 export function createApp({ config, store, verifyGoogleToken, chat, searchDoctors, checkDoctor, searchDrugs, drugCoverage, askPlan, warmPlan, hasContract, staticDir }: AppDeps) {
   const app = express();
+  const SESSION_COOKIE = sessionCookie(config.production);
   app.disable('x-powered-by');
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -109,13 +114,15 @@ export function createApp({ config, store, verifyGoogleToken, chat, searchDoctor
   // Admins see maintenance notices; the flag goes wherever the client receives its user.
   const withRole = (user: User) => ({ ...user, isAdmin: config.adminEmails.includes(user.email.toLowerCase()) });
 
+  const isAllowed = (email: string) => !config.allowedEmails.length || config.allowedEmails.includes(email.toLowerCase());
+
   const signIn = (res: Response, identity: GoogleIdentity) => {
     const email = identity.email.toLowerCase();
     if (!identity.emailVerified) {
       res.status(403).json({ error: 'Your Google email address is not verified.' });
       return;
     }
-    if (config.allowedEmails.length && !config.allowedEmails.includes(email)) {
+    if (!isAllowed(email)) {
       res.status(403).json({ error: 'This account is not allowed to sign in here.' });
       return;
     }
@@ -127,7 +134,8 @@ export function createApp({ config, store, verifyGoogleToken, chat, searchDoctor
   const requireUser = (req: AuthedRequest, res: Response, next: NextFunction) => {
     const token = readCookie(req, SESSION_COOKIE);
     const user = token ? store.userForSession(token) : null;
-    if (!user) {
+    // Checked on every request, so removing someone from the list also ends their saved sessions.
+    if (!user || !isAllowed(user.email)) {
       res.status(401).json({ error: 'Please sign in.' });
       return;
     }
