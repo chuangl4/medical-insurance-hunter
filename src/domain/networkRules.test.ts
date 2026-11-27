@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NetworkRules } from './types';
-import { adultEyeExamsCovered, childrensDentalStatus, parseSbc, restrictionsOf } from './networkRules';
+import { KING_COUNTY_PLANS } from '../data/kingCounty2027';
+import { adultEyeExamsCovered, benefitDetailsLink, childrensDentalStatus, parseSbc, restrictionsOf } from './networkRules';
 
 const sbc = (type: string, referral: string, specialistRow: string) =>
   `Summary of Benefits and Coverage Coverage Period: 01/01/2027 - 12/31/2027 Coverage for: Individual/Family | Plan Type: ${type}
@@ -95,5 +96,26 @@ describe('plan restrictions from a summary', () => {
     expect(restrictionsOf(row('Not covered Not covered None')).childrensDental).toBe('notCovered');
     expect(restrictionsOf(row('No charge, deductible does not apply Not covered 2 cleanings / year')).childrensDental).toBe('covered');
     expect(restrictionsOf('Common Medical Event Specialist visit $40 Not covered').childrensDental).toBeUndefined();
+  });
+});
+
+describe('benefit details link', () => {
+  const plan = (id: string) => KING_COUNTY_PLANS.find((p) => p.id === id)!;
+
+  it("links a Cascade Care plan to its insurer's own summary, not the shared CHPW sheet", () => {
+    const link = benefitDetailsLink(plan('84481WA0060005')); // Molina Cascade Complete Gold
+    expect(link?.shared).toBe(false);
+    expect(link?.url).toContain('molinahealthcare.com');
+  });
+
+  it('falls back to the shared sheet, labeled as such, when the plan only borrows a sibling summary', () => {
+    expect(benefitDetailsLink(plan('49831WA1940006'))?.shared).toBe(true); // Premera Cascade Silver
+  });
+
+  it('never sends a non-CHPW plan to the CHPW sheet without marking it shared', () => {
+    for (const p of KING_COUNTY_PLANS) {
+      const link = benefitDetailsLink(p);
+      if (link && !p.carrier.startsWith('Community Health Plan') && link.url.includes('chpw.org')) expect(link.shared).toBe(true);
+    }
   });
 });

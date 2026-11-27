@@ -6,7 +6,7 @@ import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
 import { RESTRICTION_LABELS, TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, drugCostText, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { doctorFit, drugFit, hospitalFit, overallFit, type DrugFitKind, type FitPart } from '../domain/fit';
 import { facilityAccess, otherAccess } from '../domain/hospitalAccess';
-import { networkTypeOf } from '../domain/networkRules';
+import { benefitDetailsLink, networkTypeOf } from '../domain/networkRules';
 import type { Provider } from '../domain/profile';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
@@ -102,6 +102,7 @@ export function PlanCard(props: Props) {
   const hospitalIds = trackedHospitals(props.requiredIds);
   const net = networkTypeOf(plan);
   const hasContract = Boolean(CONTRACT_SOURCES[plan.id]);
+  const details = benefitDetailsLink(plan);
 
   return (
     <li className={`plan-card${overall ? ` plan-fit-${overall}` : ''}`}>
@@ -342,9 +343,9 @@ export function PlanCard(props: Props) {
             </button>
           )}
           <p className="plan-links">
-            {plan.benefits && (
-              <a href={plan.benefits.source} target="_blank" rel="noreferrer">
-                Benefit details
+            {details && (
+              <a href={details.url} target="_blank" rel="noreferrer">
+                {details.shared ? 'Cascade Care standard benefits' : 'Benefit details'}
               </a>
             )}
             <a href={plan.ratesSource} target="_blank" rel="noreferrer">

@@ -124,6 +124,21 @@ export function directoryPhoneOf(t: string): string | undefined {
 }
 export const networkRulesFor = (plan: Plan): NetworkRules | undefined => NETWORK_RULES[plan.id];
 
+/** The CHPW 2027 Benefit Highlights: the cost sharing every Cascade Care plan at a metal level shares. */
+const CASCADE_STANDARD_SHEET = 'https://individualandfamily.chpw.org/wp-content/uploads/cascade-select/content/member/CS_Benefit_Highlights_2027.pdf';
+
+/**
+ * Where to read a plan's benefits: its own 2027 summary when one was found (not one borrowed from a sibling plan),
+ * else the document its cost sharing came from. `shared` is set when that is the Cascade Care standard sheet, which
+ * belongs to Community Health Plan of Washington rather than the plan's insurer.
+ */
+export function benefitDetailsLink(plan: Plan): { url: string; shared: boolean } | null {
+  const rules = networkRulesFor(plan);
+  if (rules && !rules.inferredFrom) return { url: rules.source, shared: false };
+  if (!plan.benefits) return null;
+  return { url: plan.benefits.source, shared: plan.benefits.source === CASCADE_STANDARD_SHEET };
+}
+
 /** The plan's network type: from its 2027 summary when stated, else from the plan data. */
 export function networkTypeOf(plan: Plan): { type: NetworkType | null; fromOlderDocs: boolean } {
   const fromSummary = networkRulesFor(plan)?.type;
