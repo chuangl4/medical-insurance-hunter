@@ -32,6 +32,7 @@ import { DEFAULT_SCENARIO, applyScenario, scenarioLookup, scenarioSummary, type 
 import { ScenarioPanel, medicationNames, takeLegacyScenario } from './components/ScenarioPanel';
 import { PlanAskPanel, type AskTurn } from './components/PlanAskPanel';
 import { HOSPITALS } from './data/hospitalNetworks';
+import { cashLines } from './domain/cashMeds';
 import { suggestedQuestions } from './domain/planQuestions';
 
 /** Where earlier versions kept the household. It's moved into the account on first sign-in. */
@@ -414,6 +415,9 @@ export function App() {
               checkingDoctors={doctorLookups.checking}
               requiredIds={requiredIds}
               drugLines={scenarioHousehold.members.flatMap((m) => m.drugs ?? [])}
+              cashMeds={cashLines(profile)
+                .filter((c) => !scenario.stopped.includes(c.item.id))
+                .map((c) => ({ id: c.item.id, name: c.item.name, yearly: c.yearly }))}
               drugLookup={drugLookup}
               scenario={scenario}
               onEditScenario={openScenario}

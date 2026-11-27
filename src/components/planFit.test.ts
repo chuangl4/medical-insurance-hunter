@@ -25,6 +25,13 @@ describe('unticked must-haves', () => {
     expect(fit.overall).not.toBe('bad');
     const hospitals = fit.parts.find((p) => p.key === 'hospitals');
     expect(hospitals).toBeDefined();
-    expect(hospitals!.level).not.toBe('good');
+    // Still named on the line, but an unticked hospital never puts a ✕ on it.
+    expect(hospitals!.level).not.toBe('bad');
+    expect(hospitals!.label.includes('optional') || hospitals!.detail.includes('optional:')).toBe(true);
+  });
+  it('with every hospital unticked, the hospitals part is information only', () => {
+    const item = evaluatePlan(missing!, household, 0, false, ctx.drugLookup);
+    const hospitals = planFit(item, { ...ctx, optionalIds: HOSPITAL_IDS }).parts.find((p) => p.key === 'hospitals');
+    expect(hospitals).toMatchObject({ label: 'Hospitals (optional)', level: 'info' });
   });
 });

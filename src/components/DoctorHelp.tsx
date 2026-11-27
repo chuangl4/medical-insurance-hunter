@@ -9,13 +9,15 @@ interface Props {
   checking: boolean;
   /** Explain the status for this plan; without it, only the lookups are described. */
   plan?: Plan;
+  /** Shown on the button in place of "?", for when this is the row's next step. */
+  label?: string;
 }
 
 const STATE_MARKS = { done: '✓', missing: '–', failed: '✕', running: '…' } as const;
 const hospitalNames = () => Object.fromEntries(Object.entries(HOSPITALS).map(([id, h]) => [id, h.name]));
 
 /** A "?" button that lists what the app tried for a doctor and what's left to confirm. */
-export function DoctorHelp({ provider, checking, plan }: Props) {
+export function DoctorHelp({ provider, checking, plan, label }: Props) {
   const [open, setOpen] = useState(false);
   const hospitalId = provider.clinicCheck?.hospitalId;
   const steps = lookupSteps(provider, {
@@ -29,13 +31,13 @@ export function DoctorHelp({ provider, checking, plan }: Props) {
     <>
       <button
         type="button"
-        className="help-button"
+        className={label ? 'help-button help-button-text' : 'help-button'}
         aria-expanded={open}
         aria-label={`What the app checked for ${provider.name}`}
         title="What the app checked"
         onClick={() => setOpen((o) => !o)}
       >
-        ?
+        {label ?? '?'}
       </button>
       {open && (
         <ol className="help-steps">

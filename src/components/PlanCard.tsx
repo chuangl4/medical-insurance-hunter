@@ -1,17 +1,14 @@
 import { useState } from 'react';
 import { ChangeScenarioButton } from './ChangeScenarioButton';
-import { HOSPITALS, STATUS_LABELS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
-import { EXCEPTION_TERM } from '../data/exceptionPolicies';
-import { DOCTOR_STATUS_LABELS } from '../domain/doctors';
-import { RESTRICTION_LABELS, TIER_LABELS, fillCostText, listNote, resolveDrug, tierShare, drugCostText, type CoverageLookup, type DrugLine } from '../domain/drugs';
+import { HOSPITALS, doctorStatusFor, hospitalStatus } from '../data/hospitalNetworks';
+import { resolveDrug, type CoverageLookup, type DrugLine } from '../domain/drugs';
 import { doctorFit, drugFit, hospitalFit, overallFit, type DrugFitKind, type FitPart } from '../domain/fit';
-import { facilityAccess, otherAccess } from '../domain/hospitalAccess';
+import { otherAccess } from '../domain/hospitalAccess';
 import { benefitDetailsLink, networkTypeOf } from '../domain/networkRules';
 import type { Provider } from '../domain/profile';
 import type { EvaluatedPlan } from '../domain/types';
 import { costShareText, money, moneyOrUnknown, primaryCareText } from '../format';
-import { DoctorHelp } from './DoctorHelp';
-import { ExceptionHelp } from './ExceptionHelp';
+import { FIT_MARK, FitDetails, type CashMed } from './FitDetails';
 import { NetworkRulesLine } from './NetworkRulesLine';
 import { PlanRules } from './PlanRules';
 import { CONTRACT_SOURCES } from '../data/contractSources';
@@ -20,7 +17,6 @@ import { ScenarioMath } from './ScenarioMath';
 import type { CareScenario } from '../domain/scenarios';
 
 const CHANNEL_LABEL = { on: 'Exchange only', off: 'Direct only', both: 'Exchange or direct' };
-const FIT_MARK = { good: '✓', check: '?', bad: '✕', info: '·' } as const;
 export const OVERALL_TEXT = { good: 'Fits your needs', check: 'Fits, with things to confirm', bad: 'Misses a need' } as const;
 
 export interface PlanCardContext {
@@ -38,6 +34,8 @@ export interface PlanCardContext {
   onEditScenario: (from: HTMLElement) => void;
   /** Opens the question panel for a plan that has a contract loaded. */
   onAsk: (planId: string, from: HTMLElement) => void;
+  /** Medications paid in cash on every plan, listed under "Your fit" since they're in every plan's costs. */
+  cashMeds?: CashMed[];
 }
 
 interface Props extends PlanCardContext {
@@ -51,6 +49,16 @@ interface Props extends PlanCardContext {
 
 /** The household's must-have hospitals the app has network status for. */
 const trackedHospitals = (requiredIds: string[]) => requiredIds.filter((id) => HOSPITALS[id]);
+
+/**
+ * A strip part for must-haves, with any unticked ones added to its detail. Unticked ones never set its mark: with no
+ * must-haves left, the part is information only.
+ */
+function withOptional(required: FitPart | null, optional: FitPart | null): FitPart | null {
+  if (!optional) return required;
+  if (!required) return { ...optional, label: `${optional.label} (optional)`, level: 'info' };
+  return { ...required, detail: `${required.detail} · optional: ${optional.detail}` };
+}
 
 /** How a plan fits the household: the parts of the "Your fit" line, and what the details list. */
 export function planFit(
@@ -73,18 +81,18 @@ export function planFit(
   const doctorPart = (docs: Provider[]) =>
     doctorFit(docs.map((d) => ({ status: doctorStatusFor(d, plan).status, checking: ctx.checkingDoctors.includes(d.id) })));
   const drugPart = drugFit(drugs.map((d) => d.kind));
-  // The line shows every hospital and doctor; only the ticked must-haves decide whether the plan misses a need.
-  const judged = [hospitalPart(hospitalIds.filter(required)), doctorPart(ctx.doctors.filter((d) => required(d.id))), drugPart].filter(
-    (p): p is FitPart => p !== null,
-  );
+  const hospitalReq = hospitalPart(hospitalIds.filter(required));
+  const doctorReq = doctorPart(ctx.doctors.filter((d) => required(d.id)));
   const parts = [
-    hospitalPart(hospitalIds),
-    doctorPart(ctx.doctors),
+    withOptional(hospitalReq, hospitalPart(hospitalIds.filter((id) => !required(id)))),
+    withOptional(doctorReq, doctorPart(ctx.doctors.filter((d) => !required(d.id)))),
     drugPart,
     others.known
       ? ({ key: 'others', label: 'Other hospitals', level: 'info', detail: `${others.inCount + others.conditionalCount} of ${others.total}` } satisfies FitPart)
       : null,
   ].filter((p): p is FitPart => p !== null);
+  // The line shows every hospital and doctor; only the ticked must-haves decide whether the plan misses a need.
+  const judged = [hospitalReq, doctorReq, drugPart].filter((p): p is FitPart => p !== null);
   return { drugs, others, parts, overall: overallFit(judged) };
 }
 
@@ -98,7 +106,8 @@ export function PlanCard(props: Props) {
   const [fitOpen, setFitOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const { drugs, others, parts, overall } = planFit(item, props);
+  const fit = planFit(item, props);
+  const { parts, overall } = fit;
   const hospitalIds = trackedHospitals(props.requiredIds);
   const net = networkTypeOf(plan);
   const hasContract = Boolean(CONTRACT_SOURCES[plan.id]);
@@ -203,97 +212,17 @@ export function PlanCard(props: Props) {
       )}
 
       {!hideFit && fitOpen && (
-        <div className="fit-details">
-          {hospitalIds.length > 0 && (
-            <ul className="hospital-list">
-              {hospitalIds.map((id) => {
-                const status = hospitalStatus(plan, id);
-                const access = facilityAccess(plan, id);
-                return (
-                  <li key={id} className={`hospital status-${status}`}>
-                    <span className="hospital-name">{HOSPITALS[id].name}:</span> {STATUS_LABELS[status]}
-                    {access.note && status !== 'in' && <span className="muted"> ({access.note})</span>}
-                    {access.disagrees && (
-                      <span className="flag-inline">
-                        {' '}
-                        · Healthplanfinder says {access.directorySays === 'in' ? 'in network' : 'not covered'}; confirm
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-              <li className="hint">
-                From hospital and insurer lists, often by insurer rather than plan. Check{' '}
-                {hospitalIds.map((id, index) => (
-                  <span key={id}>
-                    {index > 0 && ' and '}
-                    <a href={HOSPITALS[id].source} target="_blank" rel="noreferrer">
-                      {HOSPITALS[id].name}'s list
-                    </a>
-                  </span>
-                ))}
-                .
-              </li>
-            </ul>
-          )}
-          {others.known && (
-            <p className={`access-line${others.missing.length ? '' : ' access-full'}`}>
-              <span className="hospital-name">Other hospitals:</span> {others.inCount} of {others.total} in network
-              {others.conditionalCount > 0 && <>, {others.conditionalCount} with conditions</>}
-              {others.missing.length > 0 && <> · not {others.missing.map((f) => f.short).join(', ')}</>}
-            </p>
-          )}
-          {doctors.length > 0 && (
-            <ul className="hospital-list">
-              {doctors.map((d) => {
-                const { status } = doctorStatusFor(d, plan);
-                const checking = checkingDoctors.includes(d.id);
-                return (
-                  <li key={d.id} className={`hospital doctor-${status}`}>
-                    <span className="hospital-name">{d.name}:</span> {checking && status === 'unknown' ? 'Checking…' : DOCTOR_STATUS_LABELS[status]}{' '}
-                    <DoctorHelp provider={d} plan={plan} checking={checking} />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {drugs.length > 0 && (
-            <ul className="hospital-list rx-list">
-              {drugs.map(({ line, how }) => {
-                const note = line.rxcui ? listNote(drugLookup(line.rxcui, plan)) : '';
-                const exception = how.kind === 'cash' && how.source === 'checked';
-                const text =
-                  how.kind === 'cash'
-                    ? `${exception ? EXCEPTION_TERM : 'Not checked, assumed not covered'} → ${money(line.price * line.fillsPerYear)}/yr cash`
-                    : how.source === 'checked'
-                      ? `Covered${how.tier ? `, ${TIER_LABELS[how.tier].toLowerCase()}` : ''}${how.estimated ? ' (tier cost estimated)' : ''}${how.restrictions.length ? ` · ${how.restrictions.map((r) => RESTRICTION_LABELS[r]).join(', ')}` : ''}`
-                      : `Not checked, assumed ${line.assume === 'generic' ? 'a generic' : 'a brand-name'} fill`;
-                const deductible = plan.benefits!.deductible.individual;
-                const approved = exception && line.rxcui !== null && scenario.approved.includes(line.rxcui);
-                const fillCost =
-                  how.kind === 'plan'
-                    ? `Per fill: ${fillCostText(how.share, line.price, deductible)}.`
-                    : exception && !approved
-                      ? `If approved (highest brand tier): ${fillCostText(tierShare(plan.benefits!, 'nonPreferredBrand').share, line.price, deductible)}.`
-                      : '';
-                const cost = item.drugCosts[line.itemId];
-                return (
-                  <li key={line.itemId} className={`hospital rx-${how.kind === 'cash' ? 'out' : how.source === 'checked' ? 'in' : 'unknown'}`}>
-                    <span className="hospital-name">{line.name}:</span> {text}
-                    {note && <small className="muted"> ({note})</small>}{' '}
-                    {exception && <ExceptionHelp plan={plan} line={line} approvedInScenario={approved} />}
-                    {fillCost && <small className="fill-cost">{fillCost}</small>}
-                    {cost && (
-                      <small className="fill-cost scenario-cost">
-                        In your scenario{approved ? ', assuming the exception is approved' : ''}: {drugCostText(cost)}
-                      </small>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+        <FitDetails
+          item={item}
+          fit={fit}
+          hospitalIds={hospitalIds}
+          optionalIds={props.optionalIds}
+          doctors={doctors}
+          checkingDoctors={checkingDoctors}
+          drugLookup={drugLookup}
+          scenario={scenario}
+          cashMeds={props.cashMeds ?? []}
+        />
       )}
 
       <button type="button" className="link-button math-toggle" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((o) => !o)}>

@@ -476,8 +476,29 @@ a:hover, .link-button:hover { text-decoration-color: currentColor; }
 .fit-more::after { content: ' ▾'; }
 .fit-strip[aria-expanded='true'] .fit-more::after { content: ' ▴'; }
 @media (max-width: 640px) { .fit-part { white-space: normal; } }
-.fit-details { display: flex; flex-direction: column; gap: 8px; padding: 2px 10px 6px; }
-.fit-details .hint { font-size: 0.8rem; }
+.fit-details { display: flex; flex-direction: column; gap: 12px; padding: 4px 10px 6px; }
+.fit-section { display: flex; flex-direction: column; gap: 4px; }
+.fit-section-head { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.fit-section-head .fit-mark { width: auto; margin-right: -4px; }
+.fit-section-aside { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 0.78rem; }
+.fit-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; }
+.fit-row { display: flex; gap: 6px; align-items: baseline; }
+.fit-row .fit-mark { flex: none; }
+.fit-row-text { min-width: 0; }
+.fit-row-name { font-weight: 600; color: var(--text); }
+.fit-row.fit-bad .fit-row-status { color: var(--warn-text); }
+.fit-row.fit-good .fit-row-status { color: var(--accent); }
+.fit-row.fit-check .fit-row-status, .fit-row.fit-info .fit-row-status { color: var(--text); }
+.fit-row-note { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 1px; }
+.fit-row-flag { color: var(--warn-text); }
+.fit-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--warn-border); background: var(--warn-bg); color: var(--warn-text); font-size: 0.74rem; line-height: 1.5; }
+.fit-confirm { padding: 8px 10px; margin: 0 -10px; border-radius: 6px; background: var(--warn-bg); border: 1px solid var(--warn-border); }
+.fit-confirm .fit-section-head { color: var(--warn-text); }
+.fit-others { margin: 0; font-size: 0.88rem; color: var(--text); }
+.fit-optional .fit-rows { opacity: 0.7; }
+.fit-optional .fit-mark { color: var(--muted) !important; }
+.fit-optional .fit-row .fit-row-status { color: var(--muted); }
+.help-button-text { width: auto; padding: 0 8px; border-radius: 999px; font-weight: 600; color: var(--accent); border-color: var(--accent); }
 
 .plan-details { border-top: 1px solid var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 14px; }
 .plan-details section { display: flex; flex-direction: column; gap: 6px; }
